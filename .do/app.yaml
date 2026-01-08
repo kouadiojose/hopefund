@@ -1,16 +1,14 @@
 name: hopefund-banking
 
 services:
-  # Backend API
+  # Backend API (Docker)
   - name: api
     github:
       repo: kouadiojose/hopefund
       branch: claude/hopefund-banking-app-M021u
       deploy_on_push: true
+    dockerfile_path: apps/api/Dockerfile
     source_dir: apps/api
-    build_command: rm -f package-lock.json && npm install && npm run build:bundle && npm install @prisma/client --save
-    run_command: node dist/bundle.js
-    environment_slug: node-js
     instance_count: 1
     instance_size_slug: basic-xxs
     http_port: 8080
