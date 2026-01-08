@@ -13,18 +13,17 @@ services:
     environment_slug: node-js
     instance_count: 1
     instance_size_slug: basic-xxs
-    http_port: 3000
+    http_port: 8080
     envs:
       - key: NODE_ENV
         value: production
+      - key: PORT
+        value: "8080"
       - key: DATABASE_URL
-        value: ${db-postgresql-tor1-68954.DATABASE_URL}
+        scope: RUN_AND_BUILD_TIME
         type: SECRET
       - key: JWT_SECRET
-        value: ${JWT_SECRET}
-        type: SECRET
-      - key: JWT_REFRESH_SECRET
-        value: ${JWT_REFRESH_SECRET}
+        scope: RUN_AND_BUILD_TIME
         type: SECRET
     routes:
       - path: /api
@@ -45,8 +44,3 @@ services:
         value: ${APP_URL}/api
     routes:
       - path: /
-
-databases:
-  - name: db-postgresql-tor1-68954
-    engine: PG
-    production: true
