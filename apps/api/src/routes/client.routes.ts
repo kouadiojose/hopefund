@@ -216,7 +216,7 @@ router.post('/', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_
         entity: 'Client',
         entity_id: client.id_client.toString(),
         new_values: data,
-        ip_address: req.ip,
+        ip_address: req.ip || null,
       },
     });
 

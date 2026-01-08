@@ -178,7 +178,7 @@ router.post('/', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_
         entity: 'DossierCredit',
         entity_id: loan.id_doss.toString(),
         new_values: data,
-        ip_address: req.ip,
+        ip_address: req.ip || null,
       },
     });
 
@@ -235,7 +235,7 @@ router.put('/:id/approve', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER'
         entity_id: loanId.toString(),
         old_values: { cre_etat: loan.cre_etat },
         new_values: { cre_etat: 2, ...data },
-        ip_address: req.ip,
+        ip_address: req.ip || null,
       },
     });
 
@@ -278,7 +278,7 @@ router.put('/:id/reject', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER',
         entity: 'DossierCredit',
         entity_id: loanId.toString(),
         new_values: { motif, commentaire },
-        ip_address: req.ip,
+        ip_address: req.ip || null,
       },
     });
 
@@ -366,7 +366,7 @@ router.put('/:id/disburse', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER
         entity: 'DossierCredit',
         entity_id: loanId.toString(),
         new_values: { accountId, amount: loan.cre_mnt_octr },
-        ip_address: req.ip,
+        ip_address: req.ip || null,
       },
     });
 

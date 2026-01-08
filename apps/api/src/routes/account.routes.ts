@@ -210,7 +210,7 @@ router.post('/:id/block', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER')
         entity: 'Compte',
         entity_id: accountId.toString(),
         new_values: { raison },
-        ip_address: req.ip,
+        ip_address: req.ip || null,
       },
     });
 
@@ -238,7 +238,7 @@ router.post('/:id/unblock', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER
         action: 'UNBLOCK',
         entity: 'Compte',
         entity_id: accountId.toString(),
-        ip_address: req.ip,
+        ip_address: req.ip || null,
       },
     });
 

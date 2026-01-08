@@ -118,8 +118,8 @@ router.post('/login', async (req, res, next) => {
         action: 'LOGIN',
         entity: 'User',
         entity_id: user.id.toString(),
-        ip_address: req.ip,
-        user_agent: req.headers['user-agent'],
+        ip_address: req.ip || null,
+        user_agent: req.headers['user-agent'] as string | undefined,
       },
     });
 
@@ -190,8 +190,8 @@ router.post('/logout', authenticate, async (req, res, next) => {
         action: 'LOGOUT',
         entity: 'User',
         entity_id: req.user!.userId.toString(),
-        ip_address: req.ip,
-        user_agent: req.headers['user-agent'],
+        ip_address: req.ip || null,
+        user_agent: req.headers['user-agent'] as string | undefined,
       },
     });
 

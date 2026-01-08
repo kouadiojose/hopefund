@@ -89,7 +89,7 @@ router.post('/deposit', authorize('SUPER_ADMIN', 'BRANCH_MANAGER', 'TELLER'), as
         entity: 'Compte',
         entity_id: accountId.toString(),
         new_values: { amount, description },
-        ip_address: req.ip,
+        ip_address: req.ip || null,
       },
     });
 
@@ -170,7 +170,7 @@ router.post('/withdraw', authorize('SUPER_ADMIN', 'BRANCH_MANAGER', 'TELLER'), a
         entity: 'Compte',
         entity_id: accountId.toString(),
         new_values: { amount, description },
-        ip_address: req.ip,
+        ip_address: req.ip || null,
       },
     });
 
@@ -293,7 +293,7 @@ router.post('/transfer', authorize('SUPER_ADMIN', 'BRANCH_MANAGER', 'TELLER'), a
         entity: 'Compte',
         entity_id: `${fromAccountId}->${toAccountId}`,
         new_values: { amount, description },
-        ip_address: req.ip,
+        ip_address: req.ip || null,
       },
     });
 
