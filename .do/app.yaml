@@ -8,8 +8,8 @@ services:
       branch: claude/hopefund-banking-app-M021u
       deploy_on_push: true
     source_dir: apps/api
-    build_command: rm -f package-lock.json && npm install && npx prisma generate && npm run build
-    run_command: node dist/index.js
+    build_command: rm -f package-lock.json && npm install && npm run build:bundle && npm install @prisma/client --save
+    run_command: node dist/bundle.js
     environment_slug: node-js
     instance_count: 1
     instance_size_slug: basic-xxs
