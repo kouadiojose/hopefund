@@ -9,7 +9,7 @@ services:
       deploy_on_push: true
     source_dir: apps/api
     build_command: npm install && npx prisma generate && npm run build
-    run_command: npm start
+    run_command: node dist/index.js
     environment_slug: node-js
     instance_count: 1
     instance_size_slug: basic-xxs
@@ -28,7 +28,7 @@ services:
     routes:
       - path: /api
 
-  # Frontend Web App
+  # Frontend Web App (Static Site)
   - name: web
     github:
       repo: kouadiojose/hopefund
@@ -36,11 +36,6 @@ services:
       deploy_on_push: true
     source_dir: apps/web
     build_command: npm install && npm run build
-    environment_slug: node-js
-    instance_count: 1
-    instance_size_slug: basic-xxs
-    envs:
-      - key: VITE_API_URL
-        value: ${APP_URL}/api
+    environment_slug: html
     routes:
       - path: /
