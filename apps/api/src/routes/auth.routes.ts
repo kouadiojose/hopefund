@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { prisma } from '../lib/prisma';
 import { config } from '../config';
@@ -30,9 +30,10 @@ const generateTokens = async (user: { id: number; email: string; role: any; id_a
     agenceId: user.id_ag ?? undefined,
   };
 
-  const accessToken = jwt.sign(payload, config.jwtSecret, {
+  const signOptions: SignOptions = {
     expiresIn: config.jwtExpiresIn,
-  });
+  };
+  const accessToken = jwt.sign(payload, config.jwtSecret, signOptions);
 
   const refreshToken = uuidv4();
   const refreshExpiresAt = new Date();
