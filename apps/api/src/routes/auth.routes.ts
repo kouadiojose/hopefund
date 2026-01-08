@@ -30,12 +30,9 @@ const generateTokens = async (user: { id: number; email: string; role: any; id_a
     agenceId: user.id_ag ?? undefined,
   };
 
-  // expiresIn accepts string ("15m", "1h", "7d") or number (seconds)
-  const accessToken = jwt.sign(
-    payload as object,
-    config.jwtSecret,
-    { expiresIn: config.jwtExpiresIn }
-  );
+  // Use 15 minutes (900 seconds) as default token expiration
+  const expiresIn = 900; // 15 minutes in seconds
+  const accessToken = jwt.sign(payload as object, config.jwtSecret, { expiresIn });
 
   const refreshToken = uuidv4();
   const refreshExpiresAt = new Date();
