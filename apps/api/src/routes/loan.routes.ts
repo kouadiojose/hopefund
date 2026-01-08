@@ -265,7 +265,7 @@ router.put('/:id/reject', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER',
         cre_etat: 9, // Rejeté
         etat: 9,
         motif,
-        details_motif: commentaire,
+        detail_obj_dem: commentaire, // Utiliser le champ existant pour le commentaire
         date_etat: new Date(),
         date_modif: new Date(),
       },
