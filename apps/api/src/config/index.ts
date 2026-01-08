@@ -12,8 +12,8 @@ export const config = {
 
   // JWT
   jwtSecret: process.env.JWT_SECRET || 'change-this-secret',
-  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '15m',
-  jwtRefreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
+  jwtExpiresIn: (process.env.JWT_EXPIRES_IN || '15m') as string | number,
+  jwtRefreshExpiresIn: (process.env.JWT_REFRESH_EXPIRES_IN || '7d') as string | number,
 
   // CORS
   corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173',
