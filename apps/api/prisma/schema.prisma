@@ -1,0 +1,396 @@
+// Hopefund Banking System - Prisma Schema
+// Connecté à la base PostgreSQL existante sur DigitalOcean
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// TABLES PRINCIPALES - Mappées sur l'existant
+// ============================================
+
+/// Table des clients (personnes physiques et morales)
+model Client {
+  id_client                  Int       @id @default(autoincrement())
+  id_ag                      Int
+  anc_id_client              String?
+  statut_juridique           Int?      // 1=Personne physique, 2=Personne morale
+  qualite                    Int?
+  adresse                    String?
+  code_postal                String?
+  ville                      String?
+  pays                       Int?
+  num_tel                    String?
+  num_port                   String?
+  email                      String?
+  date_adh                   DateTime?
+  etat                       Int?      // 1=Actif, 2=Inactif, etc.
+
+  // Personne physique (pp_*)
+  pp_nom                     String?
+  pp_prenom                  String?
+  pp_date_naissance          DateTime?
+  pp_lieu_naissance          String?
+  pp_sexe                    Int?      // 1=Masculin, 2=Féminin
+  pp_nationalite             Int?
+  pp_type_piece_id           Int?
+  pp_nm_piece_id             String?
+  pp_etat_civil              Int?
+  pp_nbre_enfant             Int?
+  pp_employeur               String?
+  pp_fonction                String?
+  pp_revenu                  Decimal?  @db.Decimal(30, 6)
+
+  // Personne morale (pm_*)
+  pm_raison_sociale          String?
+  pm_abreviation             String?
+  pm_nature_juridique        String?
+  pm_numero_reg_nat          String?
+  pm_date_constitution       DateTime?
+
+  // Groupe informel (gi_*)
+  gi_nom                     String?
+  gi_nbre_membr              Int?
+
+  // Géographie
+  province                   Int?
+  district                   Int?
+  secteur                    Int?
+  cellule                    Int?
+  village                    Int?
+
+  // Métadonnées
+  date_creation              DateTime  @default(now())
+  date_modif                 DateTime?
+  utilis_crea                Int?
+  utilis_modif               Int?
+  nbre_credits               Int?      @default(0)
+
+  // Relations
+  comptes                    Compte[]
+  dossiers_credit            DossierCredit[]
+
+  @@unique([id_client])
+  @@index([id_ag])
+  @@index([pp_nom, pp_prenom])
+  @@index([num_tel])
+  @@map("ad_cli")
+}
+
+/// Table des comptes clients
+model Compte {
+  id_cpte                    Int       @id @default(autoincrement())
+  id_ag                      Int
+  id_titulaire               Int
+  id_prod                    Int?      // Type de produit d'épargne
+  num_cpte                   Int?
+  num_complet_cpte           String?   @unique
+  num_cpte_comptable         String?   @db.VarChar(50)
+  intitule_compte            String?
+  devise                     String?   @db.Char(3)
+
+  // Soldes
+  solde                      Decimal?  @db.Decimal(30, 6) @default(0)
+  mnt_bloq                   Decimal?  @db.Decimal(30, 6) @default(0)
+  mnt_min_cpte               Decimal?  @db.Decimal(30, 6) @default(0)
+  decouvert_max              Decimal?  @db.Decimal(30, 6) @default(0)
+
+  // Intérêts
+  tx_interet_cpte            Float?
+  interet_annuel             Decimal?  @db.Decimal(30, 6) @default(0)
+  solde_calcul_interets      Decimal?  @db.Decimal(30, 6) @default(0)
+  date_solde_calcul_interets DateTime?
+  mode_calcul_int_cpte       Int?
+
+  // État
+  etat_cpte                  Int?      // 1=Actif, 2=Bloqué, 3=Dormant, 4=Clôturé
+  date_ouvert                DateTime?
+  date_clot                  DateTime?
+  raison_clot                Int?
+
+  // Chèques
+  etat_chequier              Int?      @default(0)
+  chequier_num_cheques       Int?      @default(25)
+  num_last_cheque            Int?      @default(0)
+
+  // Métadonnées
+  date_creation              DateTime  @default(now())
+  date_modif                 DateTime?
+  utilis_crea                Int?
+
+  // Relations
+  titulaire                  Client    @relation(fields: [id_titulaire, id_ag], references: [id_client, id_ag])
+  mouvements                 Mouvement[]
+
+  @@unique([num_complet_cpte, id_ag])
+  @@index([id_ag])
+  @@index([id_titulaire])
+  @@map("ad_cpt")
+}
+
+/// Table des dossiers de crédit
+model DossierCredit {
+  id_doss                    Int       @id @default(autoincrement())
+  id_ag                      Int
+  id_client                  Int
+  id_prod                    Int?      // Type de produit crédit
+
+  // Demande
+  date_dem                   DateTime?
+  mnt_dem                    Decimal?  @db.Decimal(30, 6) @default(0)
+  obj_dem                    Int?      // Objet du crédit
+  detail_obj_dem             String?
+  duree_mois                 Int?
+
+  // Crédit octroyé
+  cre_mnt_octr               Decimal?  @db.Decimal(30, 6) @default(0)
+  cre_date_approb            DateTime?
+  cre_date_debloc            DateTime?
+  cre_etat                   Int?      // État du crédit
+  cre_id_cpte                Int?      // Compte de déblocage
+
+  // Conditions
+  terme                      Int?
+  delai_grac                 Int?      @default(0)
+  differe_jours              Int?      @default(0)
+  tx_interet_lcr             Float?    @default(0)
+
+  // Garanties
+  gar_num                    Decimal?  @db.Decimal(30, 6) @default(0)
+  gar_tot                    Decimal?  @db.Decimal(30, 6) @default(0)
+  gar_mat                    Decimal?  @db.Decimal(30, 6) @default(0)
+
+  // Gestion
+  id_agent_gest              Int?
+  etat                       Int?      // État du dossier
+  date_etat                  DateTime?
+  motif                      Int?
+
+  // Assurances et frais
+  mnt_assurance              Decimal?  @db.Decimal(30, 6) @default(0)
+  mnt_commission             Decimal?  @db.Decimal(30, 6) @default(0)
+  mnt_frais_doss             Decimal?  @db.Decimal(30, 6) @default(0)
+
+  // Provisions
+  prov_mnt                   Decimal?  @db.Decimal(30, 6) @default(0)
+  prov_date                  DateTime?
+  perte_capital              Decimal?  @db.Decimal(30, 6) @default(0)
+
+  // Métadonnées
+  date_creation              DateTime  @default(now())
+  date_modif                 DateTime?
+
+  // Relations
+  client                     Client    @relation(fields: [id_client, id_ag], references: [id_client, id_ag])
+  echeances                  Echeance[]
+  garanties                  Garantie[]
+
+  @@index([id_ag])
+  @@index([id_client])
+  @@index([etat])
+  @@index([cre_etat])
+  @@map("ad_dcr")
+}
+
+/// Table des mouvements/transactions
+model Mouvement {
+  id_mouvement               Int       @id @default(autoincrement())
+  id_ag                      Int
+  cpte_interne_cli           Int
+
+  date_mvt                   DateTime?
+  type_mvt                   Int?      // 1=Crédit, 2=Débit
+  sens                       String?   @db.Char(1)
+  montant                    Decimal?  @db.Decimal(30, 6)
+  solde_avant                Decimal?  @db.Decimal(30, 6)
+  solde_apres                Decimal?  @db.Decimal(30, 6)
+
+  libel_mvt                  String?
+  type_operation             Int?
+  id_utilisateur             Int?
+
+  date_creation              DateTime  @default(now())
+
+  // Relations
+  compte                     Compte    @relation(fields: [cpte_interne_cli, id_ag], references: [id_cpte, id_ag])
+
+  @@index([id_ag])
+  @@index([cpte_interne_cli])
+  @@index([date_mvt])
+  @@map("ad_mouvement")
+}
+
+/// Table des échéances de remboursement
+model Echeance {
+  id_ech                     Int       @id @default(autoincrement())
+  id_ag                      Int
+  id_doss                    Int
+
+  num_ech                    Int?
+  date_ech                   DateTime?
+
+  mnt_capital                Decimal?  @db.Decimal(30, 6) @default(0)
+  mnt_int                    Decimal?  @db.Decimal(30, 6) @default(0)
+
+  solde_capital              Decimal?  @db.Decimal(30, 6) @default(0)
+  solde_int                  Decimal?  @db.Decimal(30, 6) @default(0)
+
+  date_paiement              DateTime?
+  mnt_paye                   Decimal?  @db.Decimal(30, 6) @default(0)
+
+  etat                       Int?      // 1=Non échu, 2=Payé, 3=Impayé
+
+  // Relations
+  dossier                    DossierCredit @relation(fields: [id_doss, id_ag], references: [id_doss, id_ag])
+
+  @@index([id_ag])
+  @@index([id_doss])
+  @@index([date_ech])
+  @@map("ad_sre")
+}
+
+/// Table des garanties
+model Garantie {
+  id_gar                     Int       @id @default(autoincrement())
+  id_ag                      Int
+  id_doss                    Int
+
+  type_gar                   Int?      // Type de garantie
+  description                String?
+  valeur_estimee             Decimal?  @db.Decimal(30, 6)
+  date_evaluation            DateTime?
+
+  // Relations
+  dossier                    DossierCredit @relation(fields: [id_doss, id_ag], references: [id_doss, id_ag])
+
+  @@index([id_ag])
+  @@index([id_doss])
+  @@map("ad_gar")
+}
+
+/// Table des agences
+model Agence {
+  id_ag                      Int       @id
+  libel_ag                   String?
+  sigle_ag                   String?
+  adresse_ag                 String?
+  tel_ag                     String?
+  email_ag                   String?
+
+  date_creation              DateTime  @default(now())
+  etat_ag                    Int?      @default(1)
+
+  @@map("ad_agc")
+}
+
+// ============================================
+// TABLES NOUVELLES - Pour l'application
+// ============================================
+
+/// Utilisateurs du système (staff)
+model User {
+  id                         Int       @id @default(autoincrement())
+  email                      String    @unique
+  password_hash              String
+
+  nom                        String
+  prenom                     String
+  telephone                  String?
+
+  role                       UserRole  @default(TELLER)
+  id_ag                      Int?      // Agence assignée
+
+  is_active                  Boolean   @default(true)
+  last_login                 DateTime?
+  failed_attempts            Int       @default(0)
+  locked_until               DateTime?
+
+  created_at                 DateTime  @default(now())
+  updated_at                 DateTime  @updatedAt
+
+  sessions                   Session[]
+  audit_logs                 AuditLog[]
+
+  @@map("app_users")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  DIRECTOR
+  BRANCH_MANAGER
+  CREDIT_OFFICER
+  TELLER
+  CLIENT
+}
+
+/// Sessions utilisateurs
+model Session {
+  id                         String    @id @default(uuid())
+  user_id                    Int
+
+  refresh_token              String    @unique
+  expires_at                 DateTime
+
+  ip_address                 String?
+  user_agent                 String?
+
+  created_at                 DateTime  @default(now())
+
+  user                       User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("app_sessions")
+}
+
+/// Journal d'audit
+model AuditLog {
+  id                         Int       @id @default(autoincrement())
+  user_id                    Int?
+
+  action                     String    // CREATE, UPDATE, DELETE, LOGIN, etc.
+  entity                     String    // Client, Compte, etc.
+  entity_id                  String?
+
+  old_values                 Json?
+  new_values                 Json?
+
+  ip_address                 String?
+  user_agent                 String?
+
+  created_at                 DateTime  @default(now())
+
+  user                       User?     @relation(fields: [user_id], references: [id])
+
+  @@index([user_id])
+  @@index([entity, entity_id])
+  @@index([created_at])
+  @@map("app_audit_logs")
+}
+
+/// Comptes clients pour l'app mobile (authentification séparée)
+model ClientAuth {
+  id                         Int       @id @default(autoincrement())
+  id_client                  Int       @unique // Lien vers ad_cli
+
+  phone_number               String    @unique
+  pin_hash                   String
+
+  is_active                  Boolean   @default(true)
+  is_verified                Boolean   @default(false)
+
+  last_login                 DateTime?
+  failed_attempts            Int       @default(0)
+  locked_until               DateTime?
+
+  device_token               String?   // Pour notifications push
+
+  created_at                 DateTime  @default(now())
+  updated_at                 DateTime  @updatedAt
+
+  @@map("app_client_auth")
+}
