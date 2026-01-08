@@ -1,0 +1,52 @@
+name: hopefund-banking
+
+services:
+  # Backend API
+  - name: api
+    github:
+      repo: kouadiojose/hopefund
+      branch: claude/hopefund-banking-app-M021u
+      deploy_on_push: true
+    source_dir: apps/api
+    build_command: npm install && npx prisma generate && npm run build
+    run_command: npm start
+    environment_slug: node-js
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    http_port: 3000
+    envs:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        value: ${db-postgresql-tor1-68954.DATABASE_URL}
+        type: SECRET
+      - key: JWT_SECRET
+        value: ${JWT_SECRET}
+        type: SECRET
+      - key: JWT_REFRESH_SECRET
+        value: ${JWT_REFRESH_SECRET}
+        type: SECRET
+    routes:
+      - path: /api
+
+  # Frontend Web App
+  - name: web
+    github:
+      repo: kouadiojose/hopefund
+      branch: claude/hopefund-banking-app-M021u
+      deploy_on_push: true
+    source_dir: apps/web
+    build_command: npm install && npm run build
+    environment_slug: node-js
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    envs:
+      - key: VITE_API_URL
+        value: ${APP_URL}/api
+    routes:
+      - path: /
+
+databases:
+  - name: db-postgresql-tor1-68954
+    engine: PG
+    production: true
