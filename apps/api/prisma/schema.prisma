@@ -75,7 +75,7 @@ model Client {
   comptes                    Compte[]
   dossiers_credit            DossierCredit[]
 
-  @@unique([id_client])
+  @@unique([id_client, id_ag])
   @@index([id_ag])
   @@index([pp_nom, pp_prenom])
   @@index([num_tel])
@@ -127,7 +127,7 @@ model Compte {
   titulaire                  Client    @relation(fields: [id_titulaire, id_ag], references: [id_client, id_ag])
   mouvements                 Mouvement[]
 
-  @@unique([num_complet_cpte, id_ag])
+  @@unique([id_cpte, id_ag])
   @@index([id_ag])
   @@index([id_titulaire])
   @@map("ad_cpt")
@@ -190,6 +190,7 @@ model DossierCredit {
   echeances                  Echeance[]
   garanties                  Garantie[]
 
+  @@unique([id_doss, id_ag])
   @@index([id_ag])
   @@index([id_client])
   @@index([etat])
