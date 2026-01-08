@@ -8,7 +8,7 @@ services:
       branch: claude/hopefund-banking-app-M021u
       deploy_on_push: true
     source_dir: apps/api
-    build_command: npm install && npx prisma generate && npm run build
+    build_command: npm install --legacy-peer-deps && npx prisma generate && npm run build && npm install --production --legacy-peer-deps
     run_command: node dist/index.js
     environment_slug: node-js
     instance_count: 1
