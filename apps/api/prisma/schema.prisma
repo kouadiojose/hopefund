@@ -202,7 +202,7 @@ model DossierCredit {
 model Mouvement {
   id_mouvement               Int       @id @default(autoincrement())
   id_ag                      Int
-  cpte_interne_cli           Int
+  cpte_interne_cli           Int?
 
   date_mvt                   DateTime?
   type_mvt                   Int?      // 1=Crédit, 2=Débit
@@ -217,8 +217,8 @@ model Mouvement {
 
   date_creation              DateTime  @default(now())
 
-  // Relations
-  compte                     Compte    @relation(fields: [cpte_interne_cli, id_ag], references: [id_cpte, id_ag])
+  // Relations - optionnelle car cpte_interne_cli peut être NULL
+  compte                     Compte?   @relation(fields: [cpte_interne_cli, id_ag], references: [id_cpte, id_ag])
 
   @@index([id_ag])
   @@index([cpte_interne_cli])
