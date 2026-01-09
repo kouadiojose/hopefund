@@ -68,8 +68,8 @@ export default function AccountDetailPage() {
     enabled: !!id,
   });
 
-  const account = accountData?.data;
-  const transactions = transactionsData?.data || [];
+  const account = accountData;
+  const transactions = transactionsData?.data || transactionsData || [];
 
   if (isLoading) {
     return (

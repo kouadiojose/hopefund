@@ -51,7 +51,7 @@ export default function LoanDetailPage() {
     enabled: !!id,
   });
 
-  const loan = loanData?.data;
+  const loan = loanData;
 
   if (isLoading) {
     return (
