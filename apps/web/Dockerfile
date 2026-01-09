@@ -15,8 +15,8 @@ COPY . .
 # Set the API URL for production (relative path since same domain)
 ENV VITE_API_URL=/api
 
-# Build the application
-RUN npm run build
+# Build the application (vite only, skip tsc)
+RUN npx vite build
 
 # Production stage with nginx
 FROM nginx:alpine AS production
