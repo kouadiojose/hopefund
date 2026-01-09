@@ -155,28 +155,14 @@ router.get('/:id', async (req, res, next) => {
   try {
     const clientId = parseInt(req.params.id);
 
+    if (isNaN(clientId)) {
+      throw new AppError('Invalid client ID', 400);
+    }
+
+    logger.info(`Fetching client details for ID: ${clientId}`);
+
     const client = await prisma.client.findUnique({
       where: { id_client: clientId },
-      include: {
-        comptes: {
-          include: {
-            mouvements: {
-              take: 5,
-              orderBy: { date_mvt: 'desc' },
-            },
-          },
-          orderBy: { date_creation: 'desc' },
-        },
-        dossiers_credit: {
-          include: {
-            echeances: {
-              orderBy: { num_ech: 'asc' },
-            },
-            garanties: true,
-          },
-          orderBy: { date_creation: 'desc' },
-        },
-      },
     });
 
     if (!client) {
@@ -190,12 +176,52 @@ router.get('/:id', async (req, res, next) => {
       throw new AppError('Access denied', 403);
     }
 
+    // Fetch accounts separately to avoid relation issues
+    const comptes = await prisma.compte.findMany({
+      where: { id_titulaire: clientId },
+      orderBy: { date_creation: 'desc' },
+    });
+
+    // Fetch movements for each account
+    const comptesWithMovements = await Promise.all(
+      comptes.map(async (compte) => {
+        const mouvements = await prisma.mouvement.findMany({
+          where: { cpte_interne_cli: compte.id_cpte },
+          take: 5,
+          orderBy: { date_mvt: 'desc' },
+        });
+        return { ...compte, mouvements };
+      })
+    );
+
+    // Fetch credits separately
+    const dossiers_credit = await prisma.dossierCredit.findMany({
+      where: { id_client: clientId },
+      orderBy: { date_creation: 'desc' },
+    });
+
+    // Fetch echeances and garanties for each credit
+    const creditsWithDetails = await Promise.all(
+      dossiers_credit.map(async (dossier) => {
+        const [echeances, garanties] = await Promise.all([
+          prisma.echeance.findMany({
+            where: { id_doss: dossier.id_doss },
+            orderBy: { num_ech: 'asc' },
+          }),
+          prisma.garantie.findMany({
+            where: { id_doss: dossier.id_doss },
+          }),
+        ]);
+        return { ...dossier, echeances, garanties };
+      })
+    );
+
     // Calculer les statistiques
-    const totalSolde = client.comptes.reduce((sum, c) => sum + toNumber(c.solde), 0);
-    const totalBloques = client.comptes.reduce((sum, c) => sum + toNumber(c.mnt_bloq), 0);
+    const totalSolde = comptesWithMovements.reduce((sum, c) => sum + toNumber(c.solde), 0);
+    const totalBloques = comptesWithMovements.reduce((sum, c) => sum + toNumber(c.mnt_bloq), 0);
     const soldeDisponible = totalSolde - totalBloques;
 
-    const creditsEnCours = client.dossiers_credit.filter(d => [5, 6, 8].includes(d.cre_etat || 0));
+    const creditsEnCours = creditsWithDetails.filter(d => [5, 6, 8].includes(d.cre_etat || 0));
     const totalCapitalRestant = creditsEnCours.reduce((sum, d) => {
       const echeancesNonPayees = d.echeances.filter(e => e.etat !== 2);
       return sum + echeancesNonPayees.reduce((s, e) => s + toNumber(e.solde_capital), 0);
@@ -203,7 +229,7 @@ router.get('/:id', async (req, res, next) => {
 
     // Échéances en retard
     const today = new Date();
-    const echeancesEnRetard = client.dossiers_credit.flatMap(d =>
+    const echeancesEnRetard = creditsWithDetails.flatMap(d =>
       d.echeances.filter(e =>
         e.etat !== 2 && e.date_ech && new Date(e.date_ech) < today
       )
@@ -213,7 +239,7 @@ router.get('/:id', async (req, res, next) => {
     );
 
     // Prochaines échéances
-    const prochainesEcheances = client.dossiers_credit.flatMap(d =>
+    const prochainesEcheances = creditsWithDetails.flatMap(d =>
       d.echeances
         .filter(e => e.etat !== 2 && e.date_ech && new Date(e.date_ech) >= today)
         .map(e => ({
@@ -272,9 +298,9 @@ router.get('/:id', async (req, res, next) => {
         total_solde: totalSolde,
         total_bloques: totalBloques,
         solde_disponible: soldeDisponible,
-        nombre_comptes: client.comptes.length,
-        comptes_actifs: client.comptes.filter(c => c.etat_cpte === 1).length,
-        nombre_credits: client.dossiers_credit.length,
+        nombre_comptes: comptesWithMovements.length,
+        comptes_actifs: comptesWithMovements.filter(c => c.etat_cpte === 1).length,
+        nombre_credits: creditsWithDetails.length,
         credits_en_cours: creditsEnCours.length,
         capital_restant: totalCapitalRestant,
         montant_en_retard: montantEnRetard,
@@ -282,7 +308,7 @@ router.get('/:id', async (req, res, next) => {
       },
 
       // Comptes avec dernières transactions
-      comptes: client.comptes.map(c => ({
+      comptes: comptesWithMovements.map(c => ({
         id_cpte: c.id_cpte,
         num_complet_cpte: c.num_complet_cpte,
         intitule_compte: c.intitule_compte,
@@ -306,7 +332,7 @@ router.get('/:id', async (req, res, next) => {
       })),
 
       // Crédits avec échéancier
-      credits: client.dossiers_credit.map(d => {
+      credits: creditsWithDetails.map(d => {
         const echeancesNonPayees = d.echeances.filter(e => e.etat !== 2);
         const capitalRestant = echeancesNonPayees.reduce((s, e) => s + toNumber(e.solde_capital), 0);
         const interetsRestants = echeancesNonPayees.reduce((s, e) => s + toNumber(e.solde_int), 0);
