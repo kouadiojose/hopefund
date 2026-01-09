@@ -303,7 +303,7 @@ model User {
   prenom                     String
   telephone                  String?
 
-  role                       UserRole  @default(TELLER)
+  role                       UserRole  @default(CAISSIER)
   id_ag                      Int?      // Agence assignée
 
   is_active                  Boolean   @default(true)
@@ -321,12 +321,55 @@ model User {
 }
 
 enum UserRole {
-  SUPER_ADMIN
-  DIRECTOR
-  BRANCH_MANAGER
-  CREDIT_OFFICER
-  TELLER
+  DIRECTION       // Direction - Accès complet
+  ADMIN_IT        // Administrateur IT - Accès complet
+  COMPTABILITE    // Comptabilité
+  CAISSIER        // Caissier
+  AGENT_CREDIT    // Agent de crédit
+  SUPERVISEUR     // Superviseur d'agence
+}
+
+/// Modules du système
+enum ModuleType {
   CLIENT
+  EPARGNE
+  CREDIT
+  GUICHET
+  SYSTEME
+  PARAMETRAGE
+  RAPPORTS
+  COMPTABILITE
+  LIGNE_CREDIT
+  BUDGET
+}
+
+/// Permissions granulaires
+model Permission {
+  id                         Int       @id @default(autoincrement())
+  code                       String    @unique  // Ex: CLIENT_VIEW, CLIENT_CREATE
+  name                       String             // Nom lisible
+  description                String?
+  module                     ModuleType
+
+  created_at                 DateTime  @default(now())
+
+  role_permissions           RolePermission[]
+
+  @@map("app_permissions")
+}
+
+/// Association Rôle-Permission
+model RolePermission {
+  id                         Int        @id @default(autoincrement())
+  role                       UserRole
+  permission_id              Int
+
+  created_at                 DateTime   @default(now())
+
+  permission                 Permission @relation(fields: [permission_id], references: [id], onDelete: Cascade)
+
+  @@unique([role, permission_id])
+  @@map("app_role_permissions")
 }
 
 /// Sessions utilisateurs

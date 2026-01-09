@@ -5,12 +5,14 @@ import { prisma } from '../lib/prisma';
 import { authenticate, authorize } from '../middleware/auth';
 import { AppError } from '../middleware/error-handler';
 import { logger } from '../utils/logger';
+import { requirePermission, getRolePermissions } from '../middleware/permission.middleware';
+import { UserRole } from '@prisma/client';
 
 const router = Router();
 
-// All admin routes require authentication and SUPER_ADMIN or DIRECTOR role
+// All admin routes require authentication and DIRECTION or ADMIN_IT role
 router.use(authenticate);
-router.use(authorize('SUPER_ADMIN', 'DIRECTOR'));
+router.use(authorize('DIRECTION', 'ADMIN_IT', 'SUPERVISEUR'));
 
 // ==================== UTILISATEURS ====================
 
@@ -147,7 +149,7 @@ router.post('/users', async (req, res, next) => {
       nom: z.string().min(1),
       prenom: z.string().min(1),
       telephone: z.string().optional(),
-      role: z.enum(['SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_OFFICER', 'TELLER']),
+      role: z.enum(['DIRECTION', 'ADMIN_IT', 'COMPTABILITE', 'CAISSIER', 'AGENT_CREDIT', 'SUPERVISEUR']),
       id_ag: z.number().optional().nullable(),
     });
 
@@ -208,7 +210,7 @@ router.put('/users/:id', async (req, res, next) => {
       nom: z.string().min(1).optional(),
       prenom: z.string().min(1).optional(),
       telephone: z.string().optional().nullable(),
-      role: z.enum(['SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_OFFICER', 'TELLER']).optional(),
+      role: z.enum(['DIRECTION', 'ADMIN_IT', 'COMPTABILITE', 'CAISSIER', 'AGENT_CREDIT', 'SUPERVISEUR']).optional(),
       id_ag: z.number().optional().nullable(),
       is_active: z.boolean().optional(),
     });
@@ -429,7 +431,7 @@ router.get('/agencies/:id', async (req, res, next) => {
 });
 
 // POST /api/admin/agencies - Créer une agence
-router.post('/agencies', authorize('SUPER_ADMIN'), async (req, res, next) => {
+router.post('/agencies', authorize('DIRECTION', 'ADMIN_IT'), async (req, res, next) => {
   try {
     const schema = z.object({
       id_ag: z.number(),
@@ -467,7 +469,7 @@ router.post('/agencies', authorize('SUPER_ADMIN'), async (req, res, next) => {
 });
 
 // PUT /api/admin/agencies/:id - Modifier une agence
-router.put('/agencies/:id', authorize('SUPER_ADMIN'), async (req, res, next) => {
+router.put('/agencies/:id', authorize('DIRECTION', 'ADMIN_IT'), async (req, res, next) => {
   try {
     const agencyId = parseInt(req.params.id);
 
@@ -578,14 +580,59 @@ router.get('/stats', async (req, res, next) => {
 });
 
 // GET /api/admin/roles - Liste des rôles disponibles
-router.get('/roles', (req, res) => {
-  res.json([
-    { value: 'SUPER_ADMIN', label: 'Super Administrateur', description: 'Accès total au système' },
-    { value: 'DIRECTOR', label: 'Directeur', description: 'Gestion globale et rapports' },
-    { value: 'BRANCH_MANAGER', label: 'Chef d\'agence', description: 'Gestion de l\'agence assignée' },
-    { value: 'CREDIT_OFFICER', label: 'Agent de crédit', description: 'Gestion des crédits et clients' },
-    { value: 'TELLER', label: 'Caissier', description: 'Opérations de caisse' },
-  ]);
+router.get('/roles', async (req, res) => {
+  const roles = [
+    {
+      value: 'DIRECTION',
+      label: 'Direction',
+      description: 'Accès complet à tous les modules du système',
+      color: 'purple',
+    },
+    {
+      value: 'ADMIN_IT',
+      label: 'Admin IT',
+      description: 'Administrateur informatique - Accès complet technique',
+      color: 'blue',
+    },
+    {
+      value: 'COMPTABILITE',
+      label: 'Comptabilité',
+      description: 'Accès comptabilité, rapports et budget',
+      color: 'green',
+    },
+    {
+      value: 'CAISSIER',
+      label: 'Caissier',
+      description: 'Opérations de guichet et caisse',
+      color: 'yellow',
+    },
+    {
+      value: 'AGENT_CREDIT',
+      label: 'Agent de Crédit',
+      description: 'Gestion des dossiers de crédit',
+      color: 'orange',
+    },
+    {
+      value: 'SUPERVISEUR',
+      label: 'Superviseur',
+      description: 'Supervision d\'agence et approbations',
+      color: 'red',
+    },
+  ];
+
+  // Ajouter les permissions pour chaque rôle
+  const rolesWithPermissions = await Promise.all(
+    roles.map(async (role) => {
+      try {
+        const permissions = await getRolePermissions(role.value as UserRole);
+        return { ...role, permissions, permissionCount: permissions.length };
+      } catch {
+        return { ...role, permissions: [], permissionCount: 0 };
+      }
+    })
+  );
+
+  res.json(rolesWithPermissions);
 });
 
 export default router;
