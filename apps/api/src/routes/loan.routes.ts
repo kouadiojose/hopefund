@@ -10,7 +10,7 @@ const router = Router();
 router.use(authenticate);
 
 // GET /api/loans - Liste des prêts
-router.get('/', authorize('DIRECTION', 'ADMIN_IT', 'SUPERVISEUR', 'AGENT_CREDIT', 'COMPTABILITE'), async (req, res, next) => {
+router.get('/', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_OFFICER', 'DIRECTOR'), async (req, res, next) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = Math.min(
@@ -22,7 +22,7 @@ router.get('/', authorize('DIRECTION', 'ADMIN_IT', 'SUPERVISEUR', 'AGENT_CREDIT'
 
     const where: any = {};
 
-    if (req.user!.agenceId && !['DIRECTION', 'ADMIN_IT'].includes(req.user!.role)) {
+    if (req.user!.agenceId && !['SUPER_ADMIN', 'DIRECTOR'].includes(req.user!.role)) {
       where.id_ag = req.user!.agenceId;
     }
 
@@ -134,7 +134,7 @@ router.get('/:id/schedule', async (req, res, next) => {
 });
 
 // POST /api/loans - Nouvelle demande de crédit
-router.post('/', authorize('DIRECTION', 'ADMIN_IT', 'SUPERVISEUR', 'AGENT_CREDIT'), async (req, res, next) => {
+router.post('/', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_OFFICER'), async (req, res, next) => {
   try {
     const schema = z.object({
       id_client: z.number(),
@@ -189,7 +189,7 @@ router.post('/', authorize('DIRECTION', 'ADMIN_IT', 'SUPERVISEUR', 'AGENT_CREDIT
 });
 
 // PUT /api/loans/:id/approve - Approuver un crédit
-router.put('/:id/approve', authorize('DIRECTION', 'ADMIN_IT', 'SUPERVISEUR'), async (req, res, next) => {
+router.put('/:id/approve', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER'), async (req, res, next) => {
   try {
     const loanId = parseInt(req.params.id);
 
@@ -246,7 +246,7 @@ router.put('/:id/approve', authorize('DIRECTION', 'ADMIN_IT', 'SUPERVISEUR'), as
 });
 
 // PUT /api/loans/:id/reject - Rejeter un crédit
-router.put('/:id/reject', authorize('DIRECTION', 'ADMIN_IT', 'SUPERVISEUR', 'AGENT_CREDIT'), async (req, res, next) => {
+router.put('/:id/reject', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_OFFICER'), async (req, res, next) => {
   try {
     const loanId = parseInt(req.params.id);
     const { motif, commentaire } = req.body;
@@ -289,7 +289,7 @@ router.put('/:id/reject', authorize('DIRECTION', 'ADMIN_IT', 'SUPERVISEUR', 'AGE
 });
 
 // PUT /api/loans/:id/disburse - Débloquer les fonds
-router.put('/:id/disburse', authorize('DIRECTION', 'ADMIN_IT', 'SUPERVISEUR'), async (req, res, next) => {
+router.put('/:id/disburse', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER'), async (req, res, next) => {
   try {
     const loanId = parseInt(req.params.id);
     const { accountId } = req.body;

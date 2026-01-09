@@ -66,12 +66,12 @@ interface Module {
 }
 
 const roleColors: Record<string, string> = {
-  DIRECTION: 'bg-purple-100 text-purple-700 border-purple-200',
-  ADMIN_IT: 'bg-blue-100 text-blue-700 border-blue-200',
-  COMPTABILITE: 'bg-green-100 text-green-700 border-green-200',
-  CAISSIER: 'bg-yellow-100 text-yellow-700 border-yellow-200',
-  AGENT_CREDIT: 'bg-orange-100 text-orange-700 border-orange-200',
-  SUPERVISEUR: 'bg-red-100 text-red-700 border-red-200',
+  SUPER_ADMIN: 'bg-purple-100 text-purple-700 border-purple-200',
+  DIRECTOR: 'bg-blue-100 text-blue-700 border-blue-200',
+  DIRECTOR: 'bg-green-100 text-green-700 border-green-200',
+  TELLER: 'bg-yellow-100 text-yellow-700 border-yellow-200',
+  CREDIT_OFFICER: 'bg-orange-100 text-orange-700 border-orange-200',
+  BRANCH_MANAGER: 'bg-red-100 text-red-700 border-red-200',
 };
 
 const moduleIcons: Record<string, string> = {
@@ -82,7 +82,7 @@ const moduleIcons: Record<string, string> = {
   SYSTEME: 'Settings',
   PARAMETRAGE: 'Sliders',
   RAPPORTS: 'BarChart3',
-  COMPTABILITE: 'Calculator',
+  DIRECTOR: 'Calculator',
   LIGNE_CREDIT: 'CreditCard',
   BUDGET: 'Wallet',
 };
@@ -175,7 +175,7 @@ export default function RolesPage() {
   }, {} as Record<string, Permission[]>);
 
   const togglePermission = (permissionId: number) => {
-    if (selectedRole === 'DIRECTION' || selectedRole === 'ADMIN_IT') return;
+    if (selectedRole === 'SUPER_ADMIN' || selectedRole === 'DIRECTOR') return;
 
     const newSelected = new Set(selectedPermissions);
     if (newSelected.has(permissionId)) {
@@ -188,7 +188,7 @@ export default function RolesPage() {
   };
 
   const toggleModule = (module: string) => {
-    if (selectedRole === 'DIRECTION' || selectedRole === 'ADMIN_IT') return;
+    if (selectedRole === 'SUPER_ADMIN' || selectedRole === 'DIRECTOR') return;
 
     const modulePerms = groupedPermissions[module] || [];
     const allSelected = modulePerms.every(p => selectedPermissions.has(p.id));
@@ -229,7 +229,7 @@ export default function RolesPage() {
     }
   }
 
-  const isReadOnlyRole = selectedRole === 'DIRECTION' || selectedRole === 'ADMIN_IT';
+  const isReadOnlyRole = selectedRole === 'SUPER_ADMIN' || selectedRole === 'DIRECTOR';
 
   return (
     <div className="space-y-6">

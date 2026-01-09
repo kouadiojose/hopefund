@@ -6,9 +6,9 @@ import { AppError } from '../middleware/error-handler';
 
 const router = Router();
 
-// All audit routes require authentication and DIRECTION or ADMIN_IT role
+// All audit routes require authentication and SUPER_ADMIN or DIRECTOR role
 router.use(authenticate);
-router.use(authorize('DIRECTION', 'ADMIN_IT'));
+router.use(authorize('SUPER_ADMIN', 'DIRECTOR'));
 
 // ==================== AUDIT LOGS ====================
 

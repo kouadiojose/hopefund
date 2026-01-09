@@ -303,7 +303,7 @@ model User {
   prenom                     String
   telephone                  String?
 
-  role                       UserRole  @default(CAISSIER)
+  role                       UserRole  @default(TELLER)
   id_ag                      Int?      // Agence assignée
 
   is_active                  Boolean   @default(true)
@@ -321,12 +321,11 @@ model User {
 }
 
 enum UserRole {
-  DIRECTION       // Direction - Accès complet
-  ADMIN_IT        // Administrateur IT - Accès complet
-  COMPTABILITE    // Comptabilité
-  CAISSIER        // Caissier
-  AGENT_CREDIT    // Agent de crédit
-  SUPERVISEUR     // Superviseur d'agence
+  SUPER_ADMIN     // Tout accès - Super administrateur
+  DIRECTOR        // Lecture globale + validation
+  BRANCH_MANAGER  // Gestion agence
+  CREDIT_OFFICER  // Gestion crédits
+  TELLER          // Opérations caisse
 }
 
 /// Modules du système

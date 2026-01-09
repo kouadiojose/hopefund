@@ -43,7 +43,7 @@ async function loadPermissions() {
 function getDefaultPermissions(): Map<UserRole, Set<string>> {
   const defaults = new Map<UserRole, Set<string>>();
 
-  // Direction et Admin IT ont accès à tout
+  // Super Admin et Director ont accès à tout
   const allPermissions = new Set([
     'CLIENT_VIEW', 'CLIENT_CREATE', 'CLIENT_EDIT', 'CLIENT_CONSULT',
     'EPARGNE_VIEW', 'EPARGNE_DEPOSIT', 'EPARGNE_WITHDRAWAL', 'EPARGNE_TRANSFER',
@@ -56,40 +56,11 @@ function getDefaultPermissions(): Map<UserRole, Set<string>> {
     'BUDGET_VIEW',
   ]);
 
-  defaults.set(UserRole.DIRECTION, allPermissions);
-  defaults.set(UserRole.ADMIN_IT, allPermissions);
+  defaults.set(UserRole.SUPER_ADMIN, allPermissions);
+  defaults.set(UserRole.DIRECTOR, allPermissions);
 
-  // Comptabilité
-  defaults.set(UserRole.COMPTABILITE, new Set([
-    'CLIENT_VIEW', 'CLIENT_CONSULT',
-    'EPARGNE_VIEW', 'EPARGNE_CONSULT',
-    'CREDIT_VIEW', 'CREDIT_CONSULT',
-    'GUICHET_VIEW', 'GUICHET_VIEW_TRANSACTIONS',
-    'RAPPORTS_VIEW', 'RAPPORTS_CLIENT', 'RAPPORTS_CREDIT',
-    'COMPTA_VIEW', 'COMPTA_OPERATIONS', 'COMPTA_CHART', 'COMPTA_REPORTS',
-    'BUDGET_VIEW', 'BUDGET_MANAGE',
-  ]));
-
-  // Caissier
-  defaults.set(UserRole.CAISSIER, new Set([
-    'CLIENT_VIEW', 'CLIENT_CONSULT', 'CLIENT_CREATE',
-    'EPARGNE_VIEW', 'EPARGNE_DEPOSIT', 'EPARGNE_WITHDRAWAL', 'EPARGNE_CONSULT',
-    'CREDIT_VIEW', 'CREDIT_CONSULT', 'CREDIT_REPAYMENT',
-    'GUICHET_VIEW', 'GUICHET_VIEW_TRANSACTIONS',
-    'RAPPORTS_VIEW',
-  ]));
-
-  // Agent Crédit
-  defaults.set(UserRole.AGENT_CREDIT, new Set([
-    'CLIENT_VIEW', 'CLIENT_CONSULT', 'CLIENT_CREATE', 'CLIENT_EDIT',
-    'EPARGNE_VIEW', 'EPARGNE_CONSULT',
-    'CREDIT_VIEW', 'CREDIT_CONSULT', 'CREDIT_CREATE', 'CREDIT_EDIT', 'CREDIT_SIMULATE',
-    'GUICHET_VIEW',
-    'RAPPORTS_VIEW', 'RAPPORTS_CREDIT',
-  ]));
-
-  // Superviseur
-  defaults.set(UserRole.SUPERVISEUR, new Set([
+  // Branch Manager
+  defaults.set(UserRole.BRANCH_MANAGER, new Set([
     'CLIENT_VIEW', 'CLIENT_CONSULT', 'CLIENT_CREATE', 'CLIENT_EDIT',
     'EPARGNE_VIEW', 'EPARGNE_CONSULT', 'EPARGNE_DEPOSIT', 'EPARGNE_WITHDRAWAL',
     'EPARGNE_WITHDRAWAL_AUTH', 'EPARGNE_BLOCK_ACCOUNT',
@@ -98,6 +69,24 @@ function getDefaultPermissions(): Map<UserRole, Set<string>> {
     'SYSTEME_VIEW', 'SYSTEME_OPEN_AGENCY', 'SYSTEME_CLOSE_AGENCY',
     'PARAM_VIEW', 'PARAM_USERS_VIEW',
     'RAPPORTS_VIEW', 'RAPPORTS_CLIENT', 'RAPPORTS_CREDIT', 'RAPPORTS_AGENCY',
+  ]));
+
+  // Credit Officer
+  defaults.set(UserRole.CREDIT_OFFICER, new Set([
+    'CLIENT_VIEW', 'CLIENT_CONSULT', 'CLIENT_CREATE', 'CLIENT_EDIT',
+    'EPARGNE_VIEW', 'EPARGNE_CONSULT',
+    'CREDIT_VIEW', 'CREDIT_CONSULT', 'CREDIT_CREATE', 'CREDIT_EDIT', 'CREDIT_SIMULATE',
+    'GUICHET_VIEW',
+    'RAPPORTS_VIEW', 'RAPPORTS_CREDIT',
+  ]));
+
+  // Teller (Caissier)
+  defaults.set(UserRole.TELLER, new Set([
+    'CLIENT_VIEW', 'CLIENT_CONSULT', 'CLIENT_CREATE',
+    'EPARGNE_VIEW', 'EPARGNE_DEPOSIT', 'EPARGNE_WITHDRAWAL', 'EPARGNE_CONSULT',
+    'CREDIT_VIEW', 'CREDIT_CONSULT', 'CREDIT_REPAYMENT',
+    'GUICHET_VIEW', 'GUICHET_VIEW_TRANSACTIONS',
+    'RAPPORTS_VIEW',
   ]));
 
   return defaults;
@@ -143,8 +132,8 @@ export function requirePermission(...permissionCodes: string[]) {
 
       const userRole = req.user.role as UserRole;
 
-      // Direction et Admin IT ont accès à tout
-      if (userRole === UserRole.DIRECTION || userRole === UserRole.ADMIN_IT) {
+      // Super Admin et Director ont accès à tout
+      if (userRole === UserRole.SUPER_ADMIN || userRole === UserRole.DIRECTOR) {
         return next();
       }
 
@@ -171,8 +160,8 @@ export function requireModule(moduleCode: string) {
 
       const userRole = req.user.role as UserRole;
 
-      // Direction et Admin IT ont accès à tout
-      if (userRole === UserRole.DIRECTION || userRole === UserRole.ADMIN_IT) {
+      // Super Admin et Director ont accès à tout
+      if (userRole === UserRole.SUPER_ADMIN || userRole === UserRole.DIRECTOR) {
         return next();
       }
 

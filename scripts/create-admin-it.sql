@@ -1,30 +1,39 @@
--- Script pour créer/mettre à jour un utilisateur ADMIN_IT
--- À exécuter sur la base de données PostgreSQL de Hopefund
+-- Script pour créer un utilisateur Super Admin dans Hopefund
+-- À exécuter sur la base de données PostgreSQL
 
--- ============================================================
--- COMPTE ADMIN EXISTANT (de seed.ts):
--- Email: admin@hopefund.com
--- Mot de passe: Admin123!
--- Rôle: DIRECTION ou SUPER_ADMIN (a tous les accès)
--- ============================================================
-
--- Option 1: Créer un nouvel utilisateur ADMIN_IT
--- Le mot de passe 'Admin123!' hashé avec bcrypt (12 rounds)
+-- Créer un utilisateur SUPER_ADMIN si il n'existe pas
+-- Mot de passe: Admin123! (hashé avec bcrypt 12 rounds)
 INSERT INTO app_users (email, password_hash, nom, prenom, role, is_active, created_at, updated_at)
-VALUES (
-  'adminit@hopefund.com',
+SELECT
+  'admin@hopefund.com',
   '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X.nOaJh5VHqBvqOBq',
-  'Admin',
-  'IT',
-  'ADMIN_IT',
+  'Administrateur',
+  'Hopefund',
+  'SUPER_ADMIN',
   true,
   NOW(),
   NOW()
-)
-ON CONFLICT (email) DO UPDATE SET role = 'ADMIN_IT';
+WHERE NOT EXISTS (SELECT 1 FROM app_users WHERE email = 'admin@hopefund.com');
 
--- Option 2: Mettre à jour l'utilisateur admin existant vers ADMIN_IT
--- UPDATE app_users SET role = 'ADMIN_IT' WHERE email = 'admin@hopefund.com';
+-- Si l'utilisateur existe déjà, mettre à jour son rôle
+UPDATE app_users
+SET role = 'SUPER_ADMIN', is_active = true
+WHERE email = 'admin@hopefund.com';
 
--- Vérifier les utilisateurs
-SELECT id, email, nom, prenom, role, is_active FROM app_users ORDER BY id;
+-- Vérifier
+SELECT id, email, nom, prenom, role, is_active FROM app_users WHERE email = 'admin@hopefund.com';
+
+-- ============================================================
+-- INFORMATIONS DE CONNEXION
+-- ============================================================
+-- Email: admin@hopefund.com
+-- Mot de passe: Admin123!
+-- Rôle: SUPER_ADMIN (accès complet)
+--
+-- Rôles disponibles:
+--   SUPER_ADMIN    - Accès complet à tout le système
+--   DIRECTOR       - Lecture globale + validation
+--   BRANCH_MANAGER - Gestion d'agence
+--   CREDIT_OFFICER - Gestion des crédits
+--   TELLER         - Opérations de caisse
+-- ============================================================

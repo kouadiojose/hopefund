@@ -12,7 +12,7 @@ const router = Router();
 
 // All admin routes require authentication and DIRECTION or ADMIN_IT role
 router.use(authenticate);
-router.use(authorize('DIRECTION', 'ADMIN_IT', 'SUPERVISEUR'));
+router.use(authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER'));
 
 // ==================== UTILISATEURS ====================
 
@@ -149,7 +149,7 @@ router.post('/users', async (req, res, next) => {
       nom: z.string().min(1),
       prenom: z.string().min(1),
       telephone: z.string().optional(),
-      role: z.enum(['DIRECTION', 'ADMIN_IT', 'COMPTABILITE', 'CAISSIER', 'AGENT_CREDIT', 'SUPERVISEUR']),
+      role: z.enum(['SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_OFFICER', 'TELLER']),
       id_ag: z.number().optional().nullable(),
     });
 
@@ -210,7 +210,7 @@ router.put('/users/:id', async (req, res, next) => {
       nom: z.string().min(1).optional(),
       prenom: z.string().min(1).optional(),
       telephone: z.string().optional().nullable(),
-      role: z.enum(['DIRECTION', 'ADMIN_IT', 'COMPTABILITE', 'CAISSIER', 'AGENT_CREDIT', 'SUPERVISEUR']).optional(),
+      role: z.enum(['SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_OFFICER', 'TELLER']).optional(),
       id_ag: z.number().optional().nullable(),
       is_active: z.boolean().optional(),
     });
@@ -431,7 +431,7 @@ router.get('/agencies/:id', async (req, res, next) => {
 });
 
 // POST /api/admin/agencies - Créer une agence
-router.post('/agencies', authorize('DIRECTION', 'ADMIN_IT'), async (req, res, next) => {
+router.post('/agencies', authorize('SUPER_ADMIN', 'DIRECTOR'), async (req, res, next) => {
   try {
     const schema = z.object({
       id_ag: z.number(),
@@ -469,7 +469,7 @@ router.post('/agencies', authorize('DIRECTION', 'ADMIN_IT'), async (req, res, ne
 });
 
 // PUT /api/admin/agencies/:id - Modifier une agence
-router.put('/agencies/:id', authorize('DIRECTION', 'ADMIN_IT'), async (req, res, next) => {
+router.put('/agencies/:id', authorize('SUPER_ADMIN', 'DIRECTOR'), async (req, res, next) => {
   try {
     const agencyId = parseInt(req.params.id);
 
@@ -583,40 +583,34 @@ router.get('/stats', async (req, res, next) => {
 router.get('/roles', async (req, res) => {
   const roles = [
     {
-      value: 'DIRECTION',
-      label: 'Direction',
+      value: 'SUPER_ADMIN',
+      label: 'Super Admin',
       description: 'Accès complet à tous les modules du système',
       color: 'purple',
     },
     {
-      value: 'ADMIN_IT',
-      label: 'Admin IT',
-      description: 'Administrateur informatique - Accès complet technique',
+      value: 'DIRECTOR',
+      label: 'Directeur',
+      description: 'Lecture globale et validation des opérations',
       color: 'blue',
     },
     {
-      value: 'COMPTABILITE',
-      label: 'Comptabilité',
-      description: 'Accès comptabilité, rapports et budget',
+      value: 'BRANCH_MANAGER',
+      label: 'Chef d\'Agence',
+      description: 'Gestion complète de l\'agence',
+      color: 'indigo',
+    },
+    {
+      value: 'CREDIT_OFFICER',
+      label: 'Agent de Crédit',
+      description: 'Gestion des dossiers de crédit',
       color: 'green',
     },
     {
-      value: 'CAISSIER',
+      value: 'TELLER',
       label: 'Caissier',
       description: 'Opérations de guichet et caisse',
       color: 'yellow',
-    },
-    {
-      value: 'AGENT_CREDIT',
-      label: 'Agent de Crédit',
-      description: 'Gestion des dossiers de crédit',
-      color: 'orange',
-    },
-    {
-      value: 'SUPERVISEUR',
-      label: 'Superviseur',
-      description: 'Supervision d\'agence et approbations',
-      color: 'red',
     },
   ];
 

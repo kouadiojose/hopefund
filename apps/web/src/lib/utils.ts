@@ -207,24 +207,22 @@ export function getEtatCivilLabel(etat: number | null): string {
 // Rôles utilisateur
 export function getRoleLabel(role: string): string {
   const labels: Record<string, string> = {
-    'DIRECTION': 'Direction',
-    'ADMIN_IT': 'Admin IT',
-    'COMPTABILITE': 'Comptabilité',
-    'CAISSIER': 'Caissier',
-    'AGENT_CREDIT': 'Agent de crédit',
-    'SUPERVISEUR': 'Superviseur',
+    'SUPER_ADMIN': 'Super Admin',
+    'DIRECTOR': 'Directeur',
+    'BRANCH_MANAGER': 'Chef d\'Agence',
+    'CREDIT_OFFICER': 'Agent de crédit',
+    'TELLER': 'Caissier',
   };
   return labels[role] || role;
 }
 
 export function getRoleColor(role: string): string {
   const colors: Record<string, string> = {
-    'DIRECTION': 'bg-purple-100 text-purple-800 border-purple-200',
-    'ADMIN_IT': 'bg-blue-100 text-blue-800 border-blue-200',
-    'SUPERVISEUR': 'bg-indigo-100 text-indigo-800 border-indigo-200',
-    'AGENT_CREDIT': 'bg-green-100 text-green-800 border-green-200',
-    'CAISSIER': 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    'COMPTABILITE': 'bg-orange-100 text-orange-800 border-orange-200',
+    'SUPER_ADMIN': 'bg-purple-100 text-purple-800 border-purple-200',
+    'DIRECTOR': 'bg-blue-100 text-blue-800 border-blue-200',
+    'BRANCH_MANAGER': 'bg-indigo-100 text-indigo-800 border-indigo-200',
+    'CREDIT_OFFICER': 'bg-green-100 text-green-800 border-green-200',
+    'TELLER': 'bg-yellow-100 text-yellow-800 border-yellow-200',
   };
   return colors[role] || 'bg-gray-100 text-gray-800 border-gray-200';
 }

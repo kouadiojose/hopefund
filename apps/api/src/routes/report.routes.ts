@@ -5,7 +5,7 @@ import { authenticate, authorize } from '../middleware/auth';
 const router = Router();
 
 router.use(authenticate);
-router.use(authorize('DIRECTION', 'ADMIN_IT', 'SUPERVISEUR', 'COMPTABILITE'));
+router.use(authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'DIRECTOR'));
 
 // GET /api/reports/dashboard - Tableau de bord général
 router.get('/dashboard', async (req, res, next) => {
@@ -13,7 +13,7 @@ router.get('/dashboard', async (req, res, next) => {
     const agencyId = req.user!.agenceId;
 
     const where: any = {};
-    if (agencyId && !['DIRECTION', 'ADMIN_IT'].includes(req.user!.role)) {
+    if (agencyId && !['SUPER_ADMIN', 'DIRECTOR'].includes(req.user!.role)) {
       where.id_ag = agencyId;
     }
 
@@ -94,7 +94,7 @@ router.get('/portfolio', async (req, res, next) => {
     const agencyId = req.user!.agenceId;
 
     const where: any = { cre_etat: 5 }; // Crédits débloqués
-    if (agencyId && !['DIRECTION', 'ADMIN_IT'].includes(req.user!.role)) {
+    if (agencyId && !['SUPER_ADMIN', 'DIRECTOR'].includes(req.user!.role)) {
       where.id_ag = agencyId;
     }
 

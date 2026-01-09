@@ -46,7 +46,7 @@ const getAccountStatusLabel = (etat: number | null): string => {
 };
 
 // GET /api/clients - Liste des clients avec résumé
-router.get('/', authorize('DIRECTION', 'ADMIN_IT', 'SUPERVISEUR', 'AGENT_CREDIT', 'CAISSIER', 'COMPTABILITE'), async (req, res, next) => {
+router.get('/', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_OFFICER', 'TELLER', 'DIRECTOR'), async (req, res, next) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = Math.min(
@@ -60,7 +60,7 @@ router.get('/', authorize('DIRECTION', 'ADMIN_IT', 'SUPERVISEUR', 'AGENT_CREDIT'
     const where: any = {};
 
     // Filter by agency for non-admin users
-    if (agencyId && !['DIRECTION', 'ADMIN_IT'].includes(req.user!.role)) {
+    if (agencyId && !['SUPER_ADMIN', 'DIRECTOR'].includes(req.user!.role)) {
       where.id_ag = agencyId;
     }
 
@@ -171,7 +171,7 @@ router.get('/:id', async (req, res, next) => {
 
     // Check agency access
     if (req.user!.agenceId &&
-        !['DIRECTION', 'ADMIN_IT'].includes(req.user!.role) &&
+        !['SUPER_ADMIN', 'DIRECTOR'].includes(req.user!.role) &&
         client.id_ag !== req.user!.agenceId) {
       throw new AppError('Access denied', 403);
     }
@@ -535,7 +535,7 @@ router.get('/:id/loans', async (req, res, next) => {
 });
 
 // POST /api/clients - Créer un client
-router.post('/', authorize('DIRECTION', 'ADMIN_IT', 'SUPERVISEUR', 'AGENT_CREDIT', 'CAISSIER'), async (req, res, next) => {
+router.post('/', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_OFFICER', 'TELLER'), async (req, res, next) => {
   try {
     const schema = z.object({
       statut_juridique: z.number().min(1).max(3),
@@ -604,7 +604,7 @@ router.post('/', authorize('DIRECTION', 'ADMIN_IT', 'SUPERVISEUR', 'AGENT_CREDIT
 });
 
 // PUT /api/clients/:id - Modifier un client
-router.put('/:id', authorize('DIRECTION', 'ADMIN_IT', 'SUPERVISEUR', 'AGENT_CREDIT'), async (req, res, next) => {
+router.put('/:id', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_OFFICER'), async (req, res, next) => {
   try {
     const clientId = parseInt(req.params.id);
 

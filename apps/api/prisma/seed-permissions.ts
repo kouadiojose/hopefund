@@ -232,85 +232,14 @@ const permissions = [
 
 // Permissions par rôle (basé sur le document)
 const rolePermissions: Record<UserRole, string[]> = {
-  // DIRECTION - Accès complet à tout
-  [UserRole.DIRECTION]: permissions.map(p => p.code),
+  // SUPER_ADMIN - Accès complet à tout
+  [UserRole.SUPER_ADMIN]: permissions.map(p => p.code),
 
-  // ADMIN_IT - Accès complet à tout (comme Direction)
-  [UserRole.ADMIN_IT]: permissions.map(p => p.code),
+  // DIRECTOR - Accès complet à tout (comme Super Admin)
+  [UserRole.DIRECTOR]: permissions.map(p => p.code),
 
-  // COMPTABILITE - Focus sur comptabilité mais accès lecture aux autres
-  [UserRole.COMPTABILITE]: [
-    // Client - Lecture principalement
-    'CLIENT_VIEW', 'CLIENT_SELECT', 'CLIENT_CONSULT', 'CLIENT_GLOBAL_STATUS', 'CLIENT_STATEMENTS',
-    // Épargne - Lecture et opérations de base
-    'EPARGNE_VIEW', 'EPARGNE_CONSULT', 'EPARGNE_SIMULATE',
-    // Crédit - Lecture
-    'CREDIT_VIEW', 'CREDIT_CONSULT', 'CREDIT_SIMULATE',
-    // Guichet - Lecture
-    'GUICHET_VIEW', 'GUICHET_VIEW_TRANSACTIONS', 'GUICHET_VIEW_ALL_TRANSACTIONS',
-    // Système - Limité
-    'SYSTEME_VIEW', 'SYSTEME_INFO',
-    // Paramétrage - Lecture
-    'PARAM_VIEW', 'PARAM_PASSWORD_SELF',
-    // Rapports - Accès complet
-    'RAPPORTS_VIEW', 'RAPPORTS_CLIENT', 'RAPPORTS_MULTI_AGENCY', 'RAPPORTS_EPARGNE',
-    'RAPPORTS_CHECKBOOK', 'RAPPORTS_CREDIT', 'RAPPORTS_AGENCY', 'RAPPORTS_EXTERNAL',
-    'RAPPORTS_SIMULATE', 'RAPPORTS_PRINTED', 'RAPPORTS_LAST',
-    // Comptabilité - Accès complet
-    ...permissions.filter(p => p.module === ModuleType.COMPTABILITE).map(p => p.code),
-    // Budget - Accès complet
-    ...permissions.filter(p => p.module === ModuleType.BUDGET).map(p => p.code),
-  ],
-
-  // CAISSIER - Opérations de guichet uniquement
-  [UserRole.CAISSIER]: [
-    // Client - Lecture et création
-    'CLIENT_VIEW', 'CLIENT_SELECT', 'CLIENT_CONSULT', 'CLIENT_CREATE', 'CLIENT_FEES',
-    'CLIENT_STATEMENTS', 'CLIENT_GLOBAL_STATUS', 'CLIENT_SHARES',
-    // Épargne - Opérations de base
-    'EPARGNE_VIEW', 'EPARGNE_CONSULT', 'EPARGNE_DEPOSIT', 'EPARGNE_WITHDRAWAL',
-    'EPARGNE_TRANSFER', 'EPARGNE_EXPRESS_DEPOSIT', 'EPARGNE_EXPRESS_WITHDRAWAL',
-    'EPARGNE_WITHDRAWAL_AUTH',
-    // Crédit - Remboursements
-    'CREDIT_VIEW', 'CREDIT_CONSULT', 'CREDIT_REPAYMENT',
-    // Guichet - Opérations de caisse
-    'GUICHET_VIEW', 'GUICHET_VIEW_TRANSACTIONS', 'GUICHET_SUPPLY', 'GUICHET_UNLOAD',
-    'GUICHET_SUPPLY_EXECUTE', 'GUICHET_CHECK_REGISTER', 'GUICHET_BATCH_DEPOSIT',
-    'GUICHET_BATCH_WITHDRAWAL',
-    // Système - Minimal
-    'SYSTEME_VIEW',
-    // Paramétrage - Mot de passe uniquement
-    'PARAM_PASSWORD_SELF',
-    // Rapports - Limité
-    'RAPPORTS_VIEW', 'RAPPORTS_SIMULATE', 'RAPPORTS_LAST',
-  ],
-
-  // AGENT_CREDIT - Gestion des crédits
-  [UserRole.AGENT_CREDIT]: [
-    // Client - Lecture et création
-    'CLIENT_VIEW', 'CLIENT_SELECT', 'CLIENT_CONSULT', 'CLIENT_CREATE', 'CLIENT_EDIT',
-    'CLIENT_RELATIONS', 'CLIENT_STATEMENTS', 'CLIENT_GLOBAL_STATUS',
-    // Épargne - Lecture
-    'EPARGNE_VIEW', 'EPARGNE_CONSULT', 'EPARGNE_SIMULATE',
-    // Crédit - Gestion complète sauf approbation finale
-    'CREDIT_VIEW', 'CREDIT_CREATE', 'CREDIT_CONSULT', 'CREDIT_SIMULATE',
-    'CREDIT_CORRECT', 'CREDIT_EDIT', 'CREDIT_REPAYMENT', 'CREDIT_SCHEDULE_EDIT',
-    'CREDIT_DEFER_REQUEST', 'CREDIT_RESCHEDULE_REQUEST', 'CREDIT_DATE_CHANGE_REQUEST',
-    'CREDIT_SHORTEN_REQUEST', 'CREDIT_EARLY_REPAYMENT',
-    // Guichet - Lecture
-    'GUICHET_VIEW', 'GUICHET_VIEW_TRANSACTIONS',
-    // Système - Minimal
-    'SYSTEME_VIEW',
-    // Paramétrage - Mot de passe uniquement
-    'PARAM_PASSWORD_SELF',
-    // Rapports - Crédit
-    'RAPPORTS_VIEW', 'RAPPORTS_CLIENT', 'RAPPORTS_CREDIT', 'RAPPORTS_SIMULATE',
-    // Ligne de crédit - Consultation
-    'LOC_VIEW',
-  ],
-
-  // SUPERVISEUR - Supervision et approbations
-  [UserRole.SUPERVISEUR]: [
+  // BRANCH_MANAGER - Supervision et approbations
+  [UserRole.BRANCH_MANAGER]: [
     // Client - Gestion complète
     'CLIENT_VIEW', 'CLIENT_SELECT', 'CLIENT_CONSULT', 'CLIENT_CREATE', 'CLIENT_EDIT',
     'CLIENT_RELATIONS', 'CLIENT_SUBSCRIPTIONS', 'CLIENT_DEFECTION', 'CLIENT_SHARES',
@@ -338,8 +267,57 @@ const rolePermissions: Record<UserRole, string[]> = {
     // Rapports - Tous
     'RAPPORTS_VIEW', 'RAPPORTS_CLIENT', 'RAPPORTS_EPARGNE', 'RAPPORTS_CREDIT',
     'RAPPORTS_AGENCY', 'RAPPORTS_SIMULATE', 'RAPPORTS_PRINTED', 'RAPPORTS_LAST',
+    // Comptabilité - Consultation
+    'COMPTA_VIEW', 'COMPTA_CHART', 'COMPTA_REPORTS',
     // Ligne de crédit
     'LOC_VIEW', 'LOC_APPROVE', 'LOC_REJECT',
+  ],
+
+  // CREDIT_OFFICER - Gestion des crédits
+  [UserRole.CREDIT_OFFICER]: [
+    // Client - Lecture et création
+    'CLIENT_VIEW', 'CLIENT_SELECT', 'CLIENT_CONSULT', 'CLIENT_CREATE', 'CLIENT_EDIT',
+    'CLIENT_RELATIONS', 'CLIENT_STATEMENTS', 'CLIENT_GLOBAL_STATUS',
+    // Épargne - Lecture
+    'EPARGNE_VIEW', 'EPARGNE_CONSULT', 'EPARGNE_SIMULATE',
+    // Crédit - Gestion complète sauf approbation finale
+    'CREDIT_VIEW', 'CREDIT_CREATE', 'CREDIT_CONSULT', 'CREDIT_SIMULATE',
+    'CREDIT_CORRECT', 'CREDIT_EDIT', 'CREDIT_REPAYMENT', 'CREDIT_SCHEDULE_EDIT',
+    'CREDIT_DEFER_REQUEST', 'CREDIT_RESCHEDULE_REQUEST', 'CREDIT_DATE_CHANGE_REQUEST',
+    'CREDIT_SHORTEN_REQUEST', 'CREDIT_EARLY_REPAYMENT',
+    // Guichet - Lecture
+    'GUICHET_VIEW', 'GUICHET_VIEW_TRANSACTIONS',
+    // Système - Minimal
+    'SYSTEME_VIEW',
+    // Paramétrage - Mot de passe uniquement
+    'PARAM_PASSWORD_SELF',
+    // Rapports - Crédit
+    'RAPPORTS_VIEW', 'RAPPORTS_CLIENT', 'RAPPORTS_CREDIT', 'RAPPORTS_SIMULATE',
+    // Ligne de crédit - Consultation
+    'LOC_VIEW',
+  ],
+
+  // TELLER - Opérations de guichet uniquement
+  [UserRole.TELLER]: [
+    // Client - Lecture et création
+    'CLIENT_VIEW', 'CLIENT_SELECT', 'CLIENT_CONSULT', 'CLIENT_CREATE', 'CLIENT_FEES',
+    'CLIENT_STATEMENTS', 'CLIENT_GLOBAL_STATUS', 'CLIENT_SHARES',
+    // Épargne - Opérations de base
+    'EPARGNE_VIEW', 'EPARGNE_CONSULT', 'EPARGNE_DEPOSIT', 'EPARGNE_WITHDRAWAL',
+    'EPARGNE_TRANSFER', 'EPARGNE_EXPRESS_DEPOSIT', 'EPARGNE_EXPRESS_WITHDRAWAL',
+    'EPARGNE_WITHDRAWAL_AUTH',
+    // Crédit - Remboursements
+    'CREDIT_VIEW', 'CREDIT_CONSULT', 'CREDIT_REPAYMENT',
+    // Guichet - Opérations de caisse
+    'GUICHET_VIEW', 'GUICHET_VIEW_TRANSACTIONS', 'GUICHET_SUPPLY', 'GUICHET_UNLOAD',
+    'GUICHET_SUPPLY_EXECUTE', 'GUICHET_CHECK_REGISTER', 'GUICHET_BATCH_DEPOSIT',
+    'GUICHET_BATCH_WITHDRAWAL',
+    // Système - Minimal
+    'SYSTEME_VIEW',
+    // Paramétrage - Mot de passe uniquement
+    'PARAM_PASSWORD_SELF',
+    // Rapports - Limité
+    'RAPPORTS_VIEW', 'RAPPORTS_SIMULATE', 'RAPPORTS_LAST',
   ],
 };
 
@@ -385,7 +363,7 @@ async function main() {
     console.log(`✅ Assigned ${rolePerms.length} permissions to ${role}`);
   }
 
-  // Mettre à jour l'utilisateur admin existant avec le rôle DIRECTION
+  // Mettre à jour l'utilisateur admin existant avec le rôle SUPER_ADMIN
   const adminUser = await prisma.user.findFirst({
     where: { email: 'admin@hopefund.com' },
   });
@@ -393,9 +371,9 @@ async function main() {
   if (adminUser) {
     await prisma.user.update({
       where: { id: adminUser.id },
-      data: { role: UserRole.DIRECTION },
+      data: { role: UserRole.SUPER_ADMIN },
     });
-    console.log('✅ Updated admin user to DIRECTION role');
+    console.log('✅ Updated admin user to SUPER_ADMIN role');
   }
 
   console.log('🎉 Permissions seeding completed!');

@@ -30,7 +30,7 @@ const transferSchema = z.object({
 });
 
 // POST /api/transactions/deposit - Dépôt
-router.post('/deposit', authorize('DIRECTION', 'ADMIN_IT', 'SUPERVISEUR', 'CAISSIER'), async (req, res, next) => {
+router.post('/deposit', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'TELLER'), async (req, res, next) => {
   try {
     const { accountId, amount, description } = depositSchema.parse(req.body);
 
@@ -106,7 +106,7 @@ router.post('/deposit', authorize('DIRECTION', 'ADMIN_IT', 'SUPERVISEUR', 'CAISS
 });
 
 // POST /api/transactions/withdraw - Retrait
-router.post('/withdraw', authorize('DIRECTION', 'ADMIN_IT', 'SUPERVISEUR', 'CAISSIER'), async (req, res, next) => {
+router.post('/withdraw', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'TELLER'), async (req, res, next) => {
   try {
     const { accountId, amount, description } = withdrawSchema.parse(req.body);
 
@@ -187,7 +187,7 @@ router.post('/withdraw', authorize('DIRECTION', 'ADMIN_IT', 'SUPERVISEUR', 'CAIS
 });
 
 // POST /api/transactions/transfer - Virement
-router.post('/transfer', authorize('DIRECTION', 'ADMIN_IT', 'SUPERVISEUR', 'CAISSIER'), async (req, res, next) => {
+router.post('/transfer', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'TELLER'), async (req, res, next) => {
   try {
     const { fromAccountId, toAccountId, amount, description } = transferSchema.parse(req.body);
 

@@ -121,7 +121,7 @@ export default function DashboardLayout() {
             ))}
 
             {/* Admin Section */}
-            {user && ['DIRECTION', 'ADMIN_IT', 'SUPERVISEUR'].includes(user.role) && (
+            {user && ['SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER'].includes(user.role) && (
               <>
                 <div className="pt-4 mt-4 border-t">
                   <p className="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-2">

@@ -91,21 +91,19 @@ interface Agency {
 }
 
 const roleColors: Record<string, string> = {
-  DIRECTION: 'bg-purple-100 text-purple-700 border-purple-200',
-  ADMIN_IT: 'bg-blue-100 text-blue-700 border-blue-200',
-  COMPTABILITE: 'bg-green-100 text-green-700 border-green-200',
-  CAISSIER: 'bg-yellow-100 text-yellow-700 border-yellow-200',
-  AGENT_CREDIT: 'bg-orange-100 text-orange-700 border-orange-200',
-  SUPERVISEUR: 'bg-red-100 text-red-700 border-red-200',
+  SUPER_ADMIN: 'bg-purple-100 text-purple-700 border-purple-200',
+  DIRECTOR: 'bg-blue-100 text-blue-700 border-blue-200',
+  BRANCH_MANAGER: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+  CREDIT_OFFICER: 'bg-green-100 text-green-700 border-green-200',
+  TELLER: 'bg-yellow-100 text-yellow-700 border-yellow-200',
 };
 
 const roleLabels: Record<string, string> = {
-  DIRECTION: 'Direction',
-  ADMIN_IT: 'Admin IT',
-  COMPTABILITE: 'Comptabilité',
-  CAISSIER: 'Caissier',
-  AGENT_CREDIT: 'Agent Crédit',
-  SUPERVISEUR: 'Superviseur',
+  SUPER_ADMIN: 'Super Admin',
+  DIRECTOR: 'Directeur',
+  BRANCH_MANAGER: 'Chef d\'Agence',
+  CREDIT_OFFICER: 'Agent Crédit',
+  TELLER: 'Caissier',
 };
 
 export default function UsersPage() {
@@ -125,7 +123,7 @@ export default function UsersPage() {
     nom: '',
     prenom: '',
     telephone: '',
-    role: 'CAISSIER',
+    role: 'TELLER',
     id_ag: null as number | null,
   });
 
@@ -224,7 +222,7 @@ export default function UsersPage() {
       nom: '',
       prenom: '',
       telephone: '',
-      role: 'CAISSIER',
+      role: 'TELLER',
       id_ag: null,
     });
     setFormError(null);

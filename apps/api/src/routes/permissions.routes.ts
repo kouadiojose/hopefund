@@ -9,9 +9,9 @@ import { refreshPermissionCache } from '../middleware/permission.middleware';
 
 const router = Router();
 
-// All permission routes require authentication and DIRECTION or ADMIN_IT role
+// All permission routes require authentication and SUPER_ADMIN or DIRECTOR role
 router.use(authenticate);
-router.use(authorize('DIRECTION', 'ADMIN_IT'));
+router.use(authorize('SUPER_ADMIN', 'DIRECTOR'));
 
 // ==================== PERMISSIONS ====================
 
@@ -70,7 +70,7 @@ router.get('/modules', async (req, res) => {
     { code: 'SYSTEME', label: 'Système', description: 'Administration système', icon: 'Settings' },
     { code: 'PARAMETRAGE', label: 'Paramétrage', description: 'Configuration du système', icon: 'Sliders' },
     { code: 'RAPPORTS', label: 'Rapports', description: 'Génération de rapports', icon: 'BarChart3' },
-    { code: 'COMPTABILITE', label: 'Comptabilité', description: 'Opérations comptables', icon: 'Calculator' },
+    { code: 'DIRECTOR', label: 'Comptabilité', description: 'Opérations comptables', icon: 'Calculator' },
     { code: 'LIGNE_CREDIT', label: 'Ligne de Crédit', description: 'Gestion des lignes de crédit', icon: 'CreditCard' },
     { code: 'BUDGET', label: 'Budget', description: 'Gestion budgétaire', icon: 'Wallet' },
   ];
@@ -241,9 +241,9 @@ router.put('/roles/:role', async (req, res, next) => {
       throw new AppError('Invalid role', 400);
     }
 
-    // Don't allow modifying DIRECTION or ADMIN_IT permissions (they have all)
-    if (role === UserRole.DIRECTION || role === UserRole.ADMIN_IT) {
-      throw new AppError('Cannot modify DIRECTION or ADMIN_IT permissions - they have full access', 400);
+    // Don't allow modifying SUPER_ADMIN or DIRECTOR permissions (they have all)
+    if (role === UserRole.SUPER_ADMIN || role === UserRole.DIRECTOR) {
+      throw new AppError('Cannot modify SUPER_ADMIN or DIRECTOR permissions - they have full access', 400);
     }
 
     const schema = z.object({
@@ -386,8 +386,8 @@ router.get('/matrix', async (req, res, next) => {
       const permIds = new Set(rolePerms.map(rp => rp.permission_id));
 
       for (const perm of permissions) {
-        // DIRECTION and ADMIN_IT have all permissions
-        if (role === UserRole.DIRECTION || role === UserRole.ADMIN_IT) {
+        // SUPER_ADMIN and DIRECTOR have all permissions
+        if (role === UserRole.SUPER_ADMIN || role === UserRole.DIRECTOR) {
           matrix[role][perm.code] = true;
         } else {
           matrix[role][perm.code] = permIds.has(perm.id);
