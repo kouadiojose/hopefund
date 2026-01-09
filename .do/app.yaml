@@ -26,14 +26,19 @@ services:
     routes:
       - path: /api
 
-  # Frontend Web App (Static Site)
+  # Frontend Web App (Docker with nginx)
   - name: web
     github:
       repo: kouadiojose/hopefund
       branch: claude/hopefund-banking-app-M021u
       deploy_on_push: true
+    dockerfile_path: apps/web/Dockerfile
     source_dir: apps/web
-    build_command: npm install && npm run build
-    environment_slug: html
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    http_port: 8080
+    envs:
+      - key: VITE_API_URL
+        value: "/api"
     routes:
       - path: /
