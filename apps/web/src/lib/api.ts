@@ -161,4 +161,53 @@ export const adminApi = {
   getRoles: () => api.get('/admin/roles'),
 };
 
+// Permissions
+export const permissionsApi = {
+  // Permissions
+  getAll: (params?: { module?: string; search?: string }) =>
+    api.get('/permissions', { params }),
+  getModules: () => api.get('/permissions/modules'),
+  getById: (id: number) => api.get(`/permissions/${id}`),
+  create: (data: any) => api.post('/permissions', data),
+  update: (id: number, data: any) => api.put(`/permissions/${id}`, data),
+  delete: (id: number) => api.delete(`/permissions/${id}`),
+
+  // Role Permissions
+  getRolePermissions: (role: string) => api.get(`/permissions/roles/${role}`),
+  setRolePermissions: (role: string, permissionIds: number[]) =>
+    api.put(`/permissions/roles/${role}`, { permissionIds }),
+  addPermissionToRole: (role: string, permissionId: number) =>
+    api.post(`/permissions/roles/${role}/add`, { permissionId }),
+  removePermissionFromRole: (role: string, permissionId: number) =>
+    api.delete(`/permissions/roles/${role}/remove/${permissionId}`),
+
+  // Matrix
+  getMatrix: () => api.get('/permissions/matrix'),
+};
+
+// Audit
+export const auditApi = {
+  getLogs: (params?: {
+    page?: number;
+    limit?: number;
+    userId?: number;
+    action?: string;
+    entity?: string;
+    startDate?: string;
+    endDate?: string;
+  }) => api.get('/audit', { params }),
+  getStats: (days?: number) => api.get('/audit/stats', { params: { days } }),
+  getActions: () => api.get('/audit/actions'),
+  getEntities: () => api.get('/audit/entities'),
+  getEntityHistory: (entity: string, id: string) => api.get(`/audit/entity/${entity}/${id}`),
+  getUserActivity: (userId: number, params?: { page?: number; limit?: number }) =>
+    api.get(`/audit/user/${userId}`, { params }),
+
+  // Sessions
+  getSessions: (params?: { page?: number; limit?: number; activeOnly?: boolean }) =>
+    api.get('/audit/sessions', { params }),
+  invalidateSession: (id: string) => api.delete(`/audit/sessions/${id}`),
+  invalidateUserSessions: (userId: number) => api.delete(`/audit/sessions/user/${userId}`),
+};
+
 export default api;

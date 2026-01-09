@@ -14,6 +14,8 @@ import transactionRoutes from './routes/transaction.routes';
 import loanRoutes from './routes/loan.routes';
 import reportRoutes from './routes/report.routes';
 import adminRoutes from './routes/admin.routes';
+import permissionsRoutes from './routes/permissions.routes';
+import auditRoutes from './routes/audit.routes';
 
 const app = express();
 
@@ -56,6 +58,8 @@ app.use('/transactions', transactionRoutes);
 app.use('/loans', loanRoutes);
 app.use('/reports', reportRoutes);
 app.use('/admin', adminRoutes);
+app.use('/permissions', permissionsRoutes);
+app.use('/audit', auditRoutes);
 
 // Routes with /api prefix (direct access)
 app.use('/api/auth', authRoutes);
@@ -65,6 +69,8 @@ app.use('/api/transactions', transactionRoutes);
 app.use('/api/loans', loanRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/permissions', permissionsRoutes);
+app.use('/api/audit', auditRoutes);
 
 // Error handling
 app.use(errorHandler);

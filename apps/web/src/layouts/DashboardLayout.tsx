@@ -17,6 +17,8 @@ import {
   ChevronDown,
   Shield,
   UserCog,
+  Lock,
+  Activity,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth';
@@ -33,6 +35,8 @@ const navigation = [
 
 const adminNavigation = [
   { name: 'Utilisateurs', href: '/admin/users', icon: UserCog },
+  { name: 'Rôles & Permissions', href: '/admin/roles', icon: Lock },
+  { name: 'Journal d\'audit', href: '/admin/audit', icon: Activity },
 ];
 
 const bottomNavigation = [

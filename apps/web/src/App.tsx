@@ -22,6 +22,8 @@ import SettingsPage from '@/pages/settings/SettingsPage';
 
 // Admin Pages
 import UsersPage from '@/pages/admin/UsersPage';
+import RolesPage from '@/pages/admin/RolesPage';
+import AuditLogsPage from '@/pages/admin/AuditLogsPage';
 
 // Protected Route Component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -64,6 +66,8 @@ function App() {
 
         {/* Admin Routes */}
         <Route path="/admin/users" element={<UsersPage />} />
+        <Route path="/admin/roles" element={<RolesPage />} />
+        <Route path="/admin/audit" element={<AuditLogsPage />} />
       </Route>
 
       {/* 404 */}
