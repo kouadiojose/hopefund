@@ -137,4 +137,28 @@ export const reportsApi = {
     api.get('/reports/transactions', { params }),
 };
 
+// Admin
+export const adminApi = {
+  // Users
+  getUsers: (params?: { page?: number; limit?: number; search?: string; role?: string; agencyId?: number }) =>
+    api.get('/admin/users', { params }),
+  getUserById: (id: number) => api.get(`/admin/users/${id}`),
+  createUser: (data: any) => api.post('/admin/users', data),
+  updateUser: (id: number, data: any) => api.put(`/admin/users/${id}`, data),
+  deleteUser: (id: number) => api.delete(`/admin/users/${id}`),
+  unlockUser: (id: number) => api.post(`/admin/users/${id}/unlock`),
+  resetPassword: (id: number, newPassword: string) =>
+    api.post(`/admin/users/${id}/reset-password`, { newPassword }),
+
+  // Agencies
+  getAgencies: () => api.get('/admin/agencies'),
+  getAgencyById: (id: number) => api.get(`/admin/agencies/${id}`),
+  createAgency: (data: any) => api.post('/admin/agencies', data),
+  updateAgency: (id: number, data: any) => api.put(`/admin/agencies/${id}`, data),
+
+  // Stats & Roles
+  getStats: () => api.get('/admin/stats'),
+  getRoles: () => api.get('/admin/roles'),
+};
+
 export default api;
