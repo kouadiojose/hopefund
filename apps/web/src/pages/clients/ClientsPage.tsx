@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -39,10 +40,9 @@ import { clientsApi } from '@/lib/api';
 import { formatDate, getInitials } from '@/lib/utils';
 
 export default function ClientsPage() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [_selectedClient, setSelectedClient] = useState<any>(null);
 
   const { data: clientsData, isLoading } = useQuery({
     queryKey: ['clients', page, search],
@@ -215,7 +215,8 @@ export default function ClientsPage() {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
                         transition={{ delay: index * 0.05 }}
-                        className="group hover:bg-gray-50"
+                        className="group hover:bg-gray-50 cursor-pointer"
+                        onClick={() => navigate(`/clients/${client.id_client}`)}
                       >
                         <TableCell>
                           <div className="flex items-center gap-3">
@@ -266,13 +267,20 @@ export default function ClientsPage() {
                         <TableCell className="text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
-                                onClick={() => setSelectedClient(client)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/clients/${client.id_client}`);
+                                }}
                                 className="gap-2"
                               >
                                 <Eye className="h-4 w-4" />
