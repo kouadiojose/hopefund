@@ -177,77 +177,101 @@ router.get('/:id', async (req, res, next) => {
     }
 
     // Fetch accounts separately to avoid relation issues
-    const comptes = await prisma.compte.findMany({
-      where: { id_titulaire: clientId },
-      orderBy: { date_creation: 'desc' },
-    });
+    let comptes: any[] = [];
+    try {
+      comptes = await prisma.compte.findMany({
+        where: { id_titulaire: clientId },
+        orderBy: { date_creation: 'desc' },
+      });
+      logger.info(`Found ${comptes.length} accounts for client ${clientId}`);
+    } catch (err) {
+      logger.error('Error fetching accounts:', err);
+      comptes = [];
+    }
 
     // Fetch movements for each account
     const comptesWithMovements = await Promise.all(
-      comptes.map(async (compte) => {
-        const mouvements = await prisma.mouvement.findMany({
-          where: { cpte_interne_cli: compte.id_cpte },
-          take: 5,
-          orderBy: { date_mvt: 'desc' },
-        });
-        return { ...compte, mouvements };
+      comptes.map(async (compte: any) => {
+        try {
+          const mouvements = await prisma.mouvement.findMany({
+            where: { cpte_interne_cli: compte.id_cpte },
+            take: 5,
+            orderBy: { date_mvt: 'desc' },
+          });
+          return { ...compte, mouvements };
+        } catch (err) {
+          logger.error(`Error fetching movements for account ${compte.id_cpte}:`, err);
+          return { ...compte, mouvements: [] };
+        }
       })
     );
 
     // Fetch credits separately
-    const dossiers_credit = await prisma.dossierCredit.findMany({
-      where: { id_client: clientId },
-      orderBy: { date_creation: 'desc' },
-    });
+    let dossiers_credit: any[] = [];
+    try {
+      dossiers_credit = await prisma.dossierCredit.findMany({
+        where: { id_client: clientId },
+        orderBy: { date_creation: 'desc' },
+      });
+      logger.info(`Found ${dossiers_credit.length} credits for client ${clientId}`);
+    } catch (err) {
+      logger.error('Error fetching credits:', err);
+      dossiers_credit = [];
+    }
 
     // Fetch echeances and garanties for each credit
     const creditsWithDetails = await Promise.all(
-      dossiers_credit.map(async (dossier) => {
-        const [echeances, garanties] = await Promise.all([
-          prisma.echeance.findMany({
-            where: { id_doss: dossier.id_doss },
-            orderBy: { num_ech: 'asc' },
-          }),
-          prisma.garantie.findMany({
-            where: { id_doss: dossier.id_doss },
-          }),
-        ]);
-        return { ...dossier, echeances, garanties };
+      dossiers_credit.map(async (dossier: any) => {
+        try {
+          const [echeances, garanties] = await Promise.all([
+            prisma.echeance.findMany({
+              where: { id_doss: dossier.id_doss },
+              orderBy: { num_ech: 'asc' },
+            }),
+            prisma.garantie.findMany({
+              where: { id_doss: dossier.id_doss },
+            }),
+          ]);
+          return { ...dossier, echeances, garanties };
+        } catch (err) {
+          logger.error(`Error fetching details for credit ${dossier.id_doss}:`, err);
+          return { ...dossier, echeances: [], garanties: [] };
+        }
       })
     );
 
     // Calculer les statistiques
-    const totalSolde = comptesWithMovements.reduce((sum, c) => sum + toNumber(c.solde), 0);
-    const totalBloques = comptesWithMovements.reduce((sum, c) => sum + toNumber(c.mnt_bloq), 0);
+    const totalSolde = comptesWithMovements.reduce((sum: number, c: any) => sum + toNumber(c.solde), 0);
+    const totalBloques = comptesWithMovements.reduce((sum: number, c: any) => sum + toNumber(c.mnt_bloq), 0);
     const soldeDisponible = totalSolde - totalBloques;
 
-    const creditsEnCours = creditsWithDetails.filter(d => [5, 6, 8].includes(d.cre_etat || 0));
-    const totalCapitalRestant = creditsEnCours.reduce((sum, d) => {
-      const echeancesNonPayees = d.echeances.filter(e => e.etat !== 2);
-      return sum + echeancesNonPayees.reduce((s, e) => s + toNumber(e.solde_capital), 0);
+    const creditsEnCours = creditsWithDetails.filter((d: any) => [5, 6, 8].includes(d.cre_etat || 0));
+    const totalCapitalRestant = creditsEnCours.reduce((sum: number, d: any) => {
+      const echeancesNonPayees = (d.echeances || []).filter((e: any) => e.etat !== 2);
+      return sum + echeancesNonPayees.reduce((s: number, e: any) => s + toNumber(e.solde_capital), 0);
     }, 0);
 
     // Échéances en retard
     const today = new Date();
-    const echeancesEnRetard = creditsWithDetails.flatMap(d =>
-      d.echeances.filter(e =>
+    const echeancesEnRetard = creditsWithDetails.flatMap((d: any) =>
+      (d.echeances || []).filter((e: any) =>
         e.etat !== 2 && e.date_ech && new Date(e.date_ech) < today
       )
     );
-    const montantEnRetard = echeancesEnRetard.reduce((sum, e) =>
+    const montantEnRetard = echeancesEnRetard.reduce((sum: number, e: any) =>
       sum + toNumber(e.solde_capital) + toNumber(e.solde_int), 0
     );
 
     // Prochaines échéances
-    const prochainesEcheances = creditsWithDetails.flatMap(d =>
-      d.echeances
-        .filter(e => e.etat !== 2 && e.date_ech && new Date(e.date_ech) >= today)
-        .map(e => ({
+    const prochainesEcheances = creditsWithDetails.flatMap((d: any) =>
+      (d.echeances || [])
+        .filter((e: any) => e.etat !== 2 && e.date_ech && new Date(e.date_ech) >= today)
+        .map((e: any) => ({
           ...e,
           id_doss: d.id_doss,
           montant_total: toNumber(e.mnt_capital) + toNumber(e.mnt_int),
         }))
-    ).sort((a, b) => new Date(a.date_ech!).getTime() - new Date(b.date_ech!).getTime())
+    ).sort((a: any, b: any) => new Date(a.date_ech!).getTime() - new Date(b.date_ech!).getTime())
     .slice(0, 5);
 
     res.json({
@@ -299,7 +323,7 @@ router.get('/:id', async (req, res, next) => {
         total_bloques: totalBloques,
         solde_disponible: soldeDisponible,
         nombre_comptes: comptesWithMovements.length,
-        comptes_actifs: comptesWithMovements.filter(c => c.etat_cpte === 1).length,
+        comptes_actifs: comptesWithMovements.filter((c: any) => c.etat_cpte === 1).length,
         nombre_credits: creditsWithDetails.length,
         credits_en_cours: creditsEnCours.length,
         capital_restant: totalCapitalRestant,
@@ -308,7 +332,7 @@ router.get('/:id', async (req, res, next) => {
       },
 
       // Comptes avec dernières transactions
-      comptes: comptesWithMovements.map(c => ({
+      comptes: comptesWithMovements.map((c: any) => ({
         id_cpte: c.id_cpte,
         num_complet_cpte: c.num_complet_cpte,
         intitule_compte: c.intitule_compte,
@@ -320,7 +344,7 @@ router.get('/:id', async (req, res, next) => {
         etat_label: getAccountStatusLabel(c.etat_cpte),
         date_ouvert: c.date_ouvert,
         tx_interet_cpte: c.tx_interet_cpte,
-        dernieres_transactions: c.mouvements.map(m => ({
+        dernieres_transactions: (c.mouvements || []).map((m: any) => ({
           id: m.id_mouvement,
           date: m.date_mvt,
           type: m.type_mvt,
@@ -332,11 +356,11 @@ router.get('/:id', async (req, res, next) => {
       })),
 
       // Crédits avec échéancier
-      credits: creditsWithDetails.map(d => {
-        const echeancesNonPayees = d.echeances.filter(e => e.etat !== 2);
-        const capitalRestant = echeancesNonPayees.reduce((s, e) => s + toNumber(e.solde_capital), 0);
-        const interetsRestants = echeancesNonPayees.reduce((s, e) => s + toNumber(e.solde_int), 0);
-        const echeancesEnRetardCredit = d.echeances.filter(e =>
+      credits: creditsWithDetails.map((d: any) => {
+        const echeancesNonPayees = (d.echeances || []).filter((e: any) => e.etat !== 2);
+        const capitalRestant = echeancesNonPayees.reduce((s: number, e: any) => s + toNumber(e.solde_capital), 0);
+        const interetsRestants = echeancesNonPayees.reduce((s: number, e: any) => s + toNumber(e.solde_int), 0);
+        const echeancesEnRetardCredit = (d.echeances || []).filter((e: any) =>
           e.etat !== 2 && e.date_ech && new Date(e.date_ech) < today
         );
 
@@ -364,15 +388,15 @@ router.get('/:id', async (req, res, next) => {
           capital_restant: capitalRestant,
           interets_restants: interetsRestants,
           total_restant: capitalRestant + interetsRestants,
-          echeances_payees: d.echeances.filter(e => e.etat === 2).length,
+          echeances_payees: (d.echeances || []).filter((e: any) => e.etat === 2).length,
           echeances_restantes: echeancesNonPayees.length,
           echeances_en_retard: echeancesEnRetardCredit.length,
-          montant_en_retard: echeancesEnRetardCredit.reduce((s, e) =>
+          montant_en_retard: echeancesEnRetardCredit.reduce((s: number, e: any) =>
             s + toNumber(e.solde_capital) + toNumber(e.solde_int), 0
           ),
 
           // Garanties
-          garanties: d.garanties.map(g => ({
+          garanties: (d.garanties || []).map((g: any) => ({
             id: g.id_gar,
             type: g.type_gar,
             description: g.description,
@@ -381,7 +405,7 @@ router.get('/:id', async (req, res, next) => {
           })),
 
           // Échéancier complet
-          echeancier: d.echeances.map(e => ({
+          echeancier: (d.echeances || []).map((e: any) => ({
             num_ech: e.num_ech,
             date_ech: e.date_ech,
             mnt_capital: toNumber(e.mnt_capital),
