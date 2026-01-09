@@ -35,12 +35,24 @@ app.use(limiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Health check
+// Health check (both with and without /api prefix)
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
 
-// API routes
+// API routes - support both with and without /api prefix for flexibility
+// Routes without /api prefix (when DigitalOcean strips it)
+app.use('/auth', authRoutes);
+app.use('/clients', clientRoutes);
+app.use('/accounts', accountRoutes);
+app.use('/transactions', transactionRoutes);
+app.use('/loans', loanRoutes);
+app.use('/reports', reportRoutes);
+
+// Routes with /api prefix (direct access)
 app.use('/api/auth', authRoutes);
 app.use('/api/clients', clientRoutes);
 app.use('/api/accounts', accountRoutes);
