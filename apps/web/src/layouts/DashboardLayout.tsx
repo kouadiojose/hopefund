@@ -15,6 +15,8 @@ import {
   Bell,
   Search,
   ChevronDown,
+  Shield,
+  UserCog,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth';
@@ -27,6 +29,10 @@ const navigation = [
   { name: 'Transactions', href: '/transactions', icon: ArrowLeftRight },
   { name: 'Crédits', href: '/loans', icon: FileText },
   { name: 'Rapports', href: '/reports', icon: BarChart3 },
+];
+
+const adminNavigation = [
+  { name: 'Utilisateurs', href: '/admin/users', icon: UserCog },
 ];
 
 const bottomNavigation = [
@@ -109,6 +115,21 @@ export default function DashboardLayout() {
             {navigation.map((item) => (
               <NavItem key={item.name} item={item} />
             ))}
+
+            {/* Admin Section */}
+            {user && ['DIRECTION', 'ADMIN_IT', 'SUPERVISEUR'].includes(user.role) && (
+              <>
+                <div className="pt-4 mt-4 border-t">
+                  <p className="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                    <Shield className="h-3 w-3" />
+                    Administration
+                  </p>
+                  {adminNavigation.map((item) => (
+                    <NavItem key={item.name} item={item} />
+                  ))}
+                </div>
+              </>
+            )}
           </nav>
 
           {/* Bottom navigation */}

@@ -20,6 +20,9 @@ import LoanDetailPage from '@/pages/loans/LoanDetailPage';
 import ReportsPage from '@/pages/reports/ReportsPage';
 import SettingsPage from '@/pages/settings/SettingsPage';
 
+// Admin Pages
+import UsersPage from '@/pages/admin/UsersPage';
+
 // Protected Route Component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore();
@@ -58,6 +61,9 @@ function App() {
         <Route path="/loans/:id" element={<LoanDetailPage />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+
+        {/* Admin Routes */}
+        <Route path="/admin/users" element={<UsersPage />} />
       </Route>
 
       {/* 404 */}
