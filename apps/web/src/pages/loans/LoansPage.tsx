@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import {
@@ -43,6 +44,7 @@ import { loansApi } from '@/lib/api';
 import { formatCurrency, formatDate, cn } from '@/lib/utils';
 
 export default function LoansPage() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -282,7 +284,8 @@ export default function LoansPage() {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.05 }}
-                      className="group hover:bg-gray-50"
+                      className="group hover:bg-gray-50 cursor-pointer"
+                      onClick={() => navigate(`/loans/${loan.id_doss}`)}
                     >
                       <TableCell>
                         <div>
@@ -328,16 +331,32 @@ export default function LoansPage() {
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => e.stopPropagation()}
+                            >
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem className="gap-2">
+                            <DropdownMenuItem
+                              className="gap-2"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/loans/${loan.id_doss}`);
+                              }}
+                            >
                               <Eye className="h-4 w-4" />
                               Voir détails
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="gap-2">
+                            <DropdownMenuItem
+                              className="gap-2"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/loans/${loan.id_doss}`);
+                              }}
+                            >
                               <FileText className="h-4 w-4" />
                               Échéancier
                             </DropdownMenuItem>

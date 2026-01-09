@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import {
@@ -39,6 +40,7 @@ import { accountsApi } from '@/lib/api';
 import { formatCurrency, formatDate, cn } from '@/lib/utils';
 
 export default function AccountsPage() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
 
@@ -230,7 +232,8 @@ export default function AccountsPage() {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.05 }}
-                        className="group hover:bg-gray-50"
+                        className="group hover:bg-gray-50 cursor-pointer"
+                        onClick={() => navigate(`/accounts/${account.id_cpte}`)}
                       >
                         <TableCell>
                           <div className="flex items-center gap-3">
@@ -282,12 +285,22 @@ export default function AccountsPage() {
                         <TableCell className="text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem className="gap-2">
+                              <DropdownMenuItem
+                                className="gap-2"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/accounts/${account.id_cpte}`);
+                                }}
+                              >
                                 <Eye className="h-4 w-4" />
                                 Voir détails
                               </DropdownMenuItem>
