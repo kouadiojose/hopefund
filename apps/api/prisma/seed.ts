@@ -17,7 +17,7 @@ async function main() {
       password_hash: hashedPassword,
       nom: 'Administrateur',
       prenom: 'Hopefund',
-      role: 'SUPER_ADMIN',
+      role: 'DIRECTION',
       is_active: true,
     },
   });

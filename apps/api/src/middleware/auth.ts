@@ -86,8 +86,8 @@ export const authorizeAgency = (
     return next(new AppError('Authentication required', 401));
   }
 
-  // Super admins and directors can access all agencies
-  if (['SUPER_ADMIN', 'DIRECTOR'].includes(req.user.role)) {
+  // Direction and Admin IT can access all agencies
+  if (['DIRECTION', 'ADMIN_IT'].includes(req.user.role)) {
     return next();
   }
 

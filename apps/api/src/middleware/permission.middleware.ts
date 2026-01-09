@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { PrismaClient, UserRole } from '@prisma/client';
-import { AppError } from './error.middleware';
+import { AppError } from './error-handler';
 
 const prisma = new PrismaClient();
 

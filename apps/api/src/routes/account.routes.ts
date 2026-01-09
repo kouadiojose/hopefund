@@ -9,7 +9,7 @@ const router = Router();
 router.use(authenticate);
 
 // GET /api/accounts - Liste des comptes
-router.get('/', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_OFFICER', 'TELLER'), async (req, res, next) => {
+router.get('/', authorize('DIRECTION', 'ADMIN_IT', 'SUPERVISEUR', 'AGENT_CREDIT', 'CAISSIER', 'COMPTABILITE'), async (req, res, next) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = Math.min(
@@ -21,7 +21,7 @@ router.get('/', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_O
 
     const where: any = {};
 
-    if (req.user!.agenceId && !['SUPER_ADMIN', 'DIRECTOR'].includes(req.user!.role)) {
+    if (req.user!.agenceId && !['DIRECTION', 'ADMIN_IT'].includes(req.user!.role)) {
       where.id_ag = req.user!.agenceId;
     }
 
@@ -191,7 +191,7 @@ router.get('/:id/transactions', async (req, res, next) => {
 });
 
 // POST /api/accounts/:id/block - Bloquer un compte
-router.post('/:id/block', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER'), async (req, res, next) => {
+router.post('/:id/block', authorize('DIRECTION', 'ADMIN_IT', 'SUPERVISEUR'), async (req, res, next) => {
   try {
     const accountId = parseInt(req.params.id);
     const { raison } = req.body;
@@ -221,7 +221,7 @@ router.post('/:id/block', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER')
 });
 
 // POST /api/accounts/:id/unblock - Débloquer un compte
-router.post('/:id/unblock', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER'), async (req, res, next) => {
+router.post('/:id/unblock', authorize('DIRECTION', 'ADMIN_IT', 'SUPERVISEUR'), async (req, res, next) => {
   try {
     const accountId = parseInt(req.params.id);
 
