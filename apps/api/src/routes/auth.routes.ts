@@ -38,14 +38,18 @@ const generateTokens = async (user: { id: number; email: string; role: any; id_a
   const refreshExpiresAt = new Date();
   refreshExpiresAt.setDate(refreshExpiresAt.getDate() + 7); // 7 days
 
-  // Store refresh token
-  await prisma.session.create({
-    data: {
-      user_id: user.id,
-      refresh_token: refreshToken,
-      expires_at: refreshExpiresAt,
-    },
-  });
+  // Store refresh token (with error handling for missing table)
+  try {
+    await prisma.session.create({
+      data: {
+        user_id: user.id,
+        refresh_token: refreshToken,
+        expires_at: refreshExpiresAt,
+      },
+    });
+  } catch (err) {
+    logger.warn('Could not store session - table may not exist');
+  }
 
   return { accessToken, refreshToken };
 };
@@ -111,17 +115,21 @@ router.post('/login', async (req, res, next) => {
     // Generate tokens
     const tokens = await generateTokens(user);
 
-    // Log audit
-    await prisma.auditLog.create({
-      data: {
-        user_id: user.id,
-        action: 'LOGIN',
-        entity: 'User',
-        entity_id: user.id.toString(),
-        ip_address: req.ip || null,
-        user_agent: req.headers['user-agent'] as string | undefined,
-      },
-    });
+    // Log audit (with error handling for missing table)
+    try {
+      await prisma.auditLog.create({
+        data: {
+          user_id: user.id,
+          action: 'LOGIN',
+          entity: 'User',
+          entity_id: user.id.toString(),
+          ip_address: req.ip || null,
+          user_agent: req.headers['user-agent'] as string | undefined,
+        },
+      });
+    } catch (err) {
+      logger.warn('Could not log audit - table may not exist');
+    }
 
     logger.info(`User ${email} logged in successfully`);
 
