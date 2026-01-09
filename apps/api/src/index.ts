@@ -16,6 +16,9 @@ import reportRoutes from './routes/report.routes';
 
 const app = express();
 
+// Trust proxy (required for DigitalOcean/reverse proxy)
+app.set('trust proxy', 1);
+
 // Security middleware
 app.use(helmet());
 app.use(cors({
