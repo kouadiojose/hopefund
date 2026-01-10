@@ -3,29 +3,20 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Shield,
-  Users,
   Lock,
   Check,
-  X,
   ChevronDown,
   ChevronRight,
   Save,
   RefreshCw,
   Search,
   Info,
-  AlertCircle,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
 import {
   Alert,
   AlertDescription,
@@ -36,7 +27,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { adminApi, permissionsApi } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
@@ -68,24 +58,11 @@ interface Module {
 const roleColors: Record<string, string> = {
   SUPER_ADMIN: 'bg-purple-100 text-purple-700 border-purple-200',
   DIRECTOR: 'bg-blue-100 text-blue-700 border-blue-200',
-  DIRECTOR: 'bg-green-100 text-green-700 border-green-200',
+  BRANCH_MANAGER: 'bg-green-100 text-green-700 border-green-200',
   TELLER: 'bg-yellow-100 text-yellow-700 border-yellow-200',
   CREDIT_OFFICER: 'bg-orange-100 text-orange-700 border-orange-200',
-  BRANCH_MANAGER: 'bg-red-100 text-red-700 border-red-200',
 };
 
-const moduleIcons: Record<string, string> = {
-  CLIENT: 'Users',
-  EPARGNE: 'PiggyBank',
-  CREDIT: 'FileText',
-  GUICHET: 'Receipt',
-  SYSTEME: 'Settings',
-  PARAMETRAGE: 'Sliders',
-  RAPPORTS: 'BarChart3',
-  DIRECTOR: 'Calculator',
-  LIGNE_CREDIT: 'CreditCard',
-  BUDGET: 'Wallet',
-};
 
 export default function RolesPage() {
   const queryClient = useQueryClient();
@@ -222,7 +199,7 @@ export default function RolesPage() {
 
   // Update selected permissions when role permissions data changes
   if (rolePermissionsData?.permissions && !hasChanges) {
-    const currentIds = new Set(rolePermissionsData.permissions.map((p: Permission) => p.id));
+    const currentIds = new Set<number>(rolePermissionsData.permissions.map((p: Permission) => p.id));
     if (selectedPermissions.size !== currentIds.size ||
         ![...selectedPermissions].every(id => currentIds.has(id))) {
       setSelectedPermissions(currentIds);
@@ -401,7 +378,7 @@ export default function RolesPage() {
                               indeterminate={someSelected}
                               onCheckedChange={() => toggleModule(module)}
                               disabled={isReadOnlyRole}
-                              onClick={(e) => e.stopPropagation()}
+                              onClick={(e: React.MouseEvent) => e.stopPropagation()}
                             />
                             <div>
                               <p className="font-medium text-gray-900 text-left">

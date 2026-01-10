@@ -1,10 +1,7 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import {
-  Search,
-  Filter,
-  Calendar,
   User,
   Activity,
   Clock,
@@ -14,9 +11,7 @@ import {
   ChevronRight,
   RefreshCw,
   Eye,
-  Download,
   X,
-  Smartphone,
   Globe,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -46,14 +41,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { auditApi, adminApi } from '@/lib/api';
 import { formatDate, cn } from '@/lib/utils';
@@ -136,7 +123,6 @@ const actionLabels: Record<string, string> = {
 };
 
 export default function AuditLogsPage() {
-  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState({
     action: '',

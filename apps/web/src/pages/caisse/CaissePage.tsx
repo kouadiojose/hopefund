@@ -10,7 +10,6 @@ import {
   XCircle,
   Banknote,
   Coins,
-  Calculator,
   FileText,
   AlertTriangle,
   RefreshCw,
