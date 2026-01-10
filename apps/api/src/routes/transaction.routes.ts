@@ -9,44 +9,71 @@ const router = Router();
 
 router.use(authenticate);
 
-// Schémas de validation
+// Schémas de validation - accepte accountId (numérique) ou accountNumber (string)
 const depositSchema = z.object({
-  accountId: z.number(),
+  accountId: z.number().optional(),
+  accountNumber: z.string().optional(),
   amount: z.number().positive(),
   description: z.string().optional(),
+}).refine(data => data.accountId !== undefined || data.accountNumber, {
+  message: "accountId ou accountNumber est requis",
 });
 
 const withdrawSchema = z.object({
-  accountId: z.number(),
+  accountId: z.number().optional(),
+  accountNumber: z.string().optional(),
   amount: z.number().positive(),
   description: z.string().optional(),
+}).refine(data => data.accountId !== undefined || data.accountNumber, {
+  message: "accountId ou accountNumber est requis",
 });
 
 const transferSchema = z.object({
-  fromAccountId: z.number(),
-  toAccountId: z.number(),
+  fromAccountId: z.number().optional(),
+  fromAccountNumber: z.string().optional(),
+  toAccountId: z.number().optional(),
+  toAccountNumber: z.string().optional(),
   amount: z.number().positive(),
   description: z.string().optional(),
+}).refine(data => (data.fromAccountId !== undefined || data.fromAccountNumber) &&
+                   (data.toAccountId !== undefined || data.toAccountNumber), {
+  message: "Les comptes source et destination sont requis",
 });
+
+// Helper pour trouver un compte par ID ou numéro
+async function findAccount(tx: any, accountId?: number, accountNumber?: string) {
+  if (accountId !== undefined) {
+    return tx.compte.findUnique({ where: { id_cpte: accountId } });
+  }
+  if (accountNumber) {
+    return tx.compte.findFirst({
+      where: {
+        OR: [
+          { num_complet_cpte: accountNumber },
+          { num_cpte: accountNumber }
+        ]
+      }
+    });
+  }
+  return null;
+}
 
 // POST /api/transactions/deposit - Dépôt
 router.post('/deposit', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'TELLER'), async (req, res, next) => {
   try {
-    const { accountId, amount, description } = depositSchema.parse(req.body);
+    const { accountId, accountNumber, amount, description } = depositSchema.parse(req.body);
 
     // Transaction atomique
     const result = await prisma.$transaction(async (tx) => {
-      // Récupérer le compte
-      const account = await tx.compte.findUnique({
-        where: { id_cpte: accountId },
-      });
+      // Récupérer le compte par ID ou numéro
+      const account = await findAccount(tx, accountId, accountNumber);
 
       if (!account) {
-        throw new AppError('Account not found', 404);
+        throw new AppError('Compte non trouvé', 404);
       }
 
       if (account.etat_cpte !== 1) {
-        throw new AppError('Account is not active', 400);
+        throw new AppError('Le compte n\'est pas actif', 400);
       }
 
       const oldBalance = Number(account.solde || 0);
@@ -54,7 +81,7 @@ router.post('/deposit', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', '
 
       // Mettre à jour le solde
       const updatedAccount = await tx.compte.update({
-        where: { id_cpte: accountId },
+        where: { id_cpte: account.id_cpte },
         data: {
           solde: newBalance,
           date_modif: new Date(),
@@ -65,7 +92,7 @@ router.post('/deposit', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', '
       const movement = await tx.mouvement.create({
         data: {
           id_ag: account.id_ag,
-          cpte_interne_cli: accountId,
+          cpte_interne_cli: account.id_cpte,
           date_mvt: new Date(),
           type_mvt: 1, // Crédit
           sens: 'C',
@@ -87,18 +114,19 @@ router.post('/deposit', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', '
         user_id: req.user!.userId,
         action: 'DEPOSIT',
         entity: 'Compte',
-        entity_id: accountId.toString(),
-        new_values: { amount, description },
+        entity_id: result.account.id_cpte.toString(),
+        new_values: { amount, description, accountNumber },
         ip_address: req.ip || null,
       },
     });
 
-    logger.info(`Deposit of ${amount} to account ${accountId} by user ${req.user!.userId}`);
+    logger.info(`Deposit of ${amount} to account ${result.account.num_complet_cpte} by user ${req.user!.userId}`);
 
     res.status(201).json({
-      message: 'Deposit successful',
+      message: 'Dépôt effectué avec succès',
       movement: result.movement,
       newBalance: result.account.solde,
+      accountNumber: result.account.num_complet_cpte,
     });
   } catch (error) {
     next(error);
@@ -108,19 +136,17 @@ router.post('/deposit', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', '
 // POST /api/transactions/withdraw - Retrait
 router.post('/withdraw', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'TELLER'), async (req, res, next) => {
   try {
-    const { accountId, amount, description } = withdrawSchema.parse(req.body);
+    const { accountId, accountNumber, amount, description } = withdrawSchema.parse(req.body);
 
     const result = await prisma.$transaction(async (tx) => {
-      const account = await tx.compte.findUnique({
-        where: { id_cpte: accountId },
-      });
+      const account = await findAccount(tx, accountId, accountNumber);
 
       if (!account) {
-        throw new AppError('Account not found', 404);
+        throw new AppError('Compte non trouvé', 404);
       }
 
       if (account.etat_cpte !== 1) {
-        throw new AppError('Account is not active', 400);
+        throw new AppError('Le compte n\'est pas actif', 400);
       }
 
       const solde = Number(account.solde || 0);
@@ -130,14 +156,14 @@ router.post('/withdraw', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 
       const disponible = solde - bloq - min + decouvert;
 
       if (amount > disponible) {
-        throw new AppError(`Insufficient funds. Available: ${disponible}`, 400);
+        throw new AppError(`Solde insuffisant. Disponible: ${disponible}`, 400);
       }
 
       const oldBalance = solde;
       const newBalance = oldBalance - amount;
 
       const updatedAccount = await tx.compte.update({
-        where: { id_cpte: accountId },
+        where: { id_cpte: account.id_cpte },
         data: {
           solde: newBalance,
           date_modif: new Date(),
@@ -147,7 +173,7 @@ router.post('/withdraw', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 
       const movement = await tx.mouvement.create({
         data: {
           id_ag: account.id_ag,
-          cpte_interne_cli: accountId,
+          cpte_interne_cli: account.id_cpte,
           date_mvt: new Date(),
           type_mvt: 2, // Débit
           sens: 'D',
@@ -168,18 +194,19 @@ router.post('/withdraw', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 
         user_id: req.user!.userId,
         action: 'WITHDRAW',
         entity: 'Compte',
-        entity_id: accountId.toString(),
-        new_values: { amount, description },
+        entity_id: result.account.id_cpte.toString(),
+        new_values: { amount, description, accountNumber },
         ip_address: req.ip || null,
       },
     });
 
-    logger.info(`Withdrawal of ${amount} from account ${accountId} by user ${req.user!.userId}`);
+    logger.info(`Withdrawal of ${amount} from account ${result.account.num_complet_cpte} by user ${req.user!.userId}`);
 
     res.status(201).json({
-      message: 'Withdrawal successful',
+      message: 'Retrait effectué avec succès',
       movement: result.movement,
       newBalance: result.account.solde,
+      accountNumber: result.account.num_complet_cpte,
     });
   } catch (error) {
     next(error);
@@ -189,38 +216,35 @@ router.post('/withdraw', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 
 // POST /api/transactions/transfer - Virement
 router.post('/transfer', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'TELLER'), async (req, res, next) => {
   try {
-    const { fromAccountId, toAccountId, amount, description } = transferSchema.parse(req.body);
-
-    if (fromAccountId === toAccountId) {
-      throw new AppError('Cannot transfer to the same account', 400);
-    }
+    const { fromAccountId, fromAccountNumber, toAccountId, toAccountNumber, amount, description } = transferSchema.parse(req.body);
 
     const result = await prisma.$transaction(async (tx) => {
       // Compte source
-      const fromAccount = await tx.compte.findUnique({
-        where: { id_cpte: fromAccountId },
-      });
+      const fromAccount = await findAccount(tx, fromAccountId, fromAccountNumber);
 
       if (!fromAccount) {
-        throw new AppError('Source account not found', 404);
+        throw new AppError('Compte source non trouvé', 404);
       }
 
       // Compte destination
-      const toAccount = await tx.compte.findUnique({
-        where: { id_cpte: toAccountId },
-      });
+      const toAccount = await findAccount(tx, toAccountId, toAccountNumber);
 
       if (!toAccount) {
-        throw new AppError('Destination account not found', 404);
+        throw new AppError('Compte destination non trouvé', 404);
+      }
+
+      // Vérifier qu'on ne vire pas vers le même compte
+      if (fromAccount.id_cpte === toAccount.id_cpte) {
+        throw new AppError('Impossible de virer vers le même compte', 400);
       }
 
       // Vérifier les états
       if (fromAccount.etat_cpte !== 1) {
-        throw new AppError('Source account is not active', 400);
+        throw new AppError('Le compte source n\'est pas actif', 400);
       }
 
       if (toAccount.etat_cpte !== 1) {
-        throw new AppError('Destination account is not active', 400);
+        throw new AppError('Le compte destination n\'est pas actif', 400);
       }
 
       // Vérifier le solde disponible
@@ -231,7 +255,7 @@ router.post('/transfer', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 
       const fromDisponible = fromSolde - fromBloq - fromMin + fromDecouvert;
 
       if (amount > fromDisponible) {
-        throw new AppError(`Insufficient funds. Available: ${fromDisponible}`, 400);
+        throw new AppError(`Solde insuffisant. Disponible: ${fromDisponible}`, 400);
       }
 
       const fromOldBalance = fromSolde;
@@ -241,12 +265,12 @@ router.post('/transfer', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 
 
       // Mettre à jour les soldes
       await tx.compte.update({
-        where: { id_cpte: fromAccountId },
+        where: { id_cpte: fromAccount.id_cpte },
         data: { solde: fromNewBalance, date_modif: new Date() },
       });
 
       await tx.compte.update({
-        where: { id_cpte: toAccountId },
+        where: { id_cpte: toAccount.id_cpte },
         data: { solde: toNewBalance, date_modif: new Date() },
       });
 
@@ -254,7 +278,7 @@ router.post('/transfer', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 
       const debitMovement = await tx.mouvement.create({
         data: {
           id_ag: fromAccount.id_ag,
-          cpte_interne_cli: fromAccountId,
+          cpte_interne_cli: fromAccount.id_cpte,
           date_mvt: new Date(),
           type_mvt: 2,
           sens: 'D',
@@ -270,7 +294,7 @@ router.post('/transfer', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 
       const creditMovement = await tx.mouvement.create({
         data: {
           id_ag: toAccount.id_ag,
-          cpte_interne_cli: toAccountId,
+          cpte_interne_cli: toAccount.id_cpte,
           date_mvt: new Date(),
           type_mvt: 1,
           sens: 'C',
@@ -283,7 +307,7 @@ router.post('/transfer', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 
         },
       });
 
-      return { debitMovement, creditMovement };
+      return { debitMovement, creditMovement, fromAccount, toAccount };
     });
 
     await prisma.auditLog.create({
@@ -291,18 +315,20 @@ router.post('/transfer', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 
         user_id: req.user!.userId,
         action: 'TRANSFER',
         entity: 'Compte',
-        entity_id: `${fromAccountId}->${toAccountId}`,
-        new_values: { amount, description },
+        entity_id: `${result.fromAccount.num_complet_cpte}->${result.toAccount.num_complet_cpte}`,
+        new_values: { amount, description, fromAccountNumber, toAccountNumber },
         ip_address: req.ip || null,
       },
     });
 
-    logger.info(`Transfer of ${amount} from ${fromAccountId} to ${toAccountId} by user ${req.user!.userId}`);
+    logger.info(`Transfer of ${amount} from ${result.fromAccount.num_complet_cpte} to ${result.toAccount.num_complet_cpte} by user ${req.user!.userId}`);
 
     res.status(201).json({
-      message: 'Transfer successful',
+      message: 'Virement effectué avec succès',
       debitMovement: result.debitMovement,
       creditMovement: result.creditMovement,
+      fromAccountNumber: result.fromAccount.num_complet_cpte,
+      toAccountNumber: result.toAccount.num_complet_cpte,
     });
   } catch (error) {
     next(error);

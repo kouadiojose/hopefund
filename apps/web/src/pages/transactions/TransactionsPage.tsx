@@ -150,22 +150,22 @@ export default function TransactionsPage() {
     switch (type) {
       case 'deposit':
         depositMutation.mutate({
-          accountId: parseInt(data.accountId),
+          accountNumber: data.accountId, // accountId field contains the account number string
           amount: data.amount,
           description: data.description,
         });
         break;
       case 'withdraw':
         withdrawMutation.mutate({
-          accountId: parseInt(data.accountId),
+          accountNumber: data.accountId,
           amount: data.amount,
           description: data.description,
         });
         break;
       case 'transfer':
         transferMutation.mutate({
-          fromAccountId: parseInt(data.fromAccountId),
-          toAccountId: parseInt(data.toAccountId),
+          fromAccountNumber: data.fromAccountId,
+          toAccountNumber: data.toAccountId,
           amount: data.amount,
           description: data.description,
         });

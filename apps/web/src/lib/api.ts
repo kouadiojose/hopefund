@@ -106,11 +106,11 @@ export const accountsApi = {
 
 // Transactions
 export const transactionsApi = {
-  deposit: (data: { accountId: number; amount: number; description?: string }) =>
+  deposit: (data: { accountNumber: string; amount: number; description?: string }) =>
     api.post('/transactions/deposit', data),
-  withdraw: (data: { accountId: number; amount: number; description?: string }) =>
+  withdraw: (data: { accountNumber: string; amount: number; description?: string }) =>
     api.post('/transactions/withdraw', data),
-  transfer: (data: { fromAccountId: number; toAccountId: number; amount: number; description?: string }) =>
+  transfer: (data: { fromAccountNumber: string; toAccountNumber: string; amount: number; description?: string }) =>
     api.post('/transactions/transfer', data),
 };
 
