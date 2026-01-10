@@ -19,17 +19,26 @@ import {
   UserCog,
   Lock,
   Activity,
+  Banknote,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth';
 import { Input } from '@/components/ui/input';
 
-const navigation = [
+type NavItem = {
+  name: string;
+  href: string;
+  icon: any;
+  roles?: string[];
+};
+
+const navigation: NavItem[] = [
   { name: 'Tableau de bord', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Clients', href: '/clients', icon: Users },
   { name: 'Comptes', href: '/accounts', icon: Wallet },
   { name: 'Transactions', href: '/transactions', icon: ArrowLeftRight },
   { name: 'Crédits', href: '/loans', icon: FileText },
+  { name: 'Caisse', href: '/caisse', icon: Banknote, roles: ['TELLER', 'BRANCH_MANAGER', 'SUPER_ADMIN', 'DIRECTOR'] },
   { name: 'Rapports', href: '/reports', icon: BarChart3 },
 ];
 
@@ -54,7 +63,7 @@ export default function DashboardLayout() {
     navigate('/login');
   };
 
-  const NavItem = ({ item }: { item: typeof navigation[0] }) => (
+  const NavItemComponent = ({ item }: { item: NavItem }) => (
     <NavLink
       to={item.href}
       className={({ isActive }) =>
@@ -116,9 +125,11 @@ export default function DashboardLayout() {
 
           {/* Navigation */}
           <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-            {navigation.map((item) => (
-              <NavItem key={item.name} item={item} />
-            ))}
+            {navigation
+              .filter((item) => !item.roles || (user && item.roles.includes(user.role)))
+              .map((item) => (
+                <NavItemComponent key={item.name} item={item} />
+              ))}
 
             {/* Admin Section */}
             {user && ['SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER'].includes(user.role) && (
@@ -129,7 +140,7 @@ export default function DashboardLayout() {
                     Administration
                   </p>
                   {adminNavigation.map((item) => (
-                    <NavItem key={item.name} item={item} />
+                    <NavItemComponent key={item.name} item={item} />
                   ))}
                 </div>
               </>
@@ -139,7 +150,7 @@ export default function DashboardLayout() {
           {/* Bottom navigation */}
           <div className="p-4 border-t space-y-1">
             {bottomNavigation.map((item) => (
-              <NavItem key={item.name} item={item} />
+              <NavItemComponent key={item.name} item={item} />
             ))}
             <button
               onClick={handleLogout}

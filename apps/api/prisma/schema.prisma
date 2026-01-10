@@ -435,3 +435,184 @@ model ClientAuth {
 
   @@map("app_client_auth")
 }
+
+// ============================================
+// GESTION DE CAISSE
+// ============================================
+
+/// Session de caisse (ouverture/fermeture journalière)
+model CaisseSession {
+  id                         Int       @id @default(autoincrement())
+  id_ag                      Int       // Agence
+  user_id                    Int       // Caissier
+
+  date_session               DateTime  @db.Date  // Date de la session
+
+  // Ouverture
+  heure_ouverture            DateTime?
+  montant_ouverture          Decimal   @db.Decimal(30, 6) @default(0)
+  decompte_ouverture_id      Int?      // Lien vers le décompte d'ouverture
+
+  // Fermeture
+  heure_fermeture            DateTime?
+  montant_fermeture          Decimal?  @db.Decimal(30, 6)
+  decompte_fermeture_id      Int?      // Lien vers le décompte de fermeture
+
+  // Écarts
+  ecart                      Decimal?  @db.Decimal(30, 6)  // Différence théorique vs réel
+  commentaire_ecart          String?
+
+  // Totaux de la journée
+  total_entrees              Decimal   @db.Decimal(30, 6) @default(0)  // Total des dépôts/entrées
+  total_sorties              Decimal   @db.Decimal(30, 6) @default(0)  // Total des retraits/sorties
+  nombre_operations          Int       @default(0)
+
+  // État: 1=Ouverte, 2=Fermée, 3=Validée par superviseur
+  etat                       Int       @default(1)
+
+  // Seuil maximal avant reversement obligatoire
+  seuil_max                  Decimal?  @db.Decimal(30, 6)
+
+  created_at                 DateTime  @default(now())
+  updated_at                 DateTime  @updatedAt
+
+  // Relations
+  decomptes                  CaisseDecompte[]
+  mouvements                 CaisseMouvement[]
+
+  @@unique([id_ag, user_id, date_session])
+  @@index([id_ag])
+  @@index([user_id])
+  @@index([date_session])
+  @@map("app_caisse_sessions")
+}
+
+/// Décompte détaillé des billets et pièces
+model CaisseDecompte {
+  id                         Int       @id @default(autoincrement())
+  session_id                 Int
+
+  // Type: 1=Ouverture, 2=Fermeture, 3=Approvisionnement, 4=Reversement
+  type_decompte              Int
+
+  // Devise (ex: CDF, USD)
+  devise                     String    @default("CDF") @db.VarChar(3)
+
+  // Billets CDF (Franc Congolais)
+  billets_20000              Int       @default(0)
+  billets_10000              Int       @default(0)
+  billets_5000               Int       @default(0)
+  billets_1000               Int       @default(0)
+  billets_500                Int       @default(0)
+  billets_200                Int       @default(0)
+  billets_100                Int       @default(0)
+  billets_50                 Int       @default(0)
+
+  // Pièces CDF
+  pieces_50                  Int       @default(0)
+  pieces_25                  Int       @default(0)
+  pieces_10                  Int       @default(0)
+  pieces_5                   Int       @default(0)
+  pieces_1                   Int       @default(0)
+
+  // Pour devises étrangères (USD, EUR, etc.)
+  billets_100_usd            Int       @default(0)
+  billets_50_usd             Int       @default(0)
+  billets_20_usd             Int       @default(0)
+  billets_10_usd             Int       @default(0)
+  billets_5_usd              Int       @default(0)
+  billets_1_usd              Int       @default(0)
+
+  // Totaux calculés
+  total_billets              Decimal   @db.Decimal(30, 6) @default(0)
+  total_pieces               Decimal   @db.Decimal(30, 6) @default(0)
+  total_general              Decimal   @db.Decimal(30, 6) @default(0)
+
+  // Validation
+  valide_par                 Int?      // ID du superviseur qui a validé
+  date_validation            DateTime?
+
+  commentaire                String?
+
+  created_at                 DateTime  @default(now())
+
+  // Relations
+  session                    CaisseSession @relation(fields: [session_id], references: [id], onDelete: Cascade)
+
+  @@index([session_id])
+  @@index([type_decompte])
+  @@map("app_caisse_decomptes")
+}
+
+/// Mouvements de caisse (approvisionnement/reversement)
+model CaisseMouvement {
+  id                         Int       @id @default(autoincrement())
+  session_id                 Int
+  id_ag                      Int
+
+  // Type: 1=Approvisionnement (entrée), 2=Reversement (sortie)
+  type_mouvement             Int
+
+  montant                    Decimal   @db.Decimal(30, 6)
+  devise                     String    @default("CDF") @db.VarChar(3)
+
+  // Source/Destination
+  caisse_source_id           Int?      // ID de la session source (caisse principale)
+  caisse_dest_id             Int?      // ID de la session destination
+
+  // Référence à la caisse principale
+  de_caisse_principale       Boolean   @default(false)
+  vers_caisse_principale     Boolean   @default(false)
+
+  // Validation
+  demande_par                Int       // Caissier qui demande
+  valide_par                 Int?      // Superviseur qui valide
+  date_validation            DateTime?
+
+  // État: 1=En attente, 2=Validé, 3=Rejeté
+  etat                       Int       @default(1)
+
+  motif_rejet                String?
+  commentaire                String?
+
+  // Référence document
+  numero_bordereau           String?
+
+  created_at                 DateTime  @default(now())
+
+  // Relations
+  session                    CaisseSession @relation(fields: [session_id], references: [id])
+
+  @@index([session_id])
+  @@index([id_ag])
+  @@index([type_mouvement])
+  @@index([etat])
+  @@map("app_caisse_mouvements")
+}
+
+/// Configuration de la caisse principale par agence
+model CaissePrincipale {
+  id                         Int       @id @default(autoincrement())
+  id_ag                      Int       @unique
+
+  // Caissier principal assigné
+  caissier_principal_id      Int?
+
+  // Solde actuel
+  solde_cdf                  Decimal   @db.Decimal(30, 6) @default(0)
+  solde_usd                  Decimal   @db.Decimal(30, 6) @default(0)
+
+  // Seuils
+  seuil_min_cdf              Decimal?  @db.Decimal(30, 6)  // Alerte si en dessous
+  seuil_max_cdf              Decimal?  @db.Decimal(30, 6)  // Alerte si au-dessus
+  seuil_max_caissier_cdf     Decimal?  @db.Decimal(30, 6)  // Max qu'un caissier peut détenir
+
+  seuil_min_usd              Decimal?  @db.Decimal(30, 6)
+  seuil_max_usd              Decimal?  @db.Decimal(30, 6)
+  seuil_max_caissier_usd     Decimal?  @db.Decimal(30, 6)
+
+  created_at                 DateTime  @default(now())
+  updated_at                 DateTime  @updatedAt
+
+  @@map("app_caisse_principale")
+}

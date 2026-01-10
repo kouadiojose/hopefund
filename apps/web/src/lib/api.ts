@@ -210,4 +210,32 @@ export const auditApi = {
   invalidateUserSessions: (userId: number) => api.delete(`/audit/sessions/user/${userId}`),
 };
 
+// Caisse (Cash Management)
+export const caisseApi = {
+  // Session
+  getCurrentSession: () => api.get('/caisse/session/current'),
+  ouvrirCaisse: (decompte: any) => api.post('/caisse/session/ouvrir', { decompte }),
+  fermerCaisse: (decompte: any) => api.post('/caisse/session/fermer', { decompte }),
+
+  // Approvisionnement / Reversement
+  demanderApprovisionnement: (data: { montant: number; devise?: string; decompte?: any; commentaire?: string }) =>
+    api.post('/caisse/approvisionnement', data),
+  demanderReversement: (data: { montant: number; devise?: string; decompte: any; commentaire?: string }) =>
+    api.post('/caisse/reversement', data),
+
+  // Validation (superviseur)
+  getMouvementsPending: () => api.get('/caisse/mouvements/pending'),
+  validerMouvement: (id: number) => api.post(`/caisse/mouvements/${id}/valider`),
+  rejeterMouvement: (id: number, motif: string) => api.post(`/caisse/mouvements/${id}/rejeter`, { motif }),
+
+  // Brouillard et historique
+  getBrouillard: () => api.get('/caisse/brouillard'),
+  getHistorique: (params?: { page?: number; limit?: number; dateDebut?: string; dateFin?: string }) =>
+    api.get('/caisse/historique', { params }),
+
+  // Caisse principale
+  getCaissePrincipale: () => api.get('/caisse/principale'),
+  updateCaissePrincipale: (data: any) => api.put('/caisse/principale', data),
+};
+
 export default api;

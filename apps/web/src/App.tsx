@@ -25,6 +25,9 @@ import UsersPage from '@/pages/admin/UsersPage';
 import RolesPage from '@/pages/admin/RolesPage';
 import AuditLogsPage from '@/pages/admin/AuditLogsPage';
 
+// Caisse Pages
+import CaissePage from '@/pages/caisse/CaissePage';
+
 // Protected Route Component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore();
@@ -62,6 +65,7 @@ function App() {
         <Route path="/loans" element={<LoansPage />} />
         <Route path="/loans/:id" element={<LoanDetailPage />} />
         <Route path="/reports" element={<ReportsPage />} />
+        <Route path="/caisse" element={<CaissePage />} />
         <Route path="/settings" element={<SettingsPage />} />
 
         {/* Admin Routes */}
