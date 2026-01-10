@@ -3,12 +3,14 @@ import jwt from 'jsonwebtoken';
 import { config } from '../config';
 import { AppError } from './error-handler';
 import { prisma } from '../lib/prisma';
-import { UserRole } from '@prisma/client';
+
+// Rôles disponibles
+type UserRole = 'SUPER_ADMIN' | 'DIRECTOR' | 'BRANCH_MANAGER' | 'CREDIT_OFFICER' | 'TELLER';
 
 export interface JwtPayload {
   userId: number;
   email: string;
-  role: UserRole;
+  role: string;
   agenceId?: number;
 }
 
@@ -63,7 +65,7 @@ export const authenticate = async (
   }
 };
 
-export const authorize = (...roles: UserRole[]) => {
+export const authorize = (...roles: string[]) => {
   return (req: Request, _res: Response, next: NextFunction) => {
     if (!req.user) {
       return next(new AppError('Authentication required', 401));

@@ -4,8 +4,12 @@ import { prisma } from '../lib/prisma';
 import { authenticate, authorize } from '../middleware/auth';
 import { AppError } from '../middleware/error-handler';
 import { logger } from '../utils/logger';
-import { UserRole, ModuleType } from '@prisma/client';
+import { ModuleType } from '@prisma/client';
 import { refreshPermissionCache } from '../middleware/permission.middleware';
+
+// Rôles disponibles
+const VALID_ROLES = ['SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_OFFICER', 'TELLER'] as const;
+type UserRole = typeof VALID_ROLES[number];
 
 const router = Router();
 
@@ -201,9 +205,9 @@ router.delete('/:id', async (req, res, next) => {
 // GET /api/permissions/roles/:role - Permissions d'un rôle
 router.get('/roles/:role', async (req, res, next) => {
   try {
-    const role = req.params.role as UserRole;
+    const role = req.params.role;
 
-    if (!Object.values(UserRole).includes(role)) {
+    if (!VALID_ROLES.includes(role as UserRole)) {
       throw new AppError('Invalid role', 400);
     }
 
@@ -235,14 +239,14 @@ router.get('/roles/:role', async (req, res, next) => {
 // PUT /api/permissions/roles/:role - Définir les permissions d'un rôle
 router.put('/roles/:role', async (req, res, next) => {
   try {
-    const role = req.params.role as UserRole;
+    const role = req.params.role;
 
-    if (!Object.values(UserRole).includes(role)) {
+    if (!VALID_ROLES.includes(role as UserRole)) {
       throw new AppError('Invalid role', 400);
     }
 
     // Don't allow modifying SUPER_ADMIN or DIRECTOR permissions (they have all)
-    if (role === UserRole.SUPER_ADMIN || role === UserRole.DIRECTOR) {
+    if (role === 'SUPER_ADMIN' || role === 'DIRECTOR') {
       throw new AppError('Cannot modify SUPER_ADMIN or DIRECTOR permissions - they have full access', 400);
     }
 
@@ -290,9 +294,9 @@ router.put('/roles/:role', async (req, res, next) => {
 // POST /api/permissions/roles/:role/add - Ajouter une permission à un rôle
 router.post('/roles/:role/add', async (req, res, next) => {
   try {
-    const role = req.params.role as UserRole;
+    const role = req.params.role;
 
-    if (!Object.values(UserRole).includes(role)) {
+    if (!VALID_ROLES.includes(role as UserRole)) {
       throw new AppError('Invalid role', 400);
     }
 
@@ -342,10 +346,10 @@ router.post('/roles/:role/add', async (req, res, next) => {
 // DELETE /api/permissions/roles/:role/remove/:permissionId - Retirer une permission d'un rôle
 router.delete('/roles/:role/remove/:permissionId', async (req, res, next) => {
   try {
-    const role = req.params.role as UserRole;
+    const role = req.params.role;
     const permissionId = parseInt(req.params.permissionId);
 
-    if (!Object.values(UserRole).includes(role)) {
+    if (!VALID_ROLES.includes(role as UserRole)) {
       throw new AppError('Invalid role', 400);
     }
 
@@ -377,7 +381,7 @@ router.get('/matrix', async (req, res, next) => {
     const rolePermissions = await prisma.rolePermission.findMany();
 
     // Build the matrix
-    const roles = Object.values(UserRole);
+    const roles = VALID_ROLES;
     const matrix: Record<string, Record<string, boolean>> = {};
 
     for (const role of roles) {
@@ -387,7 +391,7 @@ router.get('/matrix', async (req, res, next) => {
 
       for (const perm of permissions) {
         // SUPER_ADMIN and DIRECTOR have all permissions
-        if (role === UserRole.SUPER_ADMIN || role === UserRole.DIRECTOR) {
+        if (role === 'SUPER_ADMIN' || role === 'DIRECTOR') {
           matrix[role][perm.code] = true;
         } else {
           matrix[role][perm.code] = permIds.has(perm.id);

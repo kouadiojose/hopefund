@@ -6,7 +6,6 @@ import { authenticate, authorize } from '../middleware/auth';
 import { AppError } from '../middleware/error-handler';
 import { logger } from '../utils/logger';
 import { requirePermission, getRolePermissions } from '../middleware/permission.middleware';
-import { UserRole } from '@prisma/client';
 
 const router = Router();
 
@@ -174,7 +173,7 @@ router.post('/users', async (req, res, next) => {
         nom: data.nom,
         prenom: data.prenom,
         telephone: data.telephone || null,
-        role: data.role as UserRole,
+        role: data.role,
         id_ag: data.id_ag || null,
         is_active: true,
       },
@@ -244,7 +243,7 @@ router.put('/users/:id', async (req, res, next) => {
     if (data.nom) updateData.nom = data.nom;
     if (data.prenom) updateData.prenom = data.prenom;
     if (data.telephone !== undefined) updateData.telephone = data.telephone;
-    if (data.role) updateData.role = data.role as UserRole;
+    if (data.role) updateData.role = data.role;
     if (data.id_ag !== undefined) updateData.id_ag = data.id_ag;
     if (data.is_active !== undefined) updateData.is_active = data.is_active;
 
@@ -445,7 +444,6 @@ router.post('/agencies', authorize('SUPER_ADMIN', 'DIRECTOR'), async (req, res, 
     const schema = z.object({
       id_ag: z.number(),
       libel_ag: z.string().min(1),
-      sigle_ag: z.string().optional(),
       adresse_ag: z.string().optional(),
       tel_ag: z.string().optional(),
       email_ag: z.string().email().optional(),
@@ -484,7 +482,6 @@ router.put('/agencies/:id', authorize('SUPER_ADMIN', 'DIRECTOR'), async (req, re
 
     const schema = z.object({
       libel_ag: z.string().min(1).optional(),
-      sigle_ag: z.string().optional(),
       adresse_ag: z.string().optional(),
       tel_ag: z.string().optional(),
       email_ag: z.string().email().optional(),
@@ -627,7 +624,7 @@ router.get('/roles', async (req, res) => {
   const rolesWithPermissions = await Promise.all(
     roles.map(async (role) => {
       try {
-        const permissions = await getRolePermissions(role.value as UserRole);
+        const permissions = await getRolePermissions(role.value);
         return { ...role, permissions, permissionCount: permissions.length };
       } catch {
         return { ...role, permissions: [], permissionCount: 0 };

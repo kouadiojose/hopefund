@@ -278,7 +278,6 @@ model Garantie {
 model Agence {
   id_ag                      Int       @id
   libel_ag                   String?
-  sigle_ag                   String?
   adresse_ag                 String?
   tel_ag                     String?
   email_ag                   String?
@@ -303,7 +302,7 @@ model User {
   prenom                     String
   telephone                  String?
 
-  role                       UserRole  @default(TELLER)
+  role                       String    @default("TELLER")
   id_ag                      Int?      // Agence assignée
 
   is_active                  Boolean   @default(true)
@@ -320,13 +319,12 @@ model User {
   @@map("app_users")
 }
 
-enum UserRole {
-  SUPER_ADMIN     // Tout accès - Super administrateur
-  DIRECTOR        // Lecture globale + validation
-  BRANCH_MANAGER  // Gestion agence
-  CREDIT_OFFICER  // Gestion crédits
-  TELLER          // Opérations caisse
-}
+// Rôles disponibles (stockés comme String en base de données):
+// - SUPER_ADMIN     : Tout accès - Super administrateur
+// - DIRECTOR        : Lecture globale + validation
+// - BRANCH_MANAGER  : Gestion agence
+// - CREDIT_OFFICER  : Gestion crédits
+// - TELLER          : Opérations caisse
 
 /// Modules du système
 enum ModuleType {
@@ -360,7 +358,7 @@ model Permission {
 /// Association Rôle-Permission
 model RolePermission {
   id                         Int        @id @default(autoincrement())
-  role                       UserRole
+  role                       String
   permission_id              Int
 
   created_at                 DateTime   @default(now())

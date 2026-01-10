@@ -1,6 +1,9 @@
-import { PrismaClient, ModuleType, UserRole } from '@prisma/client';
+import { PrismaClient, ModuleType } from '@prisma/client';
 
 const prisma = new PrismaClient();
+
+// Rôles disponibles (strings au lieu d'enum)
+type UserRole = 'SUPER_ADMIN' | 'DIRECTOR' | 'BRANCH_MANAGER' | 'CREDIT_OFFICER' | 'TELLER';
 
 // Définition de toutes les permissions par module
 const permissions = [
@@ -233,13 +236,13 @@ const permissions = [
 // Permissions par rôle (basé sur le document)
 const rolePermissions: Record<UserRole, string[]> = {
   // SUPER_ADMIN - Accès complet à tout
-  [UserRole.SUPER_ADMIN]: permissions.map(p => p.code),
+  'SUPER_ADMIN': permissions.map(p => p.code),
 
   // DIRECTOR - Accès complet à tout (comme Super Admin)
-  [UserRole.DIRECTOR]: permissions.map(p => p.code),
+  'DIRECTOR': permissions.map(p => p.code),
 
   // BRANCH_MANAGER - Supervision et approbations
-  [UserRole.BRANCH_MANAGER]: [
+  'BRANCH_MANAGER': [
     // Client - Gestion complète
     'CLIENT_VIEW', 'CLIENT_SELECT', 'CLIENT_CONSULT', 'CLIENT_CREATE', 'CLIENT_EDIT',
     'CLIENT_RELATIONS', 'CLIENT_SUBSCRIPTIONS', 'CLIENT_DEFECTION', 'CLIENT_SHARES',
@@ -274,7 +277,7 @@ const rolePermissions: Record<UserRole, string[]> = {
   ],
 
   // CREDIT_OFFICER - Gestion des crédits
-  [UserRole.CREDIT_OFFICER]: [
+  'CREDIT_OFFICER': [
     // Client - Lecture et création
     'CLIENT_VIEW', 'CLIENT_SELECT', 'CLIENT_CONSULT', 'CLIENT_CREATE', 'CLIENT_EDIT',
     'CLIENT_RELATIONS', 'CLIENT_STATEMENTS', 'CLIENT_GLOBAL_STATUS',
@@ -298,7 +301,7 @@ const rolePermissions: Record<UserRole, string[]> = {
   ],
 
   // TELLER - Opérations de guichet uniquement
-  [UserRole.TELLER]: [
+  'TELLER': [
     // Client - Lecture et création
     'CLIENT_VIEW', 'CLIENT_SELECT', 'CLIENT_CONSULT', 'CLIENT_CREATE', 'CLIENT_FEES',
     'CLIENT_STATEMENTS', 'CLIENT_GLOBAL_STATUS', 'CLIENT_SHARES',
@@ -342,14 +345,14 @@ async function main() {
   for (const [role, permCodes] of Object.entries(rolePermissions)) {
     // Supprimer les anciennes permissions du rôle
     await prisma.rolePermission.deleteMany({
-      where: { role: role as UserRole },
+      where: { role: role },
     });
 
     // Créer les nouvelles associations
     const rolePerms = permCodes
       .filter(code => permissionMap.has(code))
       .map(code => ({
-        role: role as UserRole,
+        role: role,
         permission_id: permissionMap.get(code)!,
       }));
 
@@ -371,7 +374,7 @@ async function main() {
   if (adminUser) {
     await prisma.user.update({
       where: { id: adminUser.id },
-      data: { role: UserRole.SUPER_ADMIN },
+      data: { role: 'SUPER_ADMIN' },
     });
     console.log('✅ Updated admin user to SUPER_ADMIN role');
   }

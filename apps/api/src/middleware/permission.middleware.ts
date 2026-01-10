@@ -1,11 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
-import { PrismaClient, UserRole } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { AppError } from './error-handler';
 
 const prisma = new PrismaClient();
 
+// Rôles disponibles
+type UserRole = 'SUPER_ADMIN' | 'DIRECTOR' | 'BRANCH_MANAGER' | 'CREDIT_OFFICER' | 'TELLER';
+
 // Cache des permissions par rôle (rechargé toutes les 5 minutes)
-let permissionCache: Map<UserRole, Set<string>> = new Map();
+let permissionCache: Map<string, Set<string>> = new Map();
 let cacheLastUpdated = 0;
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
@@ -20,7 +23,7 @@ async function loadPermissions() {
       include: { permission: true },
     });
 
-    const newCache = new Map<UserRole, Set<string>>();
+    const newCache = new Map<string, Set<string>>();
 
     for (const rp of rolePermissions) {
       if (!newCache.has(rp.role)) {
@@ -40,8 +43,8 @@ async function loadPermissions() {
 }
 
 // Permissions par défaut si la base de données n'est pas encore migrée
-function getDefaultPermissions(): Map<UserRole, Set<string>> {
-  const defaults = new Map<UserRole, Set<string>>();
+function getDefaultPermissions(): Map<string, Set<string>> {
+  const defaults = new Map<string, Set<string>>();
 
   // Super Admin et Director ont accès à tout
   const allPermissions = new Set([
@@ -56,11 +59,11 @@ function getDefaultPermissions(): Map<UserRole, Set<string>> {
     'BUDGET_VIEW',
   ]);
 
-  defaults.set(UserRole.SUPER_ADMIN, allPermissions);
-  defaults.set(UserRole.DIRECTOR, allPermissions);
+  defaults.set('SUPER_ADMIN', allPermissions);
+  defaults.set('DIRECTOR', allPermissions);
 
   // Branch Manager
-  defaults.set(UserRole.BRANCH_MANAGER, new Set([
+  defaults.set('BRANCH_MANAGER', new Set([
     'CLIENT_VIEW', 'CLIENT_CONSULT', 'CLIENT_CREATE', 'CLIENT_EDIT',
     'EPARGNE_VIEW', 'EPARGNE_CONSULT', 'EPARGNE_DEPOSIT', 'EPARGNE_WITHDRAWAL',
     'EPARGNE_WITHDRAWAL_AUTH', 'EPARGNE_BLOCK_ACCOUNT',
@@ -72,7 +75,7 @@ function getDefaultPermissions(): Map<UserRole, Set<string>> {
   ]));
 
   // Credit Officer
-  defaults.set(UserRole.CREDIT_OFFICER, new Set([
+  defaults.set('CREDIT_OFFICER', new Set([
     'CLIENT_VIEW', 'CLIENT_CONSULT', 'CLIENT_CREATE', 'CLIENT_EDIT',
     'EPARGNE_VIEW', 'EPARGNE_CONSULT',
     'CREDIT_VIEW', 'CREDIT_CONSULT', 'CREDIT_CREATE', 'CREDIT_EDIT', 'CREDIT_SIMULATE',
@@ -81,7 +84,7 @@ function getDefaultPermissions(): Map<UserRole, Set<string>> {
   ]));
 
   // Teller (Caissier)
-  defaults.set(UserRole.TELLER, new Set([
+  defaults.set('TELLER', new Set([
     'CLIENT_VIEW', 'CLIENT_CONSULT', 'CLIENT_CREATE',
     'EPARGNE_VIEW', 'EPARGNE_DEPOSIT', 'EPARGNE_WITHDRAWAL', 'EPARGNE_CONSULT',
     'CREDIT_VIEW', 'CREDIT_CONSULT', 'CREDIT_REPAYMENT',
@@ -93,7 +96,7 @@ function getDefaultPermissions(): Map<UserRole, Set<string>> {
 }
 
 // Vérifier si un utilisateur a une permission spécifique
-export async function hasPermission(role: UserRole, permissionCode: string): Promise<boolean> {
+export async function hasPermission(role: string, permissionCode: string): Promise<boolean> {
   await loadPermissions();
 
   const rolePerms = permissionCache.get(role);
@@ -103,7 +106,7 @@ export async function hasPermission(role: UserRole, permissionCode: string): Pro
 }
 
 // Vérifier si un utilisateur a au moins une des permissions
-export async function hasAnyPermission(role: UserRole, permissionCodes: string[]): Promise<boolean> {
+export async function hasAnyPermission(role: string, permissionCodes: string[]): Promise<boolean> {
   await loadPermissions();
 
   const rolePerms = permissionCache.get(role);
@@ -113,7 +116,7 @@ export async function hasAnyPermission(role: UserRole, permissionCodes: string[]
 }
 
 // Vérifier si un utilisateur a toutes les permissions
-export async function hasAllPermissions(role: UserRole, permissionCodes: string[]): Promise<boolean> {
+export async function hasAllPermissions(role: string, permissionCodes: string[]): Promise<boolean> {
   await loadPermissions();
 
   const rolePerms = permissionCache.get(role);
@@ -130,10 +133,10 @@ export function requirePermission(...permissionCodes: string[]) {
         throw new AppError('Non authentifié', 401);
       }
 
-      const userRole = req.user.role as UserRole;
+      const userRole = req.user.role;
 
       // Super Admin et Director ont accès à tout
-      if (userRole === UserRole.SUPER_ADMIN || userRole === UserRole.DIRECTOR) {
+      if (userRole === 'SUPER_ADMIN' || userRole === 'DIRECTOR') {
         return next();
       }
 
@@ -158,10 +161,10 @@ export function requireModule(moduleCode: string) {
         throw new AppError('Non authentifié', 401);
       }
 
-      const userRole = req.user.role as UserRole;
+      const userRole = req.user.role;
 
       // Super Admin et Director ont accès à tout
-      if (userRole === UserRole.SUPER_ADMIN || userRole === UserRole.DIRECTOR) {
+      if (userRole === 'SUPER_ADMIN' || userRole === 'DIRECTOR') {
         return next();
       }
 
@@ -181,7 +184,7 @@ export function requireModule(moduleCode: string) {
 }
 
 // Obtenir toutes les permissions d'un rôle
-export async function getRolePermissions(role: UserRole): Promise<string[]> {
+export async function getRolePermissions(role: string): Promise<string[]> {
   await loadPermissions();
 
   const rolePerms = permissionCache.get(role);
