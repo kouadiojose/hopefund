@@ -10,7 +10,7 @@ import { UserRole } from '@prisma/client';
 
 const router = Router();
 
-// All admin routes require authentication and DIRECTION or ADMIN_IT role
+// All admin routes require authentication and SUPER_ADMIN, DIRECTOR or BRANCH_MANAGER role
 router.use(authenticate);
 router.use(authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER'));
 
@@ -161,7 +161,7 @@ router.post('/users', async (req, res, next) => {
     });
 
     if (existingUser) {
-      throw new AppError('Email already exists', 400);
+      throw new AppError('Cet email existe déjà', 400);
     }
 
     // Hash password
@@ -173,9 +173,9 @@ router.post('/users', async (req, res, next) => {
         password_hash,
         nom: data.nom,
         prenom: data.prenom,
-        telephone: data.telephone,
-        role: data.role,
-        id_ag: data.id_ag,
+        telephone: data.telephone || null,
+        role: data.role as UserRole,
+        id_ag: data.id_ag || null,
         is_active: true,
       },
       select: {
@@ -195,6 +195,7 @@ router.post('/users', async (req, res, next) => {
 
     res.status(201).json(user);
   } catch (error) {
+    logger.error('Error creating user:', error);
     next(error);
   }
 });
@@ -237,8 +238,15 @@ router.put('/users/:id', async (req, res, next) => {
     }
 
     // Prepare update data
-    const updateData: any = { ...data };
-    delete updateData.password;
+    const updateData: any = {};
+
+    if (data.email) updateData.email = data.email;
+    if (data.nom) updateData.nom = data.nom;
+    if (data.prenom) updateData.prenom = data.prenom;
+    if (data.telephone !== undefined) updateData.telephone = data.telephone;
+    if (data.role) updateData.role = data.role as UserRole;
+    if (data.id_ag !== undefined) updateData.id_ag = data.id_ag;
+    if (data.is_active !== undefined) updateData.is_active = data.is_active;
 
     // Hash new password if provided
     if (data.password) {
@@ -265,6 +273,7 @@ router.put('/users/:id', async (req, res, next) => {
 
     res.json(user);
   } catch (error) {
+    logger.error('Error updating user:', error);
     next(error);
   }
 });
