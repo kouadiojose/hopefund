@@ -167,6 +167,13 @@ router.get('/:id/transactions', async (req, res, next) => {
       return res.status(404).json({ error: 'Compte non trouvé' });
     }
 
+    // Debug: chercher toutes les transactions pour voir ce qui existe
+    const allMouvements = await prisma.mouvement.findMany({
+      take: 5,
+      orderBy: { id_mouvement: 'desc' },
+      select: { id_mouvement: true, cpte_interne_cli: true, date_mvt: true, montant: true },
+    });
+
     // Rechercher par id_cpte OU num_cpte (car les données peuvent utiliser l'un ou l'autre)
     const whereConditions: any[] = [
       { cpte_interne_cli: compte.id_cpte },
@@ -174,6 +181,14 @@ router.get('/:id/transactions', async (req, res, next) => {
 
     if (compte.num_cpte) {
       whereConditions.push({ cpte_interne_cli: compte.num_cpte });
+    }
+
+    // Aussi chercher par num_complet_cpte converti en entier si c'est numérique
+    if (compte.num_complet_cpte) {
+      const numComplet = parseInt(compte.num_complet_cpte);
+      if (!isNaN(numComplet)) {
+        whereConditions.push({ cpte_interne_cli: numComplet });
+      }
     }
 
     const where: any = {
@@ -217,6 +232,19 @@ router.get('/:id/transactions', async (req, res, next) => {
         limit: all ? total : limit,
         total,
         totalPages: all ? 1 : Math.ceil(total / limit),
+      },
+      // Debug info (à supprimer en production)
+      _debug: {
+        compte: {
+          id_cpte: compte.id_cpte,
+          num_cpte: compte.num_cpte,
+          num_complet_cpte: compte.num_complet_cpte,
+        },
+        searchedIds: whereConditions.map(c => c.cpte_interne_cli),
+        sampleMouvements: allMouvements.map(m => ({
+          id: m.id_mouvement,
+          cpte_interne_cli: m.cpte_interne_cli,
+        })),
       },
     });
   } catch (error) {
