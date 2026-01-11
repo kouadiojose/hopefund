@@ -327,7 +327,6 @@ export default function AccountDetailPage() {
                     <TableHead>Libellé</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead className="text-right">Montant</TableHead>
-                    <TableHead className="text-right">Solde après</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -342,16 +341,16 @@ export default function AccountDetailPage() {
                       <TableCell className="text-gray-600">
                         {formatDate(tx.date_mvt)}
                       </TableCell>
-                      <TableCell>{tx.libel_mvt || 'Mouvement'}</TableCell>
+                      <TableCell>{tx.libel_mvt || tx.compte_comptable || 'Mouvement'}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          {tx.sens === 'C' ? (
+                          {tx.sens?.toLowerCase() === 'c' ? (
                             <ArrowDownCircle className="h-4 w-4 text-green-500" />
                           ) : (
                             <ArrowUpCircle className="h-4 w-4 text-red-500" />
                           )}
-                          <span className={tx.sens === 'C' ? 'text-green-600' : 'text-red-600'}>
-                            {tx.sens === 'C' ? 'Crédit' : 'Débit'}
+                          <span className={tx.sens?.toLowerCase() === 'c' ? 'text-green-600' : 'text-red-600'}>
+                            {tx.sens?.toLowerCase() === 'c' ? 'Crédit' : 'Débit'}
                           </span>
                         </div>
                       </TableCell>
@@ -359,15 +358,12 @@ export default function AccountDetailPage() {
                         <span
                           className={cn(
                             'font-semibold tabular-nums',
-                            tx.sens === 'C' ? 'text-green-600' : 'text-red-600'
+                            tx.sens?.toLowerCase() === 'c' ? 'text-green-600' : 'text-red-600'
                           )}
                         >
-                          {tx.sens === 'C' ? '+' : '-'}
+                          {tx.sens?.toLowerCase() === 'c' ? '+' : '-'}
                           {formatCurrency(tx.montant || 0)}
                         </span>
-                      </TableCell>
-                      <TableCell className="text-right font-medium tabular-nums">
-                        {formatCurrency(tx.solde_apres || 0)}
                       </TableCell>
                     </motion.tr>
                   ))}
