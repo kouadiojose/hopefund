@@ -16,12 +16,22 @@ import {
   Building,
   Briefcase,
   FileText,
-  Clock
+  Clock,
+  History,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { clientsApi } from '@/lib/api';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { clientsApi, accountsApi } from '@/lib/api';
 import {
   formatCurrency,
   formatDate,
@@ -141,6 +151,28 @@ interface ClientDetail {
   }>;
 }
 
+interface Transaction {
+  id_mouvement: number;
+  date_mvt: string;
+  type_mvt: number;
+  sens: string;
+  montant: number;
+  libel_mvt: string;
+  solde_avant: number;
+  solde_apres: number;
+}
+
+interface TransactionHistoryState {
+  isOpen: boolean;
+  accountId: number | null;
+  accountNumber: string;
+  transactions: Transaction[];
+  loading: boolean;
+  page: number;
+  totalPages: number;
+  total: number;
+}
+
 export default function ClientDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -148,6 +180,16 @@ export default function ClientDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedCredits, setExpandedCredits] = useState<Set<number>>(new Set());
+  const [transactionHistory, setTransactionHistory] = useState<TransactionHistoryState>({
+    isOpen: false,
+    accountId: null,
+    accountNumber: '',
+    transactions: [],
+    loading: false,
+    page: 1,
+    totalPages: 1,
+    total: 0,
+  });
 
   useEffect(() => {
     const fetchClient = async () => {
@@ -174,6 +216,47 @@ export default function ClientDetailPage() {
       newExpanded.add(creditId);
     }
     setExpandedCredits(newExpanded);
+  };
+
+  const loadTransactionHistory = async (accountId: number, accountNumber: string, page: number = 1) => {
+    setTransactionHistory(prev => ({
+      ...prev,
+      isOpen: true,
+      accountId,
+      accountNumber,
+      loading: true,
+      page,
+    }));
+
+    try {
+      const response = await accountsApi.getTransactions(accountId, { page, limit: 20 });
+      setTransactionHistory(prev => ({
+        ...prev,
+        transactions: response.data.data,
+        totalPages: response.data.pagination.totalPages,
+        total: response.data.pagination.total,
+        loading: false,
+      }));
+    } catch (err) {
+      console.error('Error loading transactions:', err);
+      setTransactionHistory(prev => ({
+        ...prev,
+        loading: false,
+      }));
+    }
+  };
+
+  const closeTransactionHistory = () => {
+    setTransactionHistory({
+      isOpen: false,
+      accountId: null,
+      accountNumber: '',
+      transactions: [],
+      loading: false,
+      page: 1,
+      totalPages: 1,
+      total: 0,
+    });
   };
 
   if (loading) {
@@ -485,9 +568,21 @@ export default function ClientDetailPage() {
                           <p className="font-medium text-green-600">{formatCurrency(compte.solde_disponible)}</p>
                         </div>
                       </div>
-                      {compte.dernieres_transactions && compte.dernieres_transactions.length > 0 && (
-                        <div className="mt-3 pt-3 border-t">
-                          <p className="text-xs text-muted-foreground mb-2">Dernieres transactions</p>
+                      {/* Dernières transactions et bouton historique */}
+                      <div className="mt-3 pt-3 border-t">
+                        <div className="flex justify-between items-center mb-2">
+                          <p className="text-xs text-muted-foreground">Dernières transactions</p>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-xs h-6 px-2"
+                            onClick={() => loadTransactionHistory(compte.id_cpte, compte.num_complet_cpte)}
+                          >
+                            <History className="w-3 h-3 mr-1" />
+                            Voir tout l'historique
+                          </Button>
+                        </div>
+                        {compte.dernieres_transactions && compte.dernieres_transactions.length > 0 ? (
                           <div className="space-y-1">
                             {compte.dernieres_transactions.slice(0, 3).map((tx) => (
                               <div key={tx.id} className="flex justify-between text-sm">
@@ -500,8 +595,10 @@ export default function ClientDetailPage() {
                               </div>
                             ))}
                           </div>
-                        </div>
-                      )}
+                        ) : (
+                          <p className="text-sm text-muted-foreground">Aucune transaction</p>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -642,6 +739,101 @@ export default function ClientDetailPage() {
           </Card>
         </div>
       </div>
+
+      {/* Modal Historique des transactions */}
+      <Dialog open={transactionHistory.isOpen} onOpenChange={(open) => !open && closeTransactionHistory()}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="w-5 h-5" />
+              Historique des transactions - {transactionHistory.accountNumber}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-auto">
+            {transactionHistory.loading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+            ) : transactionHistory.transactions.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Aucune transaction trouvée
+              </div>
+            ) : (
+              <>
+                <div className="text-sm text-muted-foreground mb-4">
+                  {transactionHistory.total} transaction(s) au total
+                </div>
+                <table className="w-full text-sm">
+                  <thead className="bg-muted sticky top-0">
+                    <tr>
+                      <th className="text-left py-3 px-3 font-medium">Date</th>
+                      <th className="text-left py-3 px-3 font-medium">Libellé</th>
+                      <th className="text-right py-3 px-3 font-medium">Débit</th>
+                      <th className="text-right py-3 px-3 font-medium">Crédit</th>
+                      <th className="text-right py-3 px-3 font-medium">Solde après</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {transactionHistory.transactions.map((tx) => (
+                      <tr key={tx.id_mouvement} className="border-b hover:bg-muted/50">
+                        <td className="py-2 px-3">{formatDate(tx.date_mvt)}</td>
+                        <td className="py-2 px-3">{tx.libel_mvt || 'Transaction'}</td>
+                        <td className="py-2 px-3 text-right text-red-600">
+                          {tx.sens === 'D' ? formatCurrency(tx.montant) : '-'}
+                        </td>
+                        <td className="py-2 px-3 text-right text-green-600">
+                          {tx.sens === 'C' ? formatCurrency(tx.montant) : '-'}
+                        </td>
+                        <td className="py-2 px-3 text-right font-medium">
+                          {formatCurrency(tx.solde_apres)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
+            )}
+          </div>
+
+          {/* Pagination */}
+          {transactionHistory.totalPages > 1 && (
+            <div className="flex items-center justify-between pt-4 border-t">
+              <div className="text-sm text-muted-foreground">
+                Page {transactionHistory.page} sur {transactionHistory.totalPages}
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => loadTransactionHistory(
+                    transactionHistory.accountId!,
+                    transactionHistory.accountNumber,
+                    transactionHistory.page - 1
+                  )}
+                  disabled={transactionHistory.page <= 1 || transactionHistory.loading}
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  Précédent
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => loadTransactionHistory(
+                    transactionHistory.accountId!,
+                    transactionHistory.accountNumber,
+                    transactionHistory.page + 1
+                  )}
+                  disabled={transactionHistory.page >= transactionHistory.totalPages || transactionHistory.loading}
+                >
+                  Suivant
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
