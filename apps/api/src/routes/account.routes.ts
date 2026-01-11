@@ -7,93 +7,85 @@ import { config } from '../config';
 const router = Router();
 
 // GET /api/accounts/debug - Diagnostic des données (temporaire - SANS AUTH)
-router.get('/debug', async (req, res, next) => {
+router.get('/debug', async (req, res) => {
+  const result: any = {
+    timestamp: new Date().toISOString(),
+    status: 'ok',
+  };
+
   try {
     // Discover all tables that might have transaction/date info
-    const allTables: any[] = await prisma.$queryRaw`
-      SELECT table_name
-      FROM information_schema.tables
-      WHERE table_schema = 'public'
-      AND (table_name LIKE 'ad_%' OR table_name LIKE 'app_%')
-      ORDER BY table_name
-    `;
+    try {
+      const allTables: any[] = await prisma.$queryRaw`
+        SELECT table_name
+        FROM information_schema.tables
+        WHERE table_schema = 'public'
+        AND (table_name LIKE 'ad_%' OR table_name LIKE 'app_%')
+        ORDER BY table_name
+      `;
+      result.allTables = allTables.map(t => t.table_name);
+    } catch (e: any) {
+      result.allTables = { error: e.message };
+    }
 
     // Get actual column names from ad_mouvement table
-    const mouvementColumns: any[] = await prisma.$queryRaw`
-      SELECT column_name, data_type
-      FROM information_schema.columns
-      WHERE table_name = 'ad_mouvement'
-      ORDER BY ordinal_position
-    `;
+    try {
+      const mouvementColumns: any[] = await prisma.$queryRaw`
+        SELECT column_name, data_type
+        FROM information_schema.columns
+        WHERE table_name = 'ad_mouvement'
+        ORDER BY ordinal_position
+      `;
+      result.adMouvementColumns = mouvementColumns;
+    } catch (e: any) {
+      result.adMouvementColumns = { error: e.message };
+    }
 
     // Get actual column names from ad_ecriture table (if exists)
-    let ecritureColumns: any[] = [];
-    let sampleEcritures: any[] = [];
     try {
-      ecritureColumns = await prisma.$queryRaw`
+      const ecritureColumns: any[] = await prisma.$queryRaw`
         SELECT column_name, data_type
         FROM information_schema.columns
         WHERE table_name = 'ad_ecriture'
         ORDER BY ordinal_position
       `;
-      sampleEcritures = await prisma.$queryRaw`
+      result.adEcritureColumns = ecritureColumns;
+
+      const sampleEcritures: any[] = await prisma.$queryRaw`
         SELECT * FROM ad_ecriture ORDER BY id_ecriture DESC LIMIT 5
       `;
+      result.sampleEcritures = sampleEcritures;
     } catch (e: any) {
-      ecritureColumns = [{ note: 'Table ad_ecriture not found or error: ' + e.message }];
-    }
-
-    // Check for ad_his_mouvement (history table) that might have more dates
-    let hisMouvementColumns: any[] = [];
-    try {
-      hisMouvementColumns = await prisma.$queryRaw`
-        SELECT column_name, data_type
-        FROM information_schema.columns
-        WHERE table_name LIKE '%his%mouv%' OR table_name LIKE 'ad_his%'
-        ORDER BY table_name, ordinal_position
-        LIMIT 50
-      `;
-    } catch (e: any) {
-      hisMouvementColumns = [{ note: 'No history tables found or error: ' + e.message }];
+      result.adEcritureColumns = { note: 'Table not found or error', error: e.message };
     }
 
     // Sample accounts
-    const sampleAccounts = await prisma.compte.findMany({
-      take: 10,
-      select: { id_cpte: true, num_cpte: true, num_complet_cpte: true, id_titulaire: true },
-      orderBy: { id_cpte: 'desc' },
-    });
-
-    // Try to get sample movements using raw query
-    let sampleMovements: any[] = [];
-    let totalMovements = 0;
     try {
-      sampleMovements = await prisma.$queryRaw`
-        SELECT * FROM ad_mouvement ORDER BY id_mouvement DESC LIMIT 10
-      `;
-      const countResult: any[] = await prisma.$queryRaw`SELECT COUNT(*) as count FROM ad_mouvement`;
-      totalMovements = Number(countResult[0]?.count || 0);
+      const sampleAccounts = await prisma.compte.findMany({
+        take: 5,
+        select: { id_cpte: true, num_cpte: true, num_complet_cpte: true, id_titulaire: true },
+        orderBy: { id_cpte: 'desc' },
+      });
+      result.sampleAccounts = sampleAccounts;
+      result.totalAccounts = await prisma.compte.count();
     } catch (e: any) {
-      sampleMovements = [{ error: e.message }];
+      result.sampleAccounts = { error: e.message };
     }
 
-    // Try to join movements with ecritures to see dates
-    let movementsWithEcritures: any[] = [];
+    // Sample movements using raw query
     try {
-      movementsWithEcritures = await prisma.$queryRaw`
-        SELECT m.id_mouvement, m.id_ecriture, m.date_valeur, m.montant, m.sens,
-               e.*
-        FROM ad_mouvement m
-        LEFT JOIN ad_ecriture e ON m.id_ecriture = e.id_ecriture
-        ORDER BY m.id_mouvement DESC
-        LIMIT 5
+      const sampleMovements: any[] = await prisma.$queryRaw`
+        SELECT * FROM ad_mouvement ORDER BY id_mouvement DESC LIMIT 5
       `;
+      result.sampleMovements = sampleMovements;
+
+      const countResult: any[] = await prisma.$queryRaw`SELECT COUNT(*) as count FROM ad_mouvement`;
+      result.totalMovements = Number(countResult[0]?.count || 0);
     } catch (e: any) {
-      movementsWithEcritures = [{ error: e.message }];
+      result.sampleMovements = { error: e.message };
     }
 
     // Get min/max dates to understand the data range
-    let dateRange: any = {};
     try {
       const minMax: any[] = await prisma.$queryRaw`
         SELECT
@@ -102,30 +94,33 @@ router.get('/debug', async (req, res, next) => {
           COUNT(*) as total
         FROM ad_mouvement
       `;
-      dateRange = minMax[0];
+      result.dateRange = minMax[0];
     } catch (e: any) {
-      dateRange = { error: e.message };
+      result.dateRange = { error: e.message };
     }
 
-    // Total counts
-    const totalAccounts = await prisma.compte.count();
+    // Try to join movements with ecritures to see all dates
+    try {
+      const movementsWithEcritures: any[] = await prisma.$queryRaw`
+        SELECT m.id_mouvement, m.id_ecriture, m.date_valeur, m.montant, m.sens,
+               e.*
+        FROM ad_mouvement m
+        LEFT JOIN ad_ecriture e ON m.id_ecriture = e.id_ecriture
+        WHERE m.id_ecriture IS NOT NULL
+        ORDER BY m.id_mouvement DESC
+        LIMIT 5
+      `;
+      result.movementsWithEcritures = movementsWithEcritures;
+    } catch (e: any) {
+      result.movementsWithEcritures = { error: e.message };
+    }
 
-    res.json({
-      allTables: allTables.map(t => t.table_name),
-      totalAccounts,
-      totalMovements,
-      dateRange,
-      adMouvementColumns: mouvementColumns,
-      adEcritureColumns: ecritureColumns,
-      hisMouvementColumns,
-      sampleAccounts,
-      sampleMovements,
-      sampleEcritures,
-      movementsWithEcritures,
-    });
-  } catch (error) {
-    next(error);
+  } catch (e: any) {
+    result.status = 'error';
+    result.error = e.message;
   }
+
+  res.json(result);
 });
 
 // Toutes les autres routes nécessitent une authentification
