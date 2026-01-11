@@ -10,12 +10,29 @@ const router = Router();
 router.get('/debug', async (req, res, next) => {
   try {
     // Get actual column names from ad_mouvement table
-    const columns: any[] = await prisma.$queryRaw`
+    const mouvementColumns: any[] = await prisma.$queryRaw`
       SELECT column_name, data_type
       FROM information_schema.columns
       WHERE table_name = 'ad_mouvement'
       ORDER BY ordinal_position
     `;
+
+    // Get actual column names from ad_ecriture table (if exists)
+    let ecritureColumns: any[] = [];
+    let sampleEcritures: any[] = [];
+    try {
+      ecritureColumns = await prisma.$queryRaw`
+        SELECT column_name, data_type
+        FROM information_schema.columns
+        WHERE table_name = 'ad_ecriture'
+        ORDER BY ordinal_position
+      `;
+      sampleEcritures = await prisma.$queryRaw`
+        SELECT * FROM ad_ecriture ORDER BY id_ecriture DESC LIMIT 5
+      `;
+    } catch (e: any) {
+      ecritureColumns = [{ note: 'Table ad_ecriture not found or error: ' + e.message }];
+    }
 
     // Sample accounts
     const sampleAccounts = await prisma.compte.findMany({
@@ -37,15 +54,33 @@ router.get('/debug', async (req, res, next) => {
       sampleMovements = [{ error: e.message }];
     }
 
+    // Try to join movements with ecritures to see dates
+    let movementsWithEcritures: any[] = [];
+    try {
+      movementsWithEcritures = await prisma.$queryRaw`
+        SELECT m.id_mouvement, m.id_ecriture, m.date_valeur, m.montant, m.sens,
+               e.*
+        FROM ad_mouvement m
+        LEFT JOIN ad_ecriture e ON m.id_ecriture = e.id_ecriture
+        ORDER BY m.id_mouvement DESC
+        LIMIT 5
+      `;
+    } catch (e: any) {
+      movementsWithEcritures = [{ error: e.message }];
+    }
+
     // Total counts
     const totalAccounts = await prisma.compte.count();
 
     res.json({
       totalAccounts,
       totalMovements,
-      adMouvementColumns: columns,
+      adMouvementColumns: mouvementColumns,
+      adEcritureColumns: ecritureColumns,
       sampleAccounts,
       sampleMovements,
+      sampleEcritures,
+      movementsWithEcritures,
     });
   } catch (error) {
     next(error);
