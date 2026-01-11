@@ -11,6 +11,14 @@ router.use(authenticate);
 // GET /api/accounts/debug - Diagnostic des données (temporaire)
 router.get('/debug', async (req, res, next) => {
   try {
+    // Get actual column names from ad_mouvement table
+    const columns: any[] = await prisma.$queryRaw`
+      SELECT column_name, data_type
+      FROM information_schema.columns
+      WHERE table_name = 'ad_mouvement'
+      ORDER BY ordinal_position
+    `;
+
     // Sample accounts
     const sampleAccounts = await prisma.compte.findMany({
       take: 10,
@@ -18,33 +26,28 @@ router.get('/debug', async (req, res, next) => {
       orderBy: { id_cpte: 'desc' },
     });
 
-    // Sample movements
-    const sampleMovements = await prisma.mouvement.findMany({
-      take: 20,
-      select: { id_mouvement: true, cpte_interne_cli: true, date_mvt: true, montant: true, libel_mvt: true },
-      orderBy: { id_mouvement: 'desc' },
-    });
+    // Try to get sample movements using raw query
+    let sampleMovements: any[] = [];
+    let totalMovements = 0;
+    try {
+      sampleMovements = await prisma.$queryRaw`
+        SELECT * FROM ad_mouvement ORDER BY id_mouvement DESC LIMIT 10
+      `;
+      const countResult: any[] = await prisma.$queryRaw`SELECT COUNT(*) as count FROM ad_mouvement`;
+      totalMovements = Number(countResult[0]?.count || 0);
+    } catch (e: any) {
+      sampleMovements = [{ error: e.message }];
+    }
 
     // Total counts
     const totalAccounts = await prisma.compte.count();
-    const totalMovements = await prisma.mouvement.count();
-
-    // Unique cpte_interne_cli values in movements
-    const uniqueCpteIds = await prisma.mouvement.findMany({
-      distinct: ['cpte_interne_cli'],
-      select: { cpte_interne_cli: true },
-      take: 50,
-    });
 
     res.json({
       totalAccounts,
       totalMovements,
+      adMouvementColumns: columns,
       sampleAccounts,
-      sampleMovements: sampleMovements.map(m => ({
-        ...m,
-        montant: Number(m.montant || 0),
-      })),
-      uniqueCpteInterneCliValues: uniqueCpteIds.map(m => m.cpte_interne_cli),
+      sampleMovements,
     });
   } catch (error) {
     next(error);
