@@ -6,9 +6,7 @@ import { config } from '../config';
 
 const router = Router();
 
-router.use(authenticate);
-
-// GET /api/accounts/debug - Diagnostic des données (temporaire)
+// GET /api/accounts/debug - Diagnostic des données (temporaire - SANS AUTH)
 router.get('/debug', async (req, res, next) => {
   try {
     // Get actual column names from ad_mouvement table
@@ -53,6 +51,9 @@ router.get('/debug', async (req, res, next) => {
     next(error);
   }
 });
+
+// Toutes les autres routes nécessitent une authentification
+router.use(authenticate);
 
 // GET /api/accounts - Liste des comptes
 router.get('/', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_OFFICER', 'TELLER', 'DIRECTOR'), async (req, res, next) => {
