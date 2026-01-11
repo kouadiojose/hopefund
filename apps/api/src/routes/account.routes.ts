@@ -200,10 +200,10 @@ router.get('/:id/transactions', async (req, res, next) => {
     const startDate = req.query.startDate as string;
     const endDate = req.query.endDate as string;
 
-    // Récupérer le compte pour avoir le num_cpte
+    // Récupérer le compte avec toutes les infos nécessaires
     const compte = await prisma.compte.findUnique({
       where: { id_cpte: accountId },
-      select: { id_cpte: true, num_cpte: true, num_complet_cpte: true },
+      select: { id_cpte: true, num_cpte: true, num_complet_cpte: true, id_ag: true, id_titulaire: true },
     });
 
     if (!compte) {
@@ -212,30 +212,38 @@ router.get('/:id/transactions', async (req, res, next) => {
 
     // Debug: chercher toutes les transactions pour voir ce qui existe
     const allMouvements = await prisma.mouvement.findMany({
-      take: 5,
+      take: 10,
       orderBy: { id_mouvement: 'desc' },
-      select: { id_mouvement: true, cpte_interne_cli: true, date_mvt: true, montant: true },
+      select: { id_mouvement: true, cpte_interne_cli: true, id_ag: true, date_mvt: true, montant: true },
     });
 
-    // Rechercher par id_cpte OU num_cpte (car les données peuvent utiliser l'un ou l'autre)
-    const whereConditions: any[] = [
-      { cpte_interne_cli: compte.id_cpte },
-    ];
+    // Récupérer TOUS les comptes du client pour chercher dans tous leurs mouvements
+    const comptesClient = await prisma.compte.findMany({
+      where: { id_titulaire: compte.id_titulaire },
+      select: { id_cpte: true, num_cpte: true },
+    });
 
-    if (compte.num_cpte) {
-      whereConditions.push({ cpte_interne_cli: compte.num_cpte });
-    }
+    // Construire la liste de tous les IDs possibles
+    const allPossibleIds: number[] = [];
+    comptesClient.forEach(c => {
+      allPossibleIds.push(c.id_cpte);
+      if (c.num_cpte && !allPossibleIds.includes(c.num_cpte)) {
+        allPossibleIds.push(c.num_cpte);
+      }
+    });
 
-    // Aussi chercher par num_complet_cpte converti en entier si c'est numérique
+    // Ajouter aussi le num_complet_cpte converti en entier
     if (compte.num_complet_cpte) {
       const numComplet = parseInt(compte.num_complet_cpte);
-      if (!isNaN(numComplet)) {
-        whereConditions.push({ cpte_interne_cli: numComplet });
+      if (!isNaN(numComplet) && !allPossibleIds.includes(numComplet)) {
+        allPossibleIds.push(numComplet);
       }
     }
 
+    // Rechercher par cpte_interne_cli correspondant à l'un des IDs possibles
+    // ET filtrer pour n'afficher que ceux du compte demandé
     const where: any = {
-      OR: whereConditions,
+      cpte_interne_cli: { in: allPossibleIds },
     };
 
     if (startDate || endDate) {
@@ -282,11 +290,15 @@ router.get('/:id/transactions', async (req, res, next) => {
           id_cpte: compte.id_cpte,
           num_cpte: compte.num_cpte,
           num_complet_cpte: compte.num_complet_cpte,
+          id_ag: compte.id_ag,
+          id_titulaire: compte.id_titulaire,
         },
-        searchedIds: whereConditions.map(c => c.cpte_interne_cli),
+        allComptesDuClient: comptesClient,
+        searchedIds: allPossibleIds,
         sampleMouvements: allMouvements.map(m => ({
           id: m.id_mouvement,
           cpte_interne_cli: m.cpte_interne_cli,
+          id_ag: m.id_ag,
         })),
       },
     });
