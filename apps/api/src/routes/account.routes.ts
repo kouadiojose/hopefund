@@ -9,6 +9,15 @@ const router = Router();
 // GET /api/accounts/debug - Diagnostic des données (temporaire - SANS AUTH)
 router.get('/debug', async (req, res, next) => {
   try {
+    // Discover all tables that might have transaction/date info
+    const allTables: any[] = await prisma.$queryRaw`
+      SELECT table_name
+      FROM information_schema.tables
+      WHERE table_schema = 'public'
+      AND (table_name LIKE 'ad_%' OR table_name LIKE 'app_%')
+      ORDER BY table_name
+    `;
+
     // Get actual column names from ad_mouvement table
     const mouvementColumns: any[] = await prisma.$queryRaw`
       SELECT column_name, data_type
@@ -32,6 +41,20 @@ router.get('/debug', async (req, res, next) => {
       `;
     } catch (e: any) {
       ecritureColumns = [{ note: 'Table ad_ecriture not found or error: ' + e.message }];
+    }
+
+    // Check for ad_his_mouvement (history table) that might have more dates
+    let hisMouvementColumns: any[] = [];
+    try {
+      hisMouvementColumns = await prisma.$queryRaw`
+        SELECT column_name, data_type
+        FROM information_schema.columns
+        WHERE table_name LIKE '%his%mouv%' OR table_name LIKE 'ad_his%'
+        ORDER BY table_name, ordinal_position
+        LIMIT 50
+      `;
+    } catch (e: any) {
+      hisMouvementColumns = [{ note: 'No history tables found or error: ' + e.message }];
     }
 
     // Sample accounts
@@ -69,14 +92,32 @@ router.get('/debug', async (req, res, next) => {
       movementsWithEcritures = [{ error: e.message }];
     }
 
+    // Get min/max dates to understand the data range
+    let dateRange: any = {};
+    try {
+      const minMax: any[] = await prisma.$queryRaw`
+        SELECT
+          MIN(date_valeur) as min_date,
+          MAX(date_valeur) as max_date,
+          COUNT(*) as total
+        FROM ad_mouvement
+      `;
+      dateRange = minMax[0];
+    } catch (e: any) {
+      dateRange = { error: e.message };
+    }
+
     // Total counts
     const totalAccounts = await prisma.compte.count();
 
     res.json({
+      allTables: allTables.map(t => t.table_name),
       totalAccounts,
       totalMovements,
+      dateRange,
       adMouvementColumns: mouvementColumns,
       adEcritureColumns: ecritureColumns,
+      hisMouvementColumns,
       sampleAccounts,
       sampleMovements,
       sampleEcritures,
