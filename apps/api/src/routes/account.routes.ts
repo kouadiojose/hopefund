@@ -8,6 +8,49 @@ const router = Router();
 
 router.use(authenticate);
 
+// GET /api/accounts/debug - Diagnostic des données (temporaire)
+router.get('/debug', async (req, res, next) => {
+  try {
+    // Sample accounts
+    const sampleAccounts = await prisma.compte.findMany({
+      take: 10,
+      select: { id_cpte: true, num_cpte: true, num_complet_cpte: true, id_titulaire: true },
+      orderBy: { id_cpte: 'desc' },
+    });
+
+    // Sample movements
+    const sampleMovements = await prisma.mouvement.findMany({
+      take: 20,
+      select: { id_mouvement: true, cpte_interne_cli: true, date_mvt: true, montant: true, libel_mvt: true },
+      orderBy: { id_mouvement: 'desc' },
+    });
+
+    // Total counts
+    const totalAccounts = await prisma.compte.count();
+    const totalMovements = await prisma.mouvement.count();
+
+    // Unique cpte_interne_cli values in movements
+    const uniqueCpteIds = await prisma.mouvement.findMany({
+      distinct: ['cpte_interne_cli'],
+      select: { cpte_interne_cli: true },
+      take: 50,
+    });
+
+    res.json({
+      totalAccounts,
+      totalMovements,
+      sampleAccounts,
+      sampleMovements: sampleMovements.map(m => ({
+        ...m,
+        montant: Number(m.montant || 0),
+      })),
+      uniqueCpteInterneCliValues: uniqueCpteIds.map(m => m.cpte_interne_cli),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // GET /api/accounts - Liste des comptes
 router.get('/', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_OFFICER', 'TELLER', 'DIRECTOR'), async (req, res, next) => {
   try {
