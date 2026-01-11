@@ -189,13 +189,21 @@ router.get('/:id', async (req, res, next) => {
       comptes = [];
     }
 
-    // Fetch movements for each account
+    // Fetch movements for each account (recherche par id_cpte OU num_cpte)
     const comptesWithMovements = await Promise.all(
       comptes.map(async (compte: any) => {
         try {
+          // Rechercher par id_cpte OU num_cpte (car les données peuvent utiliser l'un ou l'autre)
+          const whereConditions: any[] = [
+            { cpte_interne_cli: compte.id_cpte },
+          ];
+          if (compte.num_cpte) {
+            whereConditions.push({ cpte_interne_cli: compte.num_cpte });
+          }
+
           const mouvements = await prisma.mouvement.findMany({
-            where: { cpte_interne_cli: compte.id_cpte },
-            take: 5,
+            where: { OR: whereConditions },
+            take: 10,
             orderBy: { date_mvt: 'desc' },
           });
           return { ...compte, mouvements };
@@ -545,31 +553,41 @@ router.get('/:id/transactions', async (req, res, next) => {
       500
     );
 
-    // Récupérer tous les comptes du client
+    // Récupérer tous les comptes du client avec id_cpte ET num_cpte
     const comptes = await prisma.compte.findMany({
       where: { id_titulaire: clientId },
-      select: { id_cpte: true, num_complet_cpte: true },
+      select: { id_cpte: true, num_cpte: true, num_complet_cpte: true },
     });
 
-    const accountIds = comptes.map(c => c.id_cpte);
-    const accountMap = new Map(comptes.map(c => [c.id_cpte, c.num_complet_cpte]));
-
-    if (accountIds.length === 0) {
+    if (comptes.length === 0) {
       return res.json({
         data: [],
         pagination: { page: 1, limit, total: 0, totalPages: 0 },
       });
     }
 
+    // Créer une liste de tous les IDs possibles (id_cpte et num_cpte)
+    const allPossibleIds: number[] = [];
+    const accountMap = new Map<number, string>();
+
+    comptes.forEach(c => {
+      allPossibleIds.push(c.id_cpte);
+      accountMap.set(c.id_cpte, c.num_complet_cpte || 'N/A');
+      if (c.num_cpte && c.num_cpte !== c.id_cpte) {
+        allPossibleIds.push(c.num_cpte);
+        accountMap.set(c.num_cpte, c.num_complet_cpte || 'N/A');
+      }
+    });
+
     const [transactions, total] = await Promise.all([
       prisma.mouvement.findMany({
-        where: { cpte_interne_cli: { in: accountIds } },
+        where: { cpte_interne_cli: { in: allPossibleIds } },
         skip: all ? 0 : (page - 1) * limit,
         take: limit,
         orderBy: { date_mvt: 'desc' },
       }),
       prisma.mouvement.count({
-        where: { cpte_interne_cli: { in: accountIds } },
+        where: { cpte_interne_cli: { in: allPossibleIds } },
       }),
     ]);
 

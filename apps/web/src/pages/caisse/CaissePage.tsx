@@ -39,24 +39,24 @@ import { caisseApi } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
-// Valeurs des billets et pièces
-const BILLETS_CDF = [
-  { key: 'billets_20000', value: 20000, label: '20 000 FC' },
-  { key: 'billets_10000', value: 10000, label: '10 000 FC' },
-  { key: 'billets_5000', value: 5000, label: '5 000 FC' },
-  { key: 'billets_1000', value: 1000, label: '1 000 FC' },
-  { key: 'billets_500', value: 500, label: '500 FC' },
-  { key: 'billets_200', value: 200, label: '200 FC' },
-  { key: 'billets_100', value: 100, label: '100 FC' },
-  { key: 'billets_50', value: 50, label: '50 FC' },
+// Valeurs des billets et pièces (Franc Burundais - BIF)
+const BILLETS_BIF = [
+  { key: 'billets_10000', value: 10000, label: '10 000 FBu' },
+  { key: 'billets_5000', value: 5000, label: '5 000 FBu' },
+  { key: 'billets_2000', value: 2000, label: '2 000 FBu' },
+  { key: 'billets_1000', value: 1000, label: '1 000 FBu' },
+  { key: 'billets_500', value: 500, label: '500 FBu' },
+  { key: 'billets_100', value: 100, label: '100 FBu' },
+  { key: 'billets_50', value: 50, label: '50 FBu' },
+  { key: 'billets_20', value: 20, label: '20 FBu' },
+  { key: 'billets_10', value: 10, label: '10 FBu' },
 ];
 
-const PIECES_CDF = [
-  { key: 'pieces_50', value: 50, label: '50 FC' },
-  { key: 'pieces_25', value: 25, label: '25 FC' },
-  { key: 'pieces_10', value: 10, label: '10 FC' },
-  { key: 'pieces_5', value: 5, label: '5 FC' },
-  { key: 'pieces_1', value: 1, label: '1 FC' },
+const PIECES_BIF = [
+  { key: 'pieces_50', value: 50, label: '50 FBu' },
+  { key: 'pieces_10', value: 10, label: '10 FBu' },
+  { key: 'pieces_5', value: 5, label: '5 FBu' },
+  { key: 'pieces_1', value: 1, label: '1 FBu' },
 ];
 
 const BILLETS_USD = [
@@ -78,25 +78,25 @@ function DecompteForm({
   onChange: (key: string, value: number) => void;
   readOnly?: boolean;
 }) {
-  const calculateTotal = (items: typeof BILLETS_CDF) => {
+  const calculateTotal = (items: typeof BILLETS_BIF) => {
     return items.reduce((sum, item) => sum + (values[item.key] || 0) * item.value, 0);
   };
 
-  const totalBilletsCDF = calculateTotal(BILLETS_CDF);
-  const totalPiecesCDF = calculateTotal(PIECES_CDF);
+  const totalBilletsBIF = calculateTotal(BILLETS_BIF);
+  const totalPiecesBIF = calculateTotal(PIECES_BIF);
   const totalUSD = calculateTotal(BILLETS_USD);
-  const totalCDF = totalBilletsCDF + totalPiecesCDF;
+  const totalBIF = totalBilletsBIF + totalPiecesBIF;
 
   return (
     <div className="space-y-6">
-      {/* Billets CDF */}
+      {/* Billets BIF */}
       <div>
         <div className="flex items-center gap-2 mb-3">
           <Banknote className="h-5 w-5 text-green-600" />
-          <h4 className="font-medium">Billets CDF</h4>
+          <h4 className="font-medium">Billets FBu</h4>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {BILLETS_CDF.map((item) => (
+          {BILLETS_BIF.map((item) => (
             <div key={item.key} className="space-y-1">
               <Label className="text-xs text-gray-500">{item.label}</Label>
               <div className="flex items-center gap-2">
@@ -109,25 +109,25 @@ function DecompteForm({
                   className="h-9"
                 />
                 <span className="text-xs text-gray-400 whitespace-nowrap">
-                  = {formatCurrency((values[item.key] || 0) * item.value, 'CDF')}
+                  = {formatCurrency((values[item.key] || 0) * item.value)}
                 </span>
               </div>
             </div>
           ))}
         </div>
         <div className="mt-2 text-right text-sm font-medium text-green-600">
-          Sous-total billets: {formatCurrency(totalBilletsCDF, 'CDF')}
+          Sous-total billets: {formatCurrency(totalBilletsBIF)}
         </div>
       </div>
 
-      {/* Pièces CDF */}
+      {/* Pièces BIF */}
       <div>
         <div className="flex items-center gap-2 mb-3">
           <Coins className="h-5 w-5 text-amber-600" />
-          <h4 className="font-medium">Pièces CDF</h4>
+          <h4 className="font-medium">Pièces FBu</h4>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          {PIECES_CDF.map((item) => (
+          {PIECES_BIF.map((item) => (
             <div key={item.key} className="space-y-1">
               <Label className="text-xs text-gray-500">{item.label}</Label>
               <Input
@@ -142,7 +142,7 @@ function DecompteForm({
           ))}
         </div>
         <div className="mt-2 text-right text-sm font-medium text-amber-600">
-          Sous-total pièces: {formatCurrency(totalPiecesCDF, 'CDF')}
+          Sous-total pièces: {formatCurrency(totalPiecesBIF)}
         </div>
       </div>
 
@@ -175,8 +175,8 @@ function DecompteForm({
       {/* Totaux */}
       <div className="bg-gray-50 rounded-lg p-4 space-y-2">
         <div className="flex justify-between items-center">
-          <span className="font-medium">Total CDF</span>
-          <span className="text-xl font-bold text-green-600">{formatCurrency(totalCDF, 'CDF')}</span>
+          <span className="font-medium">Total FBu</span>
+          <span className="text-xl font-bold text-green-600">{formatCurrency(totalBIF)}</span>
         </div>
         <div className="flex justify-between items-center">
           <span className="font-medium">Total USD</span>
@@ -236,7 +236,7 @@ export default function CaissePage() {
       const ecart = data.data.ecart;
       toast({
         title: 'Caisse fermée avec succès',
-        description: ecart !== 0 ? `Attention: Écart de ${formatCurrency(ecart, 'CDF')}` : 'Aucun écart',
+        description: ecart !== 0 ? `Attention: Écart de ${formatCurrency(ecart)}` : 'Aucun écart',
         variant: ecart !== 0 ? 'destructive' : 'default',
       });
       setOpenDialog(null);
@@ -299,10 +299,10 @@ export default function CaissePage() {
 
   const calculateDecompteTotal = () => {
     let total = 0;
-    BILLETS_CDF.forEach((item) => {
+    BILLETS_BIF.forEach((item) => {
       total += (decompte[item.key] || 0) * item.value;
     });
-    PIECES_CDF.forEach((item) => {
+    PIECES_BIF.forEach((item) => {
       total += (decompte[item.key] || 0) * item.value;
     });
     return total;
@@ -479,7 +479,7 @@ export default function CaissePage() {
                             />
                             {montant > 0 && calculateDecompteTotal() !== montant && (
                               <p className="text-sm text-red-500 mt-1">
-                                Le décompte ({formatCurrency(calculateDecompteTotal(), 'CDF')}) ne correspond pas au montant
+                                Le décompte ({formatCurrency(calculateDecompteTotal())}) ne correspond pas au montant
                               </p>
                             )}
                           </div>
@@ -528,20 +528,20 @@ export default function CaissePage() {
                             <div className="grid grid-cols-3 gap-4 text-sm">
                               <div>
                                 <span className="text-gray-600">Ouverture:</span>
-                                <span className="ml-2 font-medium">{formatCurrency(session.montant_ouverture, 'CDF')}</span>
+                                <span className="ml-2 font-medium">{formatCurrency(session.montant_ouverture)}</span>
                               </div>
                               <div>
                                 <span className="text-gray-600">Entrées:</span>
-                                <span className="ml-2 font-medium text-green-600">+{formatCurrency(session.total_entrees, 'CDF')}</span>
+                                <span className="ml-2 font-medium text-green-600">+{formatCurrency(session.total_entrees)}</span>
                               </div>
                               <div>
                                 <span className="text-gray-600">Sorties:</span>
-                                <span className="ml-2 font-medium text-red-600">-{formatCurrency(session.total_sorties, 'CDF')}</span>
+                                <span className="ml-2 font-medium text-red-600">-{formatCurrency(session.total_sorties)}</span>
                               </div>
                             </div>
                             <div className="mt-2 pt-2 border-t border-blue-200">
                               <span className="text-gray-600">Solde attendu:</span>
-                              <span className="ml-2 font-bold text-lg">{formatCurrency(session.solde_theorique, 'CDF')}</span>
+                              <span className="ml-2 font-bold text-lg">{formatCurrency(session.solde_theorique)}</span>
                             </div>
                           </div>
                         )}
@@ -554,7 +554,7 @@ export default function CaissePage() {
                             <div>
                               <p className="font-medium text-amber-800">Écart détecté</p>
                               <p className="text-sm text-amber-700">
-                                Différence: {formatCurrency(calculateDecompteTotal() - session.solde_theorique, 'CDF')}
+                                Différence: {formatCurrency(calculateDecompteTotal() - session.solde_theorique)}
                               </p>
                             </div>
                           </div>
@@ -593,19 +593,19 @@ export default function CaissePage() {
               <div className="grid grid-cols-4 gap-4 mt-6 pt-6 border-t">
                 <div className="text-center">
                   <p className="text-sm text-gray-500">Fond de caisse</p>
-                  <p className="text-xl font-bold">{formatCurrency(session.montant_ouverture, 'CDF')}</p>
+                  <p className="text-xl font-bold">{formatCurrency(session.montant_ouverture)}</p>
                 </div>
                 <div className="text-center">
                   <p className="text-sm text-gray-500">Entrées</p>
-                  <p className="text-xl font-bold text-green-600">+{formatCurrency(session.total_entrees, 'CDF')}</p>
+                  <p className="text-xl font-bold text-green-600">+{formatCurrency(session.total_entrees)}</p>
                 </div>
                 <div className="text-center">
                   <p className="text-sm text-gray-500">Sorties</p>
-                  <p className="text-xl font-bold text-red-600">-{formatCurrency(session.total_sorties, 'CDF')}</p>
+                  <p className="text-xl font-bold text-red-600">-{formatCurrency(session.total_sorties)}</p>
                 </div>
                 <div className="text-center">
                   <p className="text-sm text-gray-500">Solde actuel</p>
-                  <p className="text-xl font-bold text-blue-600">{formatCurrency(session.solde_theorique, 'CDF')}</p>
+                  <p className="text-xl font-bold text-blue-600">{formatCurrency(session.solde_theorique)}</p>
                 </div>
               </div>
             )}
@@ -638,22 +638,22 @@ export default function CaissePage() {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="bg-gray-50 rounded-lg p-4">
                       <p className="text-sm text-gray-500">Ouverture</p>
-                      <p className="text-lg font-bold">{formatCurrency(brouillard.montant_ouverture, 'CDF')}</p>
+                      <p className="text-lg font-bold">{formatCurrency(brouillard.montant_ouverture)}</p>
                       <p className="text-xs text-gray-400">
                         {brouillard.heure_ouverture && new Date(brouillard.heure_ouverture).toLocaleTimeString('fr-FR')}
                       </p>
                     </div>
                     <div className="bg-green-50 rounded-lg p-4">
                       <p className="text-sm text-green-600">Entrées</p>
-                      <p className="text-lg font-bold text-green-700">+{formatCurrency(brouillard.total_entrees, 'CDF')}</p>
+                      <p className="text-lg font-bold text-green-700">+{formatCurrency(brouillard.total_entrees)}</p>
                     </div>
                     <div className="bg-red-50 rounded-lg p-4">
                       <p className="text-sm text-red-600">Sorties</p>
-                      <p className="text-lg font-bold text-red-700">-{formatCurrency(brouillard.total_sorties, 'CDF')}</p>
+                      <p className="text-lg font-bold text-red-700">-{formatCurrency(brouillard.total_sorties)}</p>
                     </div>
                     <div className="bg-blue-50 rounded-lg p-4">
                       <p className="text-sm text-blue-600">Solde</p>
-                      <p className="text-lg font-bold text-blue-700">{formatCurrency(brouillard.solde_actuel, 'CDF')}</p>
+                      <p className="text-lg font-bold text-blue-700">{formatCurrency(brouillard.solde_actuel)}</p>
                     </div>
                   </div>
 
@@ -694,7 +694,7 @@ export default function CaissePage() {
                         </div>
                         <div className="text-right">
                           <p className={`font-bold ${m.type_mouvement === 1 ? 'text-green-600' : 'text-amber-600'}`}>
-                            {m.type_mouvement === 1 ? '+' : '-'}{formatCurrency(m.montant, 'CDF')}
+                            {m.type_mouvement === 1 ? '+' : '-'}{formatCurrency(m.montant)}
                           </p>
                           <Badge variant={m.etat === 2 ? 'default' : 'secondary'}>
                             {m.etat === 2 ? 'Validé' : 'En attente'}
@@ -726,7 +726,7 @@ export default function CaissePage() {
             <div className="mt-4 grid grid-cols-3 gap-4 max-w-md mx-auto">
               <div>
                 <p className="text-sm text-gray-500">Montant final</p>
-                <p className="font-bold">{formatCurrency(session.montant_fermeture, 'CDF')}</p>
+                <p className="font-bold">{formatCurrency(session.montant_fermeture)}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Opérations</p>
@@ -735,7 +735,7 @@ export default function CaissePage() {
               <div>
                 <p className="text-sm text-gray-500">Écart</p>
                 <p className={`font-bold ${session.ecart !== 0 ? 'text-red-600' : 'text-green-600'}`}>
-                  {formatCurrency(session.ecart || 0, 'CDF')}
+                  {formatCurrency(session.ecart || 0)}
                 </p>
               </div>
             </div>

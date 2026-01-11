@@ -157,8 +157,27 @@ router.get('/:id/transactions', async (req, res, next) => {
     const startDate = req.query.startDate as string;
     const endDate = req.query.endDate as string;
 
+    // Récupérer le compte pour avoir le num_cpte
+    const compte = await prisma.compte.findUnique({
+      where: { id_cpte: accountId },
+      select: { id_cpte: true, num_cpte: true, num_complet_cpte: true },
+    });
+
+    if (!compte) {
+      return res.status(404).json({ error: 'Compte non trouvé' });
+    }
+
+    // Rechercher par id_cpte OU num_cpte (car les données peuvent utiliser l'un ou l'autre)
+    const whereConditions: any[] = [
+      { cpte_interne_cli: compte.id_cpte },
+    ];
+
+    if (compte.num_cpte) {
+      whereConditions.push({ cpte_interne_cli: compte.num_cpte });
+    }
+
     const where: any = {
-      cpte_interne_cli: accountId,
+      OR: whereConditions,
     };
 
     if (startDate || endDate) {
