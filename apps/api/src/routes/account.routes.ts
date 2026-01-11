@@ -16,47 +16,49 @@ router.get('/debug', async (req, res) => {
   try {
     // Discover all tables that might have transaction/date info
     try {
-      const allTables: any[] = await prisma.$queryRaw`
+      const allTables = await prisma.$queryRaw`
         SELECT table_name
         FROM information_schema.tables
         WHERE table_schema = 'public'
         AND (table_name LIKE 'ad_%' OR table_name LIKE 'app_%')
         ORDER BY table_name
-      `;
-      result.allTables = allTables.map(t => t.table_name);
+      ` as any[];
+      result.allTables = Array.isArray(allTables) ? allTables.map((t: any) => t.table_name) : [];
     } catch (e: any) {
-      result.allTables = { error: e.message };
+      result.allTables = { error: String(e?.message || e) };
     }
 
     // Get actual column names from ad_mouvement table
     try {
-      const mouvementColumns: any[] = await prisma.$queryRaw`
+      const mouvementColumns = await prisma.$queryRaw`
         SELECT column_name, data_type
         FROM information_schema.columns
         WHERE table_name = 'ad_mouvement'
         ORDER BY ordinal_position
-      `;
-      result.adMouvementColumns = mouvementColumns;
+      ` as any[];
+      result.adMouvementColumns = mouvementColumns || [];
     } catch (e: any) {
-      result.adMouvementColumns = { error: e.message };
+      result.adMouvementColumns = { error: String(e?.message || e) };
     }
 
     // Get actual column names from ad_ecriture table (if exists)
     try {
-      const ecritureColumns: any[] = await prisma.$queryRaw`
+      const ecritureColumns = await prisma.$queryRaw`
         SELECT column_name, data_type
         FROM information_schema.columns
         WHERE table_name = 'ad_ecriture'
         ORDER BY ordinal_position
-      `;
-      result.adEcritureColumns = ecritureColumns;
+      ` as any[];
+      result.adEcritureColumns = ecritureColumns || [];
 
-      const sampleEcritures: any[] = await prisma.$queryRaw`
-        SELECT * FROM ad_ecriture ORDER BY id_ecriture DESC LIMIT 5
-      `;
-      result.sampleEcritures = sampleEcritures;
+      if (Array.isArray(ecritureColumns) && ecritureColumns.length > 0) {
+        const sampleEcritures = await prisma.$queryRaw`
+          SELECT * FROM ad_ecriture ORDER BY id_ecriture DESC LIMIT 5
+        ` as any[];
+        result.sampleEcritures = sampleEcritures || [];
+      }
     } catch (e: any) {
-      result.adEcritureColumns = { note: 'Table not found or error', error: e.message };
+      result.adEcritureColumns = { note: 'Table not found or error', error: String(e?.message || e) };
     }
 
     // Sample accounts
@@ -66,42 +68,42 @@ router.get('/debug', async (req, res) => {
         select: { id_cpte: true, num_cpte: true, num_complet_cpte: true, id_titulaire: true },
         orderBy: { id_cpte: 'desc' },
       });
-      result.sampleAccounts = sampleAccounts;
+      result.sampleAccounts = sampleAccounts || [];
       result.totalAccounts = await prisma.compte.count();
     } catch (e: any) {
-      result.sampleAccounts = { error: e.message };
+      result.sampleAccounts = { error: String(e?.message || e) };
     }
 
     // Sample movements using raw query
     try {
-      const sampleMovements: any[] = await prisma.$queryRaw`
+      const sampleMovements = await prisma.$queryRaw`
         SELECT * FROM ad_mouvement ORDER BY id_mouvement DESC LIMIT 5
-      `;
-      result.sampleMovements = sampleMovements;
+      ` as any[];
+      result.sampleMovements = sampleMovements || [];
 
-      const countResult: any[] = await prisma.$queryRaw`SELECT COUNT(*) as count FROM ad_mouvement`;
-      result.totalMovements = Number(countResult[0]?.count || 0);
+      const countResult = await prisma.$queryRaw`SELECT COUNT(*) as count FROM ad_mouvement` as any[];
+      result.totalMovements = Array.isArray(countResult) && countResult[0] ? Number(countResult[0].count || 0) : 0;
     } catch (e: any) {
-      result.sampleMovements = { error: e.message };
+      result.sampleMovements = { error: String(e?.message || e) };
     }
 
     // Get min/max dates to understand the data range
     try {
-      const minMax: any[] = await prisma.$queryRaw`
+      const minMax = await prisma.$queryRaw`
         SELECT
           MIN(date_valeur) as min_date,
           MAX(date_valeur) as max_date,
           COUNT(*) as total
         FROM ad_mouvement
-      `;
-      result.dateRange = minMax[0];
+      ` as any[];
+      result.dateRange = Array.isArray(minMax) && minMax[0] ? minMax[0] : {};
     } catch (e: any) {
-      result.dateRange = { error: e.message };
+      result.dateRange = { error: String(e?.message || e) };
     }
 
     // Try to join movements with ecritures to see all dates
     try {
-      const movementsWithEcritures: any[] = await prisma.$queryRaw`
+      const movementsWithEcritures = await prisma.$queryRaw`
         SELECT m.id_mouvement, m.id_ecriture, m.date_valeur, m.montant, m.sens,
                e.*
         FROM ad_mouvement m
@@ -109,15 +111,15 @@ router.get('/debug', async (req, res) => {
         WHERE m.id_ecriture IS NOT NULL
         ORDER BY m.id_mouvement DESC
         LIMIT 5
-      `;
-      result.movementsWithEcritures = movementsWithEcritures;
+      ` as any[];
+      result.movementsWithEcritures = movementsWithEcritures || [];
     } catch (e: any) {
-      result.movementsWithEcritures = { error: e.message };
+      result.movementsWithEcritures = { error: String(e?.message || e) };
     }
 
   } catch (e: any) {
     result.status = 'error';
-    result.error = e.message;
+    result.error = String(e?.message || e);
   }
 
   res.json(result);
