@@ -603,7 +603,6 @@ router.get('/:id/transactions', async (req, res, next) => {
       libel_mvt: t.libel_mvt,
       solde_avant: toNumber(t.solde_avant),
       solde_apres: toNumber(t.solde_apres),
-      reference: t.reference,
     }));
 
     res.json({

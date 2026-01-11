@@ -207,7 +207,6 @@ router.get('/:id/transactions', async (req, res, next) => {
       libel_mvt: t.libel_mvt,
       solde_avant: Number(t.solde_avant || 0),
       solde_apres: Number(t.solde_apres || 0),
-      reference: t.reference,
       id_utilisateur: t.id_utilisateur,
     }));
 
