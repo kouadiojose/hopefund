@@ -534,6 +534,188 @@ router.get('/:id/loans', async (req, res, next) => {
   }
 });
 
+// GET /api/clients/:id/transactions - Historique complet des transactions (tous comptes)
+router.get('/:id/transactions', async (req, res, next) => {
+  try {
+    const clientId = parseInt(req.params.id);
+    const page = parseInt(req.query.page as string) || 1;
+    const all = req.query.all === 'true';
+    const limit = all ? 10000 : Math.min(
+      parseInt(req.query.limit as string) || 50,
+      500
+    );
+
+    // Récupérer tous les comptes du client
+    const comptes = await prisma.compte.findMany({
+      where: { id_titulaire: clientId },
+      select: { id_cpte: true, num_complet_cpte: true },
+    });
+
+    const accountIds = comptes.map(c => c.id_cpte);
+    const accountMap = new Map(comptes.map(c => [c.id_cpte, c.num_complet_cpte]));
+
+    if (accountIds.length === 0) {
+      return res.json({
+        data: [],
+        pagination: { page: 1, limit, total: 0, totalPages: 0 },
+      });
+    }
+
+    const [transactions, total] = await Promise.all([
+      prisma.mouvement.findMany({
+        where: { cpte_interne_cli: { in: accountIds } },
+        skip: all ? 0 : (page - 1) * limit,
+        take: limit,
+        orderBy: { date_mvt: 'desc' },
+      }),
+      prisma.mouvement.count({
+        where: { cpte_interne_cli: { in: accountIds } },
+      }),
+    ]);
+
+    const formattedTransactions = transactions.map(t => ({
+      id_mouvement: t.id_mouvement,
+      date_mvt: t.date_mvt,
+      compte_id: t.cpte_interne_cli,
+      compte_numero: accountMap.get(t.cpte_interne_cli!) || 'N/A',
+      type_mvt: t.type_mvt,
+      type_operation: t.type_operation,
+      sens: t.sens,
+      montant: toNumber(t.montant),
+      libel_mvt: t.libel_mvt,
+      solde_avant: toNumber(t.solde_avant),
+      solde_apres: toNumber(t.solde_apres),
+      reference: t.reference,
+    }));
+
+    res.json({
+      data: formattedTransactions,
+      pagination: {
+        page: all ? 1 : page,
+        limit: all ? total : limit,
+        total,
+        totalPages: all ? 1 : Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /api/clients/:id/credit-history - Historique complet des crédits et paiements
+router.get('/:id/credit-history', async (req, res, next) => {
+  try {
+    const clientId = parseInt(req.params.id);
+    const today = new Date();
+
+    const credits = await prisma.dossierCredit.findMany({
+      where: { id_client: clientId },
+      include: {
+        echeances: {
+          orderBy: { num_ech: 'asc' },
+        },
+        garanties: true,
+      },
+      orderBy: { date_creation: 'desc' },
+    });
+
+    const result = credits.map(credit => {
+      const echeances = credit.echeances || [];
+      const echeancesPayees = echeances.filter(e => e.etat === 2);
+      const echeancesEnRetard = echeances.filter(e =>
+        e.etat !== 2 && e.date_ech && new Date(e.date_ech) < today
+      );
+      const echeancesAVenir = echeances.filter(e =>
+        e.etat !== 2 && e.date_ech && new Date(e.date_ech) >= today
+      );
+
+      const totalPaye = echeancesPayees.reduce((sum, e) =>
+        sum + toNumber(e.mnt_paye), 0
+      );
+      const totalDu = echeances.reduce((sum, e) =>
+        sum + toNumber(e.mnt_capital) + toNumber(e.mnt_int), 0
+      );
+      const totalEnRetard = echeancesEnRetard.reduce((sum, e) =>
+        sum + toNumber(e.solde_capital) + toNumber(e.solde_int), 0
+      );
+      const totalRestant = echeances.filter(e => e.etat !== 2).reduce((sum, e) =>
+        sum + toNumber(e.solde_capital) + toNumber(e.solde_int), 0
+      );
+
+      return {
+        id_doss: credit.id_doss,
+        date_demande: credit.date_dem,
+        date_deblocage: credit.cre_date_debloc,
+        montant_octroye: toNumber(credit.cre_mnt_octr),
+        duree_mois: credit.duree_mois,
+        taux_interet: credit.tx_interet_lcr,
+        etat: credit.cre_etat,
+        etat_label: getCreditStatusLabel(credit.cre_etat),
+        objet: credit.obj_dem,
+
+        // Résumé financier
+        resume: {
+          total_du: totalDu,
+          total_paye: totalPaye,
+          total_restant: totalRestant,
+          total_en_retard: totalEnRetard,
+          pourcentage_rembourse: totalDu > 0 ? Math.round((totalPaye / totalDu) * 100) : 0,
+        },
+
+        // Statistiques des échéances
+        stats_echeances: {
+          total: echeances.length,
+          payees: echeancesPayees.length,
+          en_retard: echeancesEnRetard.length,
+          a_venir: echeancesAVenir.length,
+          jours_retard_max: echeancesEnRetard.length > 0
+            ? Math.max(...echeancesEnRetard.map(e =>
+                Math.floor((today.getTime() - new Date(e.date_ech!).getTime()) / (1000 * 60 * 60 * 24))
+              ))
+            : 0,
+        },
+
+        // Échéancier complet avec détails de paiement
+        echeancier: echeances.map(e => {
+          const dateEch = e.date_ech ? new Date(e.date_ech) : null;
+          const joursRetard = e.etat !== 2 && dateEch && dateEch < today
+            ? Math.floor((today.getTime() - dateEch.getTime()) / (1000 * 60 * 60 * 24))
+            : 0;
+
+          return {
+            num_ech: e.num_ech,
+            date_ech: e.date_ech,
+            mnt_capital: toNumber(e.mnt_capital),
+            mnt_interet: toNumber(e.mnt_int),
+            montant_total: toNumber(e.mnt_capital) + toNumber(e.mnt_int),
+            solde_capital: toNumber(e.solde_capital),
+            solde_interet: toNumber(e.solde_int),
+            solde_total: toNumber(e.solde_capital) + toNumber(e.solde_int),
+            mnt_paye: toNumber(e.mnt_paye),
+            date_paiement: e.date_paiement,
+            etat: e.etat,
+            etat_label: e.etat === 2 ? 'Payé' : (joursRetard > 0 ? `En retard (${joursRetard}j)` : 'À payer'),
+            en_retard: joursRetard > 0,
+            jours_retard: joursRetard,
+          };
+        }),
+
+        // Garanties
+        garanties: (credit.garanties || []).map(g => ({
+          id: g.id_gar,
+          type: g.type_gar,
+          description: g.description,
+          valeur: toNumber(g.valeur_estimee),
+        })),
+      };
+    });
+
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
 // POST /api/clients - Créer un client
 router.post('/', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_OFFICER', 'TELLER'), async (req, res, next) => {
   try {

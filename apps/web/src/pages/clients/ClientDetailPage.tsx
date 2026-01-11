@@ -173,6 +173,28 @@ interface TransactionHistoryState {
   total: number;
 }
 
+interface ClientTransaction {
+  id_mouvement: number;
+  date_mvt: string;
+  compte_id: number;
+  compte_numero: string;
+  type_mvt: number;
+  sens: string;
+  montant: number;
+  libel_mvt: string;
+  solde_avant: number;
+  solde_apres: number;
+}
+
+interface ClientTransactionHistoryState {
+  isOpen: boolean;
+  transactions: ClientTransaction[];
+  loading: boolean;
+  page: number;
+  totalPages: number;
+  total: number;
+}
+
 export default function ClientDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -184,6 +206,14 @@ export default function ClientDetailPage() {
     isOpen: false,
     accountId: null,
     accountNumber: '',
+    transactions: [],
+    loading: false,
+    page: 1,
+    totalPages: 1,
+    total: 0,
+  });
+  const [clientTransactionHistory, setClientTransactionHistory] = useState<ClientTransactionHistoryState>({
+    isOpen: false,
     transactions: [],
     loading: false,
     page: 1,
@@ -259,6 +289,46 @@ export default function ClientDetailPage() {
     });
   };
 
+  // Charger l'historique complet des transactions du client (tous comptes)
+  const loadClientTransactionHistory = async (page: number = 1) => {
+    if (!id) return;
+
+    setClientTransactionHistory(prev => ({
+      ...prev,
+      isOpen: true,
+      loading: true,
+      page,
+    }));
+
+    try {
+      const response = await clientsApi.getTransactions(parseInt(id), { page, limit: 50 });
+      setClientTransactionHistory(prev => ({
+        ...prev,
+        transactions: response.data.data,
+        totalPages: response.data.pagination.totalPages,
+        total: response.data.pagination.total,
+        loading: false,
+      }));
+    } catch (err) {
+      console.error('Error loading client transactions:', err);
+      setClientTransactionHistory(prev => ({
+        ...prev,
+        loading: false,
+      }));
+    }
+  };
+
+  const closeClientTransactionHistory = () => {
+    setClientTransactionHistory({
+      isOpen: false,
+      transactions: [],
+      loading: false,
+      page: 1,
+      totalPages: 1,
+      total: 0,
+    });
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -297,9 +367,15 @@ export default function ClientDetailPage() {
             </p>
           </div>
         </div>
-        <Badge className={getClientStatusColor(client.etat)}>
-          {getClientStatusLabel(client.etat)}
-        </Badge>
+        <div className="flex items-center gap-3">
+          <Button variant="outline" onClick={() => loadClientTransactionHistory()}>
+            <History className="w-4 h-4 mr-2" />
+            Historique complet
+          </Button>
+          <Badge className={getClientStatusColor(client.etat)}>
+            {getClientStatusLabel(client.etat)}
+          </Badge>
+        </div>
       </div>
 
       {/* Statistiques principales */}
@@ -825,6 +901,95 @@ export default function ClientDetailPage() {
                     transactionHistory.page + 1
                   )}
                   disabled={transactionHistory.page >= transactionHistory.totalPages || transactionHistory.loading}
+                >
+                  Suivant
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Historique complet du client (tous comptes) */}
+      <Dialog open={clientTransactionHistory.isOpen} onOpenChange={(open) => !open && closeClientTransactionHistory()}>
+        <DialogContent className="max-w-5xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="w-5 h-5" />
+              Historique complet des transactions - {client?.nom_complet}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-auto">
+            {clientTransactionHistory.loading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+            ) : clientTransactionHistory.transactions.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Aucune transaction trouvée
+              </div>
+            ) : (
+              <>
+                <div className="text-sm text-muted-foreground mb-4">
+                  {clientTransactionHistory.total} transaction(s) au total (depuis l'ouverture des comptes)
+                </div>
+                <table className="w-full text-sm">
+                  <thead className="bg-muted sticky top-0">
+                    <tr>
+                      <th className="text-left py-3 px-3 font-medium">Date</th>
+                      <th className="text-left py-3 px-3 font-medium">Compte</th>
+                      <th className="text-left py-3 px-3 font-medium">Libellé</th>
+                      <th className="text-right py-3 px-3 font-medium">Débit</th>
+                      <th className="text-right py-3 px-3 font-medium">Crédit</th>
+                      <th className="text-right py-3 px-3 font-medium">Solde après</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {clientTransactionHistory.transactions.map((tx) => (
+                      <tr key={tx.id_mouvement} className="border-b hover:bg-muted/50">
+                        <td className="py-2 px-3">{formatDate(tx.date_mvt)}</td>
+                        <td className="py-2 px-3 font-mono text-xs">{tx.compte_numero}</td>
+                        <td className="py-2 px-3">{tx.libel_mvt || 'Transaction'}</td>
+                        <td className="py-2 px-3 text-right text-red-600">
+                          {tx.sens === 'D' ? formatCurrency(tx.montant) : '-'}
+                        </td>
+                        <td className="py-2 px-3 text-right text-green-600">
+                          {tx.sens === 'C' ? formatCurrency(tx.montant) : '-'}
+                        </td>
+                        <td className="py-2 px-3 text-right font-medium">
+                          {formatCurrency(tx.solde_apres)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
+            )}
+          </div>
+
+          {/* Pagination */}
+          {clientTransactionHistory.totalPages > 1 && (
+            <div className="flex items-center justify-between pt-4 border-t">
+              <div className="text-sm text-muted-foreground">
+                Page {clientTransactionHistory.page} sur {clientTransactionHistory.totalPages}
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => loadClientTransactionHistory(clientTransactionHistory.page - 1)}
+                  disabled={clientTransactionHistory.page <= 1 || clientTransactionHistory.loading}
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  Précédent
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => loadClientTransactionHistory(clientTransactionHistory.page + 1)}
+                  disabled={clientTransactionHistory.page >= clientTransactionHistory.totalPages || clientTransactionHistory.loading}
                 >
                   Suivant
                   <ChevronRight className="w-4 h-4 ml-1" />

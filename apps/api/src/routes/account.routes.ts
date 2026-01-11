@@ -144,14 +144,15 @@ router.get('/:id/balance', async (req, res, next) => {
   }
 });
 
-// GET /api/accounts/:id/transactions - Transactions du compte
+// GET /api/accounts/:id/transactions - Transactions du compte (historique complet)
 router.get('/:id/transactions', async (req, res, next) => {
   try {
     const accountId = parseInt(req.params.id);
     const page = parseInt(req.query.page as string) || 1;
-    const limit = Math.min(
-      parseInt(req.query.limit as string) || 20,
-      100
+    const all = req.query.all === 'true'; // Option pour récupérer tout l'historique
+    const limit = all ? 10000 : Math.min(
+      parseInt(req.query.limit as string) || 50,
+      500 // Augmenté de 100 à 500
     );
     const startDate = req.query.startDate as string;
     const endDate = req.query.endDate as string;
@@ -169,20 +170,35 @@ router.get('/:id/transactions', async (req, res, next) => {
     const [transactions, total] = await Promise.all([
       prisma.mouvement.findMany({
         where,
-        skip: (page - 1) * limit,
+        skip: all ? 0 : (page - 1) * limit,
         take: limit,
         orderBy: { date_mvt: 'desc' },
       }),
       prisma.mouvement.count({ where }),
     ]);
 
+    // Convertir les décimales en nombres
+    const formattedTransactions = transactions.map(t => ({
+      id_mouvement: t.id_mouvement,
+      date_mvt: t.date_mvt,
+      type_mvt: t.type_mvt,
+      type_operation: t.type_operation,
+      sens: t.sens,
+      montant: Number(t.montant || 0),
+      libel_mvt: t.libel_mvt,
+      solde_avant: Number(t.solde_avant || 0),
+      solde_apres: Number(t.solde_apres || 0),
+      reference: t.reference,
+      id_utilisateur: t.id_utilisateur,
+    }));
+
     res.json({
-      data: transactions,
+      data: formattedTransactions,
       pagination: {
-        page,
-        limit,
+        page: all ? 1 : page,
+        limit: all ? total : limit,
         total,
-        totalPages: Math.ceil(total / limit),
+        totalPages: all ? 1 : Math.ceil(total / limit),
       },
     });
   } catch (error) {

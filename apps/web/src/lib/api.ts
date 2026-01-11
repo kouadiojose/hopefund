@@ -90,6 +90,11 @@ export const clientsApi = {
   update: (id: number, data: any) => api.put(`/clients/${id}`, data),
   getAccounts: (id: number) => api.get(`/clients/${id}/accounts`),
   getLoans: (id: number) => api.get(`/clients/${id}/loans`),
+  // Historique complet des transactions (tous comptes du client)
+  getTransactions: (id: number, params?: { page?: number; limit?: number; all?: boolean }) =>
+    api.get(`/clients/${id}/transactions`, { params }),
+  // Historique complet des crédits avec détails de paiement
+  getCreditHistory: (id: number) => api.get(`/clients/${id}/credit-history`),
 };
 
 // Accounts
@@ -98,7 +103,7 @@ export const accountsApi = {
     api.get('/accounts', { params }),
   getById: (id: number) => api.get(`/accounts/${id}`),
   getBalance: (id: number) => api.get(`/accounts/${id}/balance`),
-  getTransactions: (id: number, params?: { page?: number; limit?: number; startDate?: string; endDate?: string }) =>
+  getTransactions: (id: number, params?: { page?: number; limit?: number; startDate?: string; endDate?: string; all?: boolean }) =>
     api.get(`/accounts/${id}/transactions`, { params }),
   block: (id: number, raison: string) => api.post(`/accounts/${id}/block`, { raison }),
   unblock: (id: number) => api.post(`/accounts/${id}/unblock`),
