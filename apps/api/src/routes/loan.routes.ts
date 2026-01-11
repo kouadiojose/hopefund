@@ -334,15 +334,11 @@ router.put('/:id/disburse', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER
         data: {
           id_ag: account.id_ag,
           cpte_interne_cli: accountId,
-          date_mvt: new Date(),
-          type_mvt: 1,
-          sens: 'C',
+          date_valeur: new Date(),
+          sens: 'c',
           montant: amount,
-          solde_avant: oldBalance,
-          solde_apres: newBalance,
-          libel_mvt: `Déblocage crédit #${loanId}`,
-          type_operation: 10, // Déblocage crédit
-          id_utilisateur: req.user!.userId,
+          devise: 'BIF',
+          compte: '2.1.1.1',  // Compte comptable
         },
       });
 

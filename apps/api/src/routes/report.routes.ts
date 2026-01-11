@@ -49,17 +49,17 @@ router.get('/dashboard', async (req, res, next) => {
     today.setHours(0, 0, 0, 0);
 
     const todayTransactions = await prisma.mouvement.groupBy({
-      by: ['type_mvt'],
+      by: ['sens'],
       where: {
         ...where,
-        date_mvt: { gte: today },
+        date_valeur: { gte: today },
       },
       _sum: { montant: true },
       _count: true,
     });
 
-    const deposits = todayTransactions.find(t => t.type_mvt === 1) || { _sum: { montant: 0 }, _count: 0 };
-    const withdrawals = todayTransactions.find(t => t.type_mvt === 2) || { _sum: { montant: 0 }, _count: 0 };
+    const deposits = todayTransactions.find(t => t.sens === 'c') || { _sum: { montant: 0 }, _count: 0 };
+    const withdrawals = todayTransactions.find(t => t.sens === 'd') || { _sum: { montant: 0 }, _count: 0 };
 
     res.json({
       overview: {
@@ -161,14 +161,14 @@ router.get('/transactions', async (req, res, next) => {
     const where: any = {};
 
     if (startDate) {
-      where.date_mvt = { ...where.date_mvt, gte: new Date(startDate) };
+      where.date_valeur = { ...where.date_valeur, gte: new Date(startDate) };
     }
     if (endDate) {
-      where.date_mvt = { ...where.date_mvt, lte: new Date(endDate) };
+      where.date_valeur = { ...where.date_valeur, lte: new Date(endDate) };
     }
 
     const summary = await prisma.mouvement.groupBy({
-      by: ['type_mvt'],
+      by: ['sens'],
       where,
       _sum: { montant: true },
       _count: true,
@@ -176,7 +176,7 @@ router.get('/transactions', async (req, res, next) => {
 
     res.json({
       summary: summary.map(s => ({
-        type: s.type_mvt === 1 ? 'credit' : 'debit',
+        type: s.sens === 'c' ? 'credit' : 'debit',
         count: s._count,
         total: s._sum.montant,
       })),

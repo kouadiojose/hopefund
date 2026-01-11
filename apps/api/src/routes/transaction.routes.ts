@@ -93,15 +93,11 @@ router.post('/deposit', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', '
         data: {
           id_ag: account.id_ag,
           cpte_interne_cli: account.id_cpte,
-          date_mvt: new Date(),
-          type_mvt: 1, // Crédit
-          sens: 'C',
+          date_valeur: new Date(),
+          sens: 'c',  // crédit (minuscule comme dans la base)
           montant: amount,
-          solde_avant: oldBalance,
-          solde_apres: newBalance,
-          libel_mvt: description || 'Dépôt espèces',
-          type_operation: 1, // Dépôt
-          id_utilisateur: req.user!.userId,
+          devise: 'BIF',
+          compte: '2.1.1.1',  // Compte comptable épargne
         },
       });
 
@@ -174,15 +170,11 @@ router.post('/withdraw', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 
         data: {
           id_ag: account.id_ag,
           cpte_interne_cli: account.id_cpte,
-          date_mvt: new Date(),
-          type_mvt: 2, // Débit
-          sens: 'D',
+          date_valeur: new Date(),
+          sens: 'd',  // débit (minuscule comme dans la base)
           montant: amount,
-          solde_avant: oldBalance,
-          solde_apres: newBalance,
-          libel_mvt: description || 'Retrait espèces',
-          type_operation: 2, // Retrait
-          id_utilisateur: req.user!.userId,
+          devise: 'BIF',
+          compte: '2.1.1.1',  // Compte comptable épargne
         },
       });
 
@@ -279,15 +271,11 @@ router.post('/transfer', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 
         data: {
           id_ag: fromAccount.id_ag,
           cpte_interne_cli: fromAccount.id_cpte,
-          date_mvt: new Date(),
-          type_mvt: 2,
-          sens: 'D',
+          date_valeur: new Date(),
+          sens: 'd',
           montant: amount,
-          solde_avant: fromOldBalance,
-          solde_apres: fromNewBalance,
-          libel_mvt: description || `Virement vers ${toAccount.num_complet_cpte}`,
-          type_operation: 3,
-          id_utilisateur: req.user!.userId,
+          devise: 'BIF',
+          compte: '2.1.1.1',
         },
       });
 
@@ -295,15 +283,11 @@ router.post('/transfer', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 
         data: {
           id_ag: toAccount.id_ag,
           cpte_interne_cli: toAccount.id_cpte,
-          date_mvt: new Date(),
-          type_mvt: 1,
-          sens: 'C',
+          date_valeur: new Date(),
+          sens: 'c',
           montant: amount,
-          solde_avant: toOldBalance,
-          solde_apres: toNewBalance,
-          libel_mvt: description || `Virement de ${fromAccount.num_complet_cpte}`,
-          type_operation: 3,
-          id_utilisateur: req.user!.userId,
+          devise: 'BIF',
+          compte: '2.1.1.1',
         },
       });
 
