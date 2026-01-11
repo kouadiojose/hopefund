@@ -214,46 +214,15 @@ router.get('/:id/transactions', async (req, res, next) => {
       return res.status(404).json({ error: 'Compte non trouvé' });
     }
 
-    // Debug: chercher toutes les transactions pour voir ce qui existe
-    const allMouvements = await prisma.mouvement.findMany({
-      take: 10,
-      orderBy: { id_mouvement: 'desc' },
-      select: { id_mouvement: true, cpte_interne_cli: true, id_ag: true, date_mvt: true, montant: true },
-    });
-
-    // Récupérer TOUS les comptes du client pour chercher dans tous leurs mouvements
-    const comptesClient = await prisma.compte.findMany({
-      where: { id_titulaire: compte.id_titulaire },
-      select: { id_cpte: true, num_cpte: true },
-    });
-
-    // Construire la liste de tous les IDs possibles
-    const allPossibleIds: number[] = [];
-    comptesClient.forEach(c => {
-      allPossibleIds.push(c.id_cpte);
-      if (c.num_cpte && !allPossibleIds.includes(c.num_cpte)) {
-        allPossibleIds.push(c.num_cpte);
-      }
-    });
-
-    // Ajouter aussi le num_complet_cpte converti en entier
-    if (compte.num_complet_cpte) {
-      const numComplet = parseInt(compte.num_complet_cpte);
-      if (!isNaN(numComplet) && !allPossibleIds.includes(numComplet)) {
-        allPossibleIds.push(numComplet);
-      }
-    }
-
-    // Rechercher par cpte_interne_cli correspondant à l'un des IDs possibles
-    // ET filtrer pour n'afficher que ceux du compte demandé
+    // Rechercher par cpte_interne_cli = id_cpte du compte demandé
     const where: any = {
-      cpte_interne_cli: { in: allPossibleIds },
+      cpte_interne_cli: compte.id_cpte,
     };
 
     if (startDate || endDate) {
-      where.date_mvt = {};
-      if (startDate) where.date_mvt.gte = new Date(startDate);
-      if (endDate) where.date_mvt.lte = new Date(endDate);
+      where.date_valeur = {};
+      if (startDate) where.date_valeur.gte = new Date(startDate);
+      if (endDate) where.date_valeur.lte = new Date(endDate);
     }
 
     const [transactions, total] = await Promise.all([
@@ -261,23 +230,20 @@ router.get('/:id/transactions', async (req, res, next) => {
         where,
         skip: all ? 0 : (page - 1) * limit,
         take: limit,
-        orderBy: { date_mvt: 'desc' },
+        orderBy: { date_valeur: 'desc' },
       }),
       prisma.mouvement.count({ where }),
     ]);
 
-    // Convertir les décimales en nombres
+    // Convertir les décimales en nombres et adapter au format attendu par le frontend
     const formattedTransactions = transactions.map(t => ({
       id_mouvement: t.id_mouvement,
-      date_mvt: t.date_mvt,
-      type_mvt: t.type_mvt,
-      type_operation: t.type_operation,
+      date_mvt: t.date_valeur,  // Renommé pour compatibilité frontend
       sens: t.sens,
       montant: Number(t.montant || 0),
-      libel_mvt: t.libel_mvt,
-      solde_avant: Number(t.solde_avant || 0),
-      solde_apres: Number(t.solde_apres || 0),
-      id_utilisateur: t.id_utilisateur,
+      devise: t.devise,
+      compte_comptable: t.compte,
+      id_ecriture: t.id_ecriture,
     }));
 
     res.json({
@@ -287,23 +253,6 @@ router.get('/:id/transactions', async (req, res, next) => {
         limit: all ? total : limit,
         total,
         totalPages: all ? 1 : Math.ceil(total / limit),
-      },
-      // Debug info (à supprimer en production)
-      _debug: {
-        compte: {
-          id_cpte: compte.id_cpte,
-          num_cpte: compte.num_cpte,
-          num_complet_cpte: compte.num_complet_cpte,
-          id_ag: compte.id_ag,
-          id_titulaire: compte.id_titulaire,
-        },
-        allComptesDuClient: comptesClient,
-        searchedIds: allPossibleIds,
-        sampleMouvements: allMouvements.map(m => ({
-          id: m.id_mouvement,
-          cpte_interne_cli: m.cpte_interne_cli,
-          id_ag: m.id_ag,
-        })),
       },
     });
   } catch (error) {

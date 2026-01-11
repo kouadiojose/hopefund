@@ -204,7 +204,7 @@ router.get('/:id', async (req, res, next) => {
           const mouvements = await prisma.mouvement.findMany({
             where: { OR: whereConditions },
             take: 10,
-            orderBy: { date_mvt: 'desc' },
+            orderBy: { date_valeur: 'desc' },
           });
           return { ...compte, mouvements };
         } catch (err) {
@@ -354,12 +354,11 @@ router.get('/:id', async (req, res, next) => {
         tx_interet_cpte: c.tx_interet_cpte,
         dernieres_transactions: (c.mouvements || []).map((m: any) => ({
           id: m.id_mouvement,
-          date: m.date_mvt,
-          type: m.type_mvt,
+          date: m.date_valeur,
           sens: m.sens,
           montant: toNumber(m.montant),
-          libelle: m.libel_mvt,
-          solde_apres: toNumber(m.solde_apres),
+          devise: m.devise,
+          compte_comptable: m.compte,
         })),
       })),
 
@@ -449,7 +448,7 @@ router.get('/:id/accounts', async (req, res, next) => {
       include: {
         mouvements: {
           take: 20,
-          orderBy: { date_mvt: 'desc' },
+          orderBy: { date_valeur: 'desc' },
         },
       },
       orderBy: { date_creation: 'desc' },
@@ -469,13 +468,11 @@ router.get('/:id/accounts', async (req, res, next) => {
       tx_interet_cpte: c.tx_interet_cpte,
       transactions: c.mouvements.map(m => ({
         id: m.id_mouvement,
-        date: m.date_mvt,
-        type: m.type_mvt,
+        date: m.date_valeur,
         sens: m.sens,
         montant: toNumber(m.montant),
-        libelle: m.libel_mvt,
-        solde_avant: toNumber(m.solde_avant),
-        solde_apres: toNumber(m.solde_apres),
+        devise: m.devise,
+        compte_comptable: m.compte,
       })),
     })));
   } catch (error) {
@@ -584,7 +581,7 @@ router.get('/:id/transactions', async (req, res, next) => {
         where: { cpte_interne_cli: { in: allPossibleIds } },
         skip: all ? 0 : (page - 1) * limit,
         take: limit,
-        orderBy: { date_mvt: 'desc' },
+        orderBy: { date_valeur: 'desc' },
       }),
       prisma.mouvement.count({
         where: { cpte_interne_cli: { in: allPossibleIds } },
@@ -593,16 +590,13 @@ router.get('/:id/transactions', async (req, res, next) => {
 
     const formattedTransactions = transactions.map(t => ({
       id_mouvement: t.id_mouvement,
-      date_mvt: t.date_mvt,
+      date_mvt: t.date_valeur,  // Renommé pour compatibilité frontend
       compte_id: t.cpte_interne_cli,
       compte_numero: accountMap.get(t.cpte_interne_cli!) || 'N/A',
-      type_mvt: t.type_mvt,
-      type_operation: t.type_operation,
       sens: t.sens,
       montant: toNumber(t.montant),
-      libel_mvt: t.libel_mvt,
-      solde_avant: toNumber(t.solde_avant),
-      solde_apres: toNumber(t.solde_apres),
+      devise: t.devise,
+      compte_comptable: t.compte,
     }));
 
     res.json({

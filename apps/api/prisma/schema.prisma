@@ -198,31 +198,25 @@ model DossierCredit {
   @@map("ad_dcr")
 }
 
-/// Table des mouvements/transactions
+/// Table des mouvements/transactions (structure réelle de la base)
 model Mouvement {
   id_mouvement               Int       @id @default(autoincrement())
   id_ag                      Int
-  cpte_interne_cli           Int?
-
-  date_mvt                   DateTime?
-  type_mvt                   Int?      // 1=Crédit, 2=Débit
-  sens                       String?   @db.Char(1)
+  id_ecriture                Int?
+  compte                     String?   @db.VarChar(50)  // Compte comptable (ex: "2.1.1.1.7")
+  cpte_interne_cli           Int?                       // ID du compte client (référence id_cpte)
+  sens                       String?   @db.Char(1)      // 'c' = crédit, 'd' = débit
   montant                    Decimal?  @db.Decimal(30, 6)
-  solde_avant                Decimal?  @db.Decimal(30, 6)
-  solde_apres                Decimal?  @db.Decimal(30, 6)
-
-  libel_mvt                  String?
-  type_operation             Int?
-  id_utilisateur             Int?
-
-  date_creation              DateTime  @default(now())
+  devise                     String?   @db.Char(3)      // "BIF"
+  date_valeur                DateTime? @db.Date
+  consolide                  Boolean?
 
   // Relations - optionnelle car cpte_interne_cli peut être NULL
-  compte                     Compte?   @relation(fields: [cpte_interne_cli, id_ag], references: [id_cpte, id_ag])
+  compteClient               Compte?   @relation(fields: [cpte_interne_cli, id_ag], references: [id_cpte, id_ag])
 
   @@index([id_ag])
   @@index([cpte_interne_cli])
-  @@index([date_mvt])
+  @@index([date_valeur])
   @@map("ad_mouvement")
 }
 
