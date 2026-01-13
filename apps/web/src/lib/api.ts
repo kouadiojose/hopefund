@@ -161,9 +161,16 @@ export const adminApi = {
   createAgency: (data: any) => api.post('/admin/agencies', data),
   updateAgency: (id: number, data: any) => api.put(`/admin/agencies/${id}`, data),
 
-  // Stats & Roles
+  // Stats
   getStats: () => api.get('/admin/stats'),
+
+  // Roles
   getRoles: () => api.get('/admin/roles'),
+  createRole: (data: { code: string; label: string; description?: string; color?: string }) =>
+    api.post('/admin/roles', data),
+  updateRole: (code: string, data: { label?: string; description?: string; color?: string }) =>
+    api.put(`/admin/roles/${code}`, data),
+  deleteRole: (code: string) => api.delete(`/admin/roles/${code}`),
 };
 
 // Permissions

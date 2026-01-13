@@ -313,12 +313,23 @@ model User {
   @@map("app_users")
 }
 
-// Rôles disponibles (stockés comme String en base de données):
-// - SUPER_ADMIN     : Tout accès - Super administrateur
-// - DIRECTOR        : Lecture globale + validation
-// - BRANCH_MANAGER  : Gestion agence
-// - CREDIT_OFFICER  : Gestion crédits
-// - TELLER          : Opérations caisse
+/// Rôles du système (dynamiques)
+model Role {
+  id                         Int       @id @default(autoincrement())
+  code                       String    @unique  // Ex: SUPER_ADMIN, TELLER, CUSTOM_ROLE
+  label                      String             // Nom affiché
+  description                String?
+  color                      String    @default("gray")  // Couleur pour l'UI
+  is_system                  Boolean   @default(false)   // Rôle système non supprimable
+  is_active                  Boolean   @default(true)
+
+  created_at                 DateTime  @default(now())
+  updated_at                 DateTime  @updatedAt
+
+  role_permissions           RolePermission[]
+
+  @@map("app_roles")
+}
 
 /// Modules du système
 enum ModuleType {
@@ -352,14 +363,16 @@ model Permission {
 /// Association Rôle-Permission
 model RolePermission {
   id                         Int        @id @default(autoincrement())
-  role                       String
+  role                       String     // Code du rôle (ex: SUPER_ADMIN, CUSTOM_ROLE)
   permission_id              Int
 
   created_at                 DateTime   @default(now())
 
   permission                 Permission @relation(fields: [permission_id], references: [id], onDelete: Cascade)
+  roleRef                    Role?      @relation(fields: [role], references: [code])
 
   @@unique([role, permission_id])
+  @@index([role])
   @@map("app_role_permissions")
 }
 

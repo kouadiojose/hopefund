@@ -585,54 +585,231 @@ router.get('/stats', async (req, res, next) => {
   }
 });
 
+// ==================== RÔLES ====================
+
+// Rôles système par défaut (pour initialisation)
+const defaultSystemRoles = [
+  { code: 'SUPER_ADMIN', label: 'Super Admin', description: 'Accès complet à tous les modules du système', color: 'purple', is_system: true },
+  { code: 'DIRECTOR', label: 'Directeur', description: 'Lecture globale et validation des opérations', color: 'blue', is_system: true },
+  { code: 'BRANCH_MANAGER', label: 'Chef d\'Agence', description: 'Gestion complète de l\'agence', color: 'indigo', is_system: true },
+  { code: 'CREDIT_OFFICER', label: 'Agent de Crédit', description: 'Gestion des dossiers de crédit', color: 'green', is_system: true },
+  { code: 'TELLER', label: 'Caissier', description: 'Opérations de guichet et caisse', color: 'yellow', is_system: true },
+];
+
 // GET /api/admin/roles - Liste des rôles disponibles
-router.get('/roles', async (req, res) => {
-  const roles = [
-    {
-      value: 'SUPER_ADMIN',
-      label: 'Super Admin',
-      description: 'Accès complet à tous les modules du système',
-      color: 'purple',
-    },
-    {
-      value: 'DIRECTOR',
-      label: 'Directeur',
-      description: 'Lecture globale et validation des opérations',
-      color: 'blue',
-    },
-    {
-      value: 'BRANCH_MANAGER',
-      label: 'Chef d\'Agence',
-      description: 'Gestion complète de l\'agence',
-      color: 'indigo',
-    },
-    {
-      value: 'CREDIT_OFFICER',
-      label: 'Agent de Crédit',
-      description: 'Gestion des dossiers de crédit',
-      color: 'green',
-    },
-    {
-      value: 'TELLER',
-      label: 'Caissier',
-      description: 'Opérations de guichet et caisse',
-      color: 'yellow',
-    },
-  ];
+router.get('/roles', async (req, res, next) => {
+  try {
+    // Essayer de récupérer les rôles depuis la base de données
+    let roles = await prisma.role.findMany({
+      where: { is_active: true },
+      orderBy: [{ is_system: 'desc' }, { label: 'asc' }],
+    });
 
-  // Ajouter les permissions pour chaque rôle
-  const rolesWithPermissions = await Promise.all(
-    roles.map(async (role) => {
-      try {
-        const permissions = await getRolePermissions(role.value);
-        return { ...role, permissions, permissionCount: permissions.length };
-      } catch {
-        return { ...role, permissions: [], permissionCount: 0 };
-      }
-    })
-  );
+    // Si aucun rôle n'existe, initialiser avec les rôles par défaut
+    if (roles.length === 0) {
+      await prisma.role.createMany({
+        data: defaultSystemRoles,
+        skipDuplicates: true,
+      });
+      roles = await prisma.role.findMany({
+        where: { is_active: true },
+        orderBy: [{ is_system: 'desc' }, { label: 'asc' }],
+      });
+    }
 
-  res.json(rolesWithPermissions);
+    // Ajouter les permissions pour chaque rôle
+    const rolesWithPermissions = await Promise.all(
+      roles.map(async (role) => {
+        try {
+          const permissions = await getRolePermissions(role.code);
+          return {
+            id: role.id,
+            value: role.code,
+            code: role.code,
+            label: role.label,
+            description: role.description,
+            color: role.color,
+            is_system: role.is_system,
+            permissions,
+            permissionCount: permissions.length,
+          };
+        } catch {
+          return {
+            id: role.id,
+            value: role.code,
+            code: role.code,
+            label: role.label,
+            description: role.description,
+            color: role.color,
+            is_system: role.is_system,
+            permissions: [],
+            permissionCount: 0,
+          };
+        }
+      })
+    );
+
+    res.json(rolesWithPermissions);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST /api/admin/roles - Créer un nouveau rôle
+router.post('/roles', authorize('SUPER_ADMIN', 'DIRECTOR'), async (req, res, next) => {
+  try {
+    const schema = z.object({
+      code: z.string().min(2).max(50).regex(/^[A-Z_]+$/, 'Le code doit être en majuscules avec underscores'),
+      label: z.string().min(2).max(100),
+      description: z.string().max(500).optional(),
+      color: z.string().max(20).default('gray'),
+    });
+
+    const data = schema.parse(req.body);
+
+    // Vérifier que le code n'existe pas
+    const existing = await prisma.role.findUnique({ where: { code: data.code } });
+    if (existing) {
+      throw new AppError('Un rôle avec ce code existe déjà', 400);
+    }
+
+    const role = await prisma.role.create({
+      data: {
+        code: data.code,
+        label: data.label,
+        description: data.description,
+        color: data.color,
+        is_system: false,
+      },
+    });
+
+    // Audit log
+    await prisma.auditLog.create({
+      data: {
+        user_id: req.user!.userId,
+        action: 'CREATE',
+        entity: 'Role',
+        entity_id: role.id.toString(),
+        new_values: data,
+        ip_address: req.ip || null,
+      },
+    });
+
+    res.status(201).json({
+      id: role.id,
+      value: role.code,
+      code: role.code,
+      label: role.label,
+      description: role.description,
+      color: role.color,
+      is_system: role.is_system,
+      permissions: [],
+      permissionCount: 0,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// PUT /api/admin/roles/:code - Modifier un rôle
+router.put('/roles/:code', authorize('SUPER_ADMIN', 'DIRECTOR'), async (req, res, next) => {
+  try {
+    const { code } = req.params;
+    const schema = z.object({
+      label: z.string().min(2).max(100).optional(),
+      description: z.string().max(500).optional(),
+      color: z.string().max(20).optional(),
+    });
+
+    const data = schema.parse(req.body);
+
+    const role = await prisma.role.findUnique({ where: { code } });
+    if (!role) {
+      throw new AppError('Rôle non trouvé', 404);
+    }
+
+    // Les rôles système ne peuvent pas être supprimés mais peuvent être modifiés (label, description, color)
+    const updatedRole = await prisma.role.update({
+      where: { code },
+      data,
+    });
+
+    // Audit log
+    await prisma.auditLog.create({
+      data: {
+        user_id: req.user!.userId,
+        action: 'UPDATE',
+        entity: 'Role',
+        entity_id: role.id.toString(),
+        old_values: { label: role.label, description: role.description, color: role.color },
+        new_values: data,
+        ip_address: req.ip || null,
+      },
+    });
+
+    const permissions = await getRolePermissions(updatedRole.code);
+
+    res.json({
+      id: updatedRole.id,
+      value: updatedRole.code,
+      code: updatedRole.code,
+      label: updatedRole.label,
+      description: updatedRole.description,
+      color: updatedRole.color,
+      is_system: updatedRole.is_system,
+      permissions,
+      permissionCount: permissions.length,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// DELETE /api/admin/roles/:code - Supprimer un rôle
+router.delete('/roles/:code', authorize('SUPER_ADMIN'), async (req, res, next) => {
+  try {
+    const { code } = req.params;
+
+    const role = await prisma.role.findUnique({ where: { code } });
+    if (!role) {
+      throw new AppError('Rôle non trouvé', 404);
+    }
+
+    if (role.is_system) {
+      throw new AppError('Les rôles système ne peuvent pas être supprimés', 400);
+    }
+
+    // Vérifier si des utilisateurs utilisent ce rôle
+    const usersWithRole = await prisma.user.count({ where: { role: code } });
+    if (usersWithRole > 0) {
+      throw new AppError(`Ce rôle est utilisé par ${usersWithRole} utilisateur(s). Réassignez-les d'abord.`, 400);
+    }
+
+    // Supprimer les permissions associées
+    await prisma.rolePermission.deleteMany({ where: { role: code } });
+
+    // Désactiver le rôle (soft delete)
+    await prisma.role.update({
+      where: { code },
+      data: { is_active: false },
+    });
+
+    // Audit log
+    await prisma.auditLog.create({
+      data: {
+        user_id: req.user!.userId,
+        action: 'DELETE',
+        entity: 'Role',
+        entity_id: role.id.toString(),
+        old_values: { code: role.code, label: role.label },
+        ip_address: req.ip || null,
+      },
+    });
+
+    res.json({ message: 'Rôle supprimé avec succès' });
+  } catch (error) {
+    next(error);
+  }
 });
 
 export default router;
