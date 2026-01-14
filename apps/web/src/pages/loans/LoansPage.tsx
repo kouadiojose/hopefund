@@ -65,17 +65,19 @@ export default function LoansPage() {
   const loans = loansData?.data || [];
   const pagination = loansData?.pagination;
 
-  const getStatusBadge = (status: number) => {
+  const getStatusBadge = (loan: any) => {
+    // Utiliser cre_etat en priorité, sinon etat
+    const status = loan.cre_etat ?? loan.etat ?? 0;
     const statuses: Record<number, { label: string; variant: any; icon: any }> = {
-      1: { label: 'En cours', variant: 'info', icon: Clock },
+      1: { label: 'En analyse', variant: 'info', icon: Clock },
       2: { label: 'Approuvé', variant: 'success', icon: CheckCircle },
-      3: { label: 'Décaissé', variant: 'success', icon: Banknote },
-      4: { label: 'Remboursé', variant: 'secondary', icon: CheckCircle },
-      5: { label: 'En retard', variant: 'warning', icon: AlertTriangle },
-      6: { label: 'Défaut', variant: 'destructive', icon: XCircle },
-      0: { label: 'Rejeté', variant: 'destructive', icon: XCircle },
+      3: { label: 'Att. décaissement', variant: 'warning', icon: Clock },
+      5: { label: 'Actif', variant: 'success', icon: Banknote },
+      8: { label: 'En retard', variant: 'destructive', icon: AlertTriangle },
+      9: { label: 'Rejeté', variant: 'destructive', icon: XCircle },
+      10: { label: 'Soldé', variant: 'secondary', icon: CheckCircle },
     };
-    const statusInfo = statuses[status] || { label: 'Inconnu', variant: 'secondary', icon: Clock };
+    const statusInfo = statuses[status] || { label: `État ${status}`, variant: 'secondary', icon: Clock };
     const Icon = statusInfo.icon;
     return (
       <Badge variant={statusInfo.variant} className="gap-1">
@@ -87,10 +89,10 @@ export default function LoansPage() {
 
   const statusTabs = [
     { id: 'all', label: 'Tous', count: pagination?.total || 0 },
-    { id: 'pending', label: 'En attente', count: 125 },
-    { id: 'active', label: 'Actifs', count: 3420 },
-    { id: 'late', label: 'En retard', count: 89 },
-    { id: 'completed', label: 'Remboursés', count: 15000 },
+    { id: '1', label: 'En analyse', count: null },
+    { id: '5', label: 'Actifs', count: null },
+    { id: '8', label: 'En retard', count: null },
+    { id: '10', label: 'Soldés', count: null },
   ];
 
   return (
@@ -224,16 +226,18 @@ export default function LoansPage() {
             className="whitespace-nowrap"
           >
             {tab.label}
-            <span
-              className={cn(
-                'ml-2 px-2 py-0.5 rounded-full text-xs',
-                statusFilter === tab.id
-                  ? 'bg-white/20 text-white'
-                  : 'bg-gray-100 text-gray-600'
-              )}
-            >
-              {tab.count.toLocaleString()}
-            </span>
+            {tab.count !== null && (
+              <span
+                className={cn(
+                  'ml-2 px-2 py-0.5 rounded-full text-xs',
+                  statusFilter === tab.id
+                    ? 'bg-white/20 text-white'
+                    : 'bg-gray-100 text-gray-600'
+                )}
+              >
+                {tab.count.toLocaleString()}
+              </span>
+            )}
           </Button>
         ))}
       </div>
@@ -327,7 +331,7 @@ export default function LoansPage() {
                           {formatDate(loan.date_ech)}
                         </p>
                       </TableCell>
-                      <TableCell>{getStatusBadge(loan.etat_doss)}</TableCell>
+                      <TableCell>{getStatusBadge(loan)}</TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
