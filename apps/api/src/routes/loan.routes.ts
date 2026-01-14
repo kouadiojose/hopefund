@@ -354,34 +354,54 @@ router.get('/:id', async (req, res, next) => {
       throw new AppError('Invalid loan ID', 400);
     }
 
-    // Récupérer le dossier de crédit
+    // Récupérer le dossier de crédit sans include pour éviter les erreurs de relation
     const loan = await prisma.dossierCredit.findUnique({
       where: { id_doss: loanId },
-      include: {
-        client: true,
-      },
     });
 
     if (!loan) {
       throw new AppError('Loan not found', 404);
     }
 
-    // Récupérer les échéances séparément (éviter les problèmes de clé composite)
-    const echeances = await prisma.echeance.findMany({
-      where: {
-        id_doss: loanId,
-        id_ag: loan.id_ag,
-      },
-      orderBy: { date_ech: 'asc' },
-    });
+    // Récupérer le client séparément
+    let client = null;
+    try {
+      client = await prisma.client.findFirst({
+        where: {
+          id_client: loan.id_client,
+          id_ag: loan.id_ag,
+        },
+      });
+    } catch (clientError) {
+      console.error('Error fetching client:', clientError);
+    }
+
+    // Récupérer les échéances séparément
+    let echeances: any[] = [];
+    try {
+      echeances = await prisma.echeance.findMany({
+        where: {
+          id_doss: loanId,
+          id_ag: loan.id_ag,
+        },
+        orderBy: { date_ech: 'asc' },
+      });
+    } catch (echeancesError) {
+      console.error('Error fetching echeances:', echeancesError);
+    }
 
     // Récupérer les garanties séparément
-    const garanties = await prisma.garantie.findMany({
-      where: {
-        id_doss: loanId,
-        id_ag: loan.id_ag,
-      },
-    });
+    let garanties: any[] = [];
+    try {
+      garanties = await prisma.garantie.findMany({
+        where: {
+          id_doss: loanId,
+          id_ag: loan.id_ag,
+        },
+      });
+    } catch (garantiesError) {
+      console.error('Error fetching garanties:', garantiesError);
+    }
 
     // Calculer les totaux
     const totalCapital = echeances.reduce((sum, e) => sum + Number(e.mnt_capital || 0), 0);
@@ -392,6 +412,7 @@ router.get('/:id', async (req, res, next) => {
 
     res.json({
       ...loan,
+      client,
       echeances,
       garanties,
       resume: {
@@ -403,6 +424,7 @@ router.get('/:id', async (req, res, next) => {
       },
     });
   } catch (error) {
+    console.error('Error in loan detail:', error);
     next(error);
   }
 });
