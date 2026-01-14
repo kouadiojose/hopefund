@@ -46,13 +46,19 @@ export default function LoanDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const { data: loanData, isLoading } = useQuery({
-    queryKey: ['loan', id],
+  // Extraire uniquement la partie numérique de l'ID (au cas où il y aurait un suffixe comme :1)
+  const loanId = id ? parseInt(id.split(':')[0], 10) : null;
+
+  const { data: loanData, isLoading, error } = useQuery({
+    queryKey: ['loan', loanId],
     queryFn: async () => {
-      const response = await loansApi.getById(Number(id));
+      if (!loanId || isNaN(loanId)) {
+        throw new Error('Invalid loan ID');
+      }
+      const response = await loansApi.getById(loanId);
       return response.data;
     },
-    enabled: !!id,
+    enabled: !!loanId && !isNaN(loanId),
   });
 
   const loan = loanData;
