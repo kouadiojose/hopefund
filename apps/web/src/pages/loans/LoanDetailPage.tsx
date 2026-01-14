@@ -112,7 +112,7 @@ export default function LoanDetailPage() {
 
   const queryClient = useQueryClient();
 
-  const { data: loanData, isLoading, error } = useQuery({
+  const { data: loanData, isLoading } = useQuery({
     queryKey: ['loan', loanId],
     queryFn: async () => {
       if (!loanId || isNaN(loanId)) {
@@ -651,7 +651,7 @@ export default function LoanDetailPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {simulatedSchedule.map((ech, index) => (
+                    {simulatedSchedule.map((ech) => (
                       <TableRow key={ech.num_ech} className="hover:bg-gray-50">
                         <TableCell className="font-medium">#{ech.num_ech}</TableCell>
                         <TableCell>{formatDate(ech.date_ech)}</TableCell>

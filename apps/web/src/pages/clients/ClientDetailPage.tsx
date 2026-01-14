@@ -663,7 +663,7 @@ export default function ClientDetailPage() {
                             {compte.dernieres_transactions.slice(0, 3).map((tx) => (
                               <div key={tx.id} className="flex justify-between text-sm">
                                 <span className="text-muted-foreground">
-                                  {formatDate(tx.date)} - {tx.libelle || tx.compte_comptable || 'Transaction'}
+                                  {formatDate(tx.date)} - {tx.libelle || 'Transaction'}
                                 </span>
                                 <span className={tx.sens?.toLowerCase() === 'c' ? 'text-green-600' : 'text-red-600'}>
                                   {tx.sens?.toLowerCase() === 'c' ? '+' : '-'}{formatCurrency(tx.montant)}
@@ -853,7 +853,7 @@ export default function ClientDetailPage() {
                     {transactionHistory.transactions.map((tx) => (
                       <tr key={tx.id_mouvement} className="border-b hover:bg-muted/50">
                         <td className="py-2 px-3">{formatDate(tx.date_mvt)}</td>
-                        <td className="py-2 px-3">{tx.libel_mvt || tx.compte_comptable || 'Transaction'}</td>
+                        <td className="py-2 px-3">{tx.libel_mvt || 'Transaction'}</td>
                         <td className="py-2 px-3 text-right text-red-600">
                           {tx.sens?.toLowerCase() === 'd' ? formatCurrency(tx.montant) : '-'}
                         </td>
@@ -946,7 +946,7 @@ export default function ClientDetailPage() {
                       <tr key={tx.id_mouvement} className="border-b hover:bg-muted/50">
                         <td className="py-2 px-3">{formatDate(tx.date_mvt)}</td>
                         <td className="py-2 px-3 font-mono text-xs">{tx.compte_numero}</td>
-                        <td className="py-2 px-3">{tx.libel_mvt || tx.compte_comptable || 'Transaction'}</td>
+                        <td className="py-2 px-3">{tx.libel_mvt || 'Transaction'}</td>
                         <td className="py-2 px-3 text-right text-red-600">
                           {tx.sens?.toLowerCase() === 'd' ? formatCurrency(tx.montant) : '-'}
                         </td>
