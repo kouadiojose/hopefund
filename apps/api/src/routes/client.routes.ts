@@ -59,26 +59,51 @@ router.get('/', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_O
 
     const where: any = {};
 
-    // Filter by agency for non-admin users
-    if (agencyId && !['SUPER_ADMIN', 'DIRECTOR'].includes(req.user!.role)) {
-      where.id_ag = agencyId;
-    }
-
-    // Filter by state
-    if (etat !== undefined) {
-      where.etat = etat;
-    }
-
-    // Search by name, phone, or ID
+    // Build search conditions first
+    const searchConditions: any[] = [];
     if (search) {
-      where.OR = [
+      searchConditions.push(
         { pp_nom: { contains: search, mode: 'insensitive' } },
         { pp_prenom: { contains: search, mode: 'insensitive' } },
         { pm_raison_sociale: { contains: search, mode: 'insensitive' } },
         { num_tel: { contains: search } },
         { num_port: { contains: search } },
         { email: { contains: search, mode: 'insensitive' } },
-      ];
+      );
+
+      // Allow search by client ID if the search is numeric
+      const searchAsNumber = parseInt(search, 10);
+      if (!isNaN(searchAsNumber)) {
+        searchConditions.push({ id_client: searchAsNumber });
+      }
+    }
+
+    // Filter by agency for non-admin users, but allow cross-agency search when searching
+    // This allows finding clients that may have loans in the user's agency but belong to another agency
+    if (agencyId && !['SUPER_ADMIN', 'DIRECTOR'].includes(req.user!.role)) {
+      if (search) {
+        // When searching, show results from user's agency OR matching clients from any agency
+        where.OR = [
+          // Clients from user's agency matching search
+          { id_ag: agencyId, OR: searchConditions },
+          // Clients from any agency that have loans in user's agency and match search
+          {
+            dossiers_credit: { some: { id_ag: agencyId } },
+            OR: searchConditions,
+          },
+        ];
+      } else {
+        // Without search, only show clients from user's agency
+        where.id_ag = agencyId;
+      }
+    } else if (search) {
+      // Admin/Director: just apply search conditions
+      where.OR = searchConditions;
+    }
+
+    // Filter by state
+    if (etat !== undefined) {
+      where.etat = etat;
     }
 
     const [clients, total] = await Promise.all([

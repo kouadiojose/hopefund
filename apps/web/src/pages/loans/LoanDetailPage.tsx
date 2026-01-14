@@ -464,6 +464,7 @@ export default function LoanDetailPage() {
                   <div className="p-4 bg-gray-50 rounded-lg">
                     <p className="text-sm text-gray-500 mb-1">Client</p>
                     <p className="font-semibold">{clientNom}</p>
+                    <p className="text-xs text-gray-400 mt-1">ID: {loan.id_client}</p>
                   </div>
                   <div className="p-4 bg-gray-50 rounded-lg">
                     <p className="text-sm text-gray-500 mb-1">Objet du crédit</p>
