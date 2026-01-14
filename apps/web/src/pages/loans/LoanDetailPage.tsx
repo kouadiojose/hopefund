@@ -1,3 +1,4 @@
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
@@ -14,10 +15,15 @@ import {
   Printer,
   AlertTriangle,
   XCircle,
+  Calculator,
+  Settings,
+  RefreshCw,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Table,
   TableBody,
@@ -42,12 +48,65 @@ interface Echeance {
   etat: number | null;
 }
 
+// Interface pour échéance simulée
+interface SimulatedEcheance {
+  num_ech: number;
+  date_ech: string;
+  mnt_capital: number;
+  mnt_int: number;
+  total: number;
+  solde_restant: number;
+}
+
+// Fonction pour générer un échéancier simulé
+function generateSimulatedSchedule(
+  montant: number,
+  tauxAnnuel: number,
+  dureeMois: number,
+  dateDebut: Date = new Date()
+): SimulatedEcheance[] {
+  if (montant <= 0 || dureeMois <= 0) return [];
+
+  const tauxMensuel = tauxAnnuel / 100 / 12;
+  const echeances: SimulatedEcheance[] = [];
+
+  // Calcul de la mensualité constante (amortissement constant + intérêts dégressifs)
+  const capitalParEcheance = montant / dureeMois;
+  let soldeRestant = montant;
+
+  for (let i = 1; i <= dureeMois; i++) {
+    const interets = soldeRestant * tauxMensuel;
+    const capital = capitalParEcheance;
+    soldeRestant -= capital;
+
+    const dateEch = new Date(dateDebut);
+    dateEch.setMonth(dateEch.getMonth() + i);
+
+    echeances.push({
+      num_ech: i,
+      date_ech: dateEch.toISOString(),
+      mnt_capital: Math.round(capital),
+      mnt_int: Math.round(interets),
+      total: Math.round(capital + interets),
+      solde_restant: Math.max(0, Math.round(soldeRestant)),
+    });
+  }
+
+  return echeances;
+}
+
 export default function LoanDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
 
   // Extraire uniquement la partie numérique de l'ID (au cas où il y aurait un suffixe comme :1)
   const loanId = id ? parseInt(id.split(':')[0], 10) : null;
+
+  // États pour la simulation
+  const [simTaux, setSimTaux] = useState<number | null>(null);
+  const [simDuree, setSimDuree] = useState<number | null>(null);
+  const [simMontant, setSimMontant] = useState<number | null>(null);
+  const [showSimulation, setShowSimulation] = useState(false);
 
   const { data: loanData, isLoading, error } = useQuery({
     queryKey: ['loan', loanId],
@@ -64,6 +123,28 @@ export default function LoanDetailPage() {
   const loan = loanData;
   const echeances: Echeance[] = loan?.echeances || [];
   const resume = loan?.resume || {};
+
+  // Initialiser les valeurs de simulation depuis le prêt
+  const effectiveTaux = simTaux ?? Number(loan?.tx_interet_lcr || 18);
+  const effectiveDuree = simDuree ?? Number(loan?.duree_mois || 12);
+  const effectiveMontant = simMontant ?? Number(loan?.cre_mnt_octr || loan?.mnt_dem || 0);
+
+  // Générer l'échéancier simulé
+  const simulatedSchedule = useMemo(() => {
+    if (!loan) return [];
+    return generateSimulatedSchedule(effectiveMontant, effectiveTaux, effectiveDuree);
+  }, [loan, effectiveMontant, effectiveTaux, effectiveDuree]);
+
+  // Calculs de la simulation
+  const simTotalCapital = simulatedSchedule.reduce((sum, e) => sum + e.mnt_capital, 0);
+  const simTotalInteret = simulatedSchedule.reduce((sum, e) => sum + e.mnt_int, 0);
+  const simTotalDu = simTotalCapital + simTotalInteret;
+  const simMensualiteMoyenne = simulatedSchedule.length > 0
+    ? simulatedSchedule.reduce((sum, e) => sum + e.total, 0) / simulatedSchedule.length
+    : 0;
+
+  // Le prêt est-il en phase de simulation (non décaissé)
+  const isSimulationPhase = !loan?.cre_date_debloc && (loan?.cre_etat || loan?.etat) < 5;
 
   // Calculer le statut de chaque échéance
   const getEcheanceStatus = (echeance: Echeance) => {
@@ -411,116 +492,261 @@ export default function LoanDetailPage() {
         </motion.div>
       </div>
 
-      {/* Payment Schedule */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6 }}
-      >
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                <FileText className="h-5 w-5 text-gray-500" />
-                Échéancier de remboursement
-              </CardTitle>
-              <p className="text-sm text-gray-500 mt-1">
-                {echeanceStats.paid} payées | {echeanceStats.overdue} en retard | {echeanceStats.future} à venir
-              </p>
-            </div>
-            <Button variant="outline" size="sm" className="gap-2">
-              <Download className="h-4 w-4" />
-              Télécharger PDF
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {echeances.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <p>Aucun échéancier disponible pour ce prêt</p>
-                <p className="text-sm">L'échéancier sera généré après le décaissement</p>
+      {/* Simulation Section - Pour les prêts non décaissés */}
+      {isSimulationPhase && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+        >
+          <Card className="border-blue-200 bg-blue-50/30">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                  <Calculator className="h-5 w-5 text-blue-600" />
+                  Simulation d'échéancier
+                </CardTitle>
+                <p className="text-sm text-gray-500 mt-1">
+                  Ajustez les paramètres pour voir la simulation. Cet échéancier sera appliqué après approbation.
+                </p>
               </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>N°</TableHead>
-                    <TableHead>Date échéance</TableHead>
-                    <TableHead className="text-right">Capital</TableHead>
-                    <TableHead className="text-right">Intérêts</TableHead>
-                    <TableHead className="text-right">Total dû</TableHead>
-                    <TableHead className="text-right">Payé</TableHead>
-                    <TableHead className="text-right">Solde</TableHead>
-                    <TableHead>Statut</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {echeances.map((echeance, index) => {
-                    const status = getEcheanceStatus(echeance);
-                    const soldeRestant = Number(echeance.solde_capital || 0) + Number(echeance.solde_int || 0);
-                    const totalDu = Number(echeance.mnt_capital || 0) + Number(echeance.mnt_int || 0);
+              <Button
+                variant={showSimulation ? 'default' : 'outline'}
+                size="sm"
+                className="gap-2"
+                onClick={() => setShowSimulation(!showSimulation)}
+              >
+                <Settings className="h-4 w-4" />
+                {showSimulation ? 'Masquer paramètres' : 'Ajuster paramètres'}
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {/* Paramètres de simulation */}
+              {showSimulation && (
+                <div className="mb-6 p-4 bg-white rounded-lg border">
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <div>
+                      <Label htmlFor="simMontant">Montant (FBu)</Label>
+                      <Input
+                        id="simMontant"
+                        type="number"
+                        value={effectiveMontant}
+                        onChange={(e) => setSimMontant(Number(e.target.value))}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="simTaux">Taux d'intérêt annuel (%)</Label>
+                      <Input
+                        id="simTaux"
+                        type="number"
+                        step="0.1"
+                        value={effectiveTaux}
+                        onChange={(e) => setSimTaux(Number(e.target.value))}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="simDuree">Durée (mois)</Label>
+                      <Input
+                        id="simDuree"
+                        type="number"
+                        value={effectiveDuree}
+                        onChange={(e) => setSimDuree(Number(e.target.value))}
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-4 flex items-center gap-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSimMontant(null);
+                        setSimTaux(null);
+                        setSimDuree(null);
+                      }}
+                      className="gap-2"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                      Réinitialiser
+                    </Button>
+                  </div>
+                </div>
+              )}
 
-                    return (
-                      <motion.tr
-                        key={echeance.id_ech}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.7 + index * 0.02 }}
-                        className={cn(
-                          'hover:bg-gray-50',
-                          status === 'pending' && 'bg-yellow-50',
-                          status === 'overdue' && 'bg-red-50'
-                        )}
-                      >
-                        <TableCell className="font-medium">#{echeance.num_ech}</TableCell>
-                        <TableCell>{formatDate(echeance.date_ech)}</TableCell>
+              {/* Résumé de la simulation */}
+              <div className="grid gap-4 sm:grid-cols-4 mb-6">
+                <div className="p-4 bg-white rounded-lg border">
+                  <p className="text-sm text-gray-500">Total Capital</p>
+                  <p className="text-xl font-bold">{formatCurrency(simTotalCapital)}</p>
+                </div>
+                <div className="p-4 bg-white rounded-lg border">
+                  <p className="text-sm text-gray-500">Total Intérêts</p>
+                  <p className="text-xl font-bold text-blue-600">{formatCurrency(simTotalInteret)}</p>
+                </div>
+                <div className="p-4 bg-white rounded-lg border">
+                  <p className="text-sm text-gray-500">Total à rembourser</p>
+                  <p className="text-xl font-bold text-hopefund-600">{formatCurrency(simTotalDu)}</p>
+                </div>
+                <div className="p-4 bg-white rounded-lg border">
+                  <p className="text-sm text-gray-500">Mensualité moyenne</p>
+                  <p className="text-xl font-bold">{formatCurrency(simMensualiteMoyenne)}</p>
+                </div>
+              </div>
+
+              {/* Tableau de simulation */}
+              <div className="bg-white rounded-lg border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gray-50">
+                      <TableHead>N°</TableHead>
+                      <TableHead>Date échéance</TableHead>
+                      <TableHead className="text-right">Capital</TableHead>
+                      <TableHead className="text-right">Intérêts</TableHead>
+                      <TableHead className="text-right">Mensualité</TableHead>
+                      <TableHead className="text-right">Solde restant</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {simulatedSchedule.map((ech, index) => (
+                      <TableRow key={ech.num_ech} className="hover:bg-gray-50">
+                        <TableCell className="font-medium">#{ech.num_ech}</TableCell>
+                        <TableCell>{formatDate(ech.date_ech)}</TableCell>
                         <TableCell className="text-right tabular-nums">
-                          {formatCurrency(echeance.mnt_capital || 0)}
+                          {formatCurrency(ech.mnt_capital)}
                         </TableCell>
-                        <TableCell className="text-right tabular-nums">
-                          {formatCurrency(echeance.mnt_int || 0)}
+                        <TableCell className="text-right tabular-nums text-blue-600">
+                          {formatCurrency(ech.mnt_int)}
                         </TableCell>
                         <TableCell className="text-right font-semibold tabular-nums">
-                          {formatCurrency(totalDu)}
+                          {formatCurrency(ech.total)}
                         </TableCell>
-                        <TableCell className="text-right tabular-nums text-green-600">
-                          {formatCurrency(echeance.mnt_paye || 0)}
+                        <TableCell className="text-right tabular-nums text-gray-500">
+                          {formatCurrency(ech.solde_restant)}
                         </TableCell>
-                        <TableCell className="text-right tabular-nums">
-                          {formatCurrency(soldeRestant)}
-                        </TableCell>
-                        <TableCell>
-                          {status === 'paid' && (
-                            <Badge variant="success" className="gap-1">
-                              <CheckCircle className="h-3 w-3" />
-                              Payé
-                            </Badge>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* Payment Schedule - Pour les prêts décaissés */}
+      {!isSimulationPhase && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+        >
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-gray-500" />
+                  Échéancier de remboursement
+                </CardTitle>
+                <p className="text-sm text-gray-500 mt-1">
+                  {echeanceStats.paid} payées | {echeanceStats.overdue} en retard | {echeanceStats.future} à venir
+                </p>
+              </div>
+              <Button variant="outline" size="sm" className="gap-2">
+                <Download className="h-4 w-4" />
+                Télécharger PDF
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {echeances.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                  <p>Aucun échéancier disponible pour ce prêt</p>
+                  <p className="text-sm">L'échéancier sera généré après le décaissement</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>N°</TableHead>
+                      <TableHead>Date échéance</TableHead>
+                      <TableHead className="text-right">Capital</TableHead>
+                      <TableHead className="text-right">Intérêts</TableHead>
+                      <TableHead className="text-right">Total dû</TableHead>
+                      <TableHead className="text-right">Payé</TableHead>
+                      <TableHead className="text-right">Solde</TableHead>
+                      <TableHead>Statut</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {echeances.map((echeance, index) => {
+                      const status = getEcheanceStatus(echeance);
+                      const soldeRestant = Number(echeance.solde_capital || 0) + Number(echeance.solde_int || 0);
+                      const totalDu = Number(echeance.mnt_capital || 0) + Number(echeance.mnt_int || 0);
+
+                      return (
+                        <motion.tr
+                          key={echeance.id_ech}
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ delay: 0.7 + index * 0.02 }}
+                          className={cn(
+                            'hover:bg-gray-50',
+                            status === 'pending' && 'bg-yellow-50',
+                            status === 'overdue' && 'bg-red-50'
                           )}
-                          {status === 'overdue' && (
-                            <Badge variant="destructive" className="gap-1">
-                              <XCircle className="h-3 w-3" />
-                              En retard
-                            </Badge>
-                          )}
-                          {status === 'pending' && (
-                            <Badge variant="warning" className="gap-1">
-                              <Clock className="h-3 w-3" />
-                              Aujourd'hui
-                            </Badge>
-                          )}
-                          {status === 'future' && (
-                            <Badge variant="secondary">À venir</Badge>
-                          )}
-                        </TableCell>
-                      </motion.tr>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
-      </motion.div>
+                        >
+                          <TableCell className="font-medium">#{echeance.num_ech}</TableCell>
+                          <TableCell>{formatDate(echeance.date_ech)}</TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {formatCurrency(echeance.mnt_capital || 0)}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {formatCurrency(echeance.mnt_int || 0)}
+                          </TableCell>
+                          <TableCell className="text-right font-semibold tabular-nums">
+                            {formatCurrency(totalDu)}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums text-green-600">
+                            {formatCurrency(echeance.mnt_paye || 0)}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {formatCurrency(soldeRestant)}
+                          </TableCell>
+                          <TableCell>
+                            {status === 'paid' && (
+                              <Badge variant="success" className="gap-1">
+                                <CheckCircle className="h-3 w-3" />
+                                Payé
+                              </Badge>
+                            )}
+                            {status === 'overdue' && (
+                              <Badge variant="destructive" className="gap-1">
+                                <XCircle className="h-3 w-3" />
+                                En retard
+                              </Badge>
+                            )}
+                            {status === 'pending' && (
+                              <Badge variant="warning" className="gap-1">
+                                <Clock className="h-3 w-3" />
+                                Aujourd'hui
+                              </Badge>
+                            )}
+                            {status === 'future' && (
+                              <Badge variant="secondary">À venir</Badge>
+                            )}
+                          </TableCell>
+                        </motion.tr>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
     </div>
   );
 }

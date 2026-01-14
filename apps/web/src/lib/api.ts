@@ -138,6 +138,8 @@ export const loansApi = {
     api.get('/loans/schedule/upcoming', { params }),
   getDelinquentClients: (params?: { page?: number; limit?: number }) =>
     api.get('/loans/clients/delinquent', { params }),
+  // Portfolio statistics for CEO
+  getPortfolioStats: () => api.get('/loans/portfolio/stats'),
 };
 
 // Reports

@@ -9,6 +9,157 @@ const router = Router();
 
 router.use(authenticate);
 
+// GET /api/loans/portfolio/stats - Statistiques du portefeuille pour le CEO
+router.get('/portfolio/stats', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER'), async (req, res, next) => {
+  try {
+    // Statistiques par état de crédit
+    const statsByStatus = await prisma.$queryRaw`
+      SELECT
+        cre_etat,
+        COUNT(*) as count,
+        COALESCE(SUM(cre_mnt_octr), 0) as montant_total
+      FROM ad_dcr
+      WHERE cre_etat IS NOT NULL
+      GROUP BY cre_etat
+      ORDER BY cre_etat
+    ` as any[];
+
+    // Montant total du portefeuille actif (décaissés)
+    const portfolioTotal = await prisma.$queryRaw`
+      SELECT
+        COUNT(*) as nb_credits_actifs,
+        COALESCE(SUM(cre_mnt_octr), 0) as encours_total
+      FROM ad_dcr
+      WHERE cre_etat = 5
+    ` as any[];
+
+    // Montants en retard (PAR - Portfolio at Risk)
+    const parStats = await prisma.$queryRaw`
+      SELECT
+        COUNT(DISTINCT d.id_doss) as nb_credits_retard,
+        COUNT(DISTINCT d.id_client) as nb_clients_retard,
+        COALESCE(SUM(e.solde_capital + e.solde_int), 0) as montant_retard
+      FROM ad_dcr d
+      JOIN ad_sre e ON d.id_doss = e.id_doss AND d.id_ag = e.id_ag
+      WHERE d.cre_etat IN (5, 8)
+        AND e.date_ech < CURRENT_DATE
+        AND (e.etat IS NULL OR e.etat != 2)
+        AND (e.solde_capital > 0 OR e.solde_int > 0)
+    ` as any[];
+
+    // Répartition PAR par tranche de retard
+    const parByAge = await prisma.$queryRaw`
+      SELECT
+        CASE
+          WHEN EXTRACT(DAY FROM (CURRENT_DATE - e.date_ech)) <= 30 THEN '1-30 jours'
+          WHEN EXTRACT(DAY FROM (CURRENT_DATE - e.date_ech)) <= 60 THEN '31-60 jours'
+          WHEN EXTRACT(DAY FROM (CURRENT_DATE - e.date_ech)) <= 90 THEN '61-90 jours'
+          ELSE '90+ jours'
+        END as tranche,
+        COUNT(DISTINCT d.id_doss) as nb_credits,
+        COALESCE(SUM(e.solde_capital + e.solde_int), 0) as montant
+      FROM ad_dcr d
+      JOIN ad_sre e ON d.id_doss = e.id_doss AND d.id_ag = e.id_ag
+      WHERE d.cre_etat IN (5, 8)
+        AND e.date_ech < CURRENT_DATE
+        AND (e.etat IS NULL OR e.etat != 2)
+        AND (e.solde_capital > 0 OR e.solde_int > 0)
+      GROUP BY
+        CASE
+          WHEN EXTRACT(DAY FROM (CURRENT_DATE - e.date_ech)) <= 30 THEN '1-30 jours'
+          WHEN EXTRACT(DAY FROM (CURRENT_DATE - e.date_ech)) <= 60 THEN '31-60 jours'
+          WHEN EXTRACT(DAY FROM (CURRENT_DATE - e.date_ech)) <= 90 THEN '61-90 jours'
+          ELSE '90+ jours'
+        END
+      ORDER BY
+        CASE
+          WHEN EXTRACT(DAY FROM (CURRENT_DATE - e.date_ech)) <= 30 THEN 1
+          WHEN EXTRACT(DAY FROM (CURRENT_DATE - e.date_ech)) <= 60 THEN 2
+          WHEN EXTRACT(DAY FROM (CURRENT_DATE - e.date_ech)) <= 90 THEN 3
+          ELSE 4
+        END
+    ` as any[];
+
+    // Demandes récentes (derniers 30 jours)
+    const recentDemands = await prisma.$queryRaw`
+      SELECT
+        COUNT(*) as total,
+        COUNT(CASE WHEN cre_etat = 1 THEN 1 END) as en_analyse,
+        COUNT(CASE WHEN cre_etat = 2 THEN 1 END) as approuves,
+        COUNT(CASE WHEN cre_etat = 9 THEN 1 END) as rejetes,
+        COALESCE(SUM(mnt_dem), 0) as montant_demande
+      FROM ad_dcr
+      WHERE date_dem >= CURRENT_DATE - INTERVAL '30 days'
+    ` as any[];
+
+    // Remboursements du mois
+    const monthlyRepayments = await prisma.$queryRaw`
+      SELECT
+        COALESCE(SUM(mnt_paye), 0) as total_rembourse,
+        COUNT(CASE WHEN etat = 2 THEN 1 END) as echeances_payees
+      FROM ad_sre
+      WHERE date_paiement >= DATE_TRUNC('month', CURRENT_DATE)
+        AND date_paiement < DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month'
+    ` as any[];
+
+    // Formater les statistiques par état
+    const statusLabels: Record<number, string> = {
+      1: 'En analyse',
+      2: 'Approuvé',
+      3: 'Att. décaissement',
+      5: 'Actif',
+      8: 'En retard',
+      9: 'Rejeté',
+      10: 'Soldé',
+    };
+
+    const formattedStatsByStatus = statsByStatus.map((s: any) => ({
+      etat: s.cre_etat,
+      label: statusLabels[s.cre_etat] || `État ${s.cre_etat}`,
+      count: Number(s.count || 0),
+      montant: Number(s.montant_total || 0),
+    }));
+
+    // Calculer le PAR ratio
+    const encoursTotal = Number(portfolioTotal[0]?.encours_total || 0);
+    const montantRetard = Number(parStats[0]?.montant_retard || 0);
+    const parRatio = encoursTotal > 0 ? (montantRetard / encoursTotal) * 100 : 0;
+
+    res.json({
+      portfolio: {
+        nb_credits_actifs: Number(portfolioTotal[0]?.nb_credits_actifs || 0),
+        encours_total: encoursTotal,
+      },
+      par: {
+        nb_credits_retard: Number(parStats[0]?.nb_credits_retard || 0),
+        nb_clients_retard: Number(parStats[0]?.nb_clients_retard || 0),
+        montant_retard: montantRetard,
+        par_ratio: Math.round(parRatio * 100) / 100,
+      },
+      par_by_age: parByAge.map((p: any) => ({
+        tranche: p.tranche,
+        nb_credits: Number(p.nb_credits || 0),
+        montant: Number(p.montant || 0),
+      })),
+      stats_by_status: formattedStatsByStatus,
+      recent_demands: {
+        total: Number(recentDemands[0]?.total || 0),
+        en_analyse: Number(recentDemands[0]?.en_analyse || 0),
+        approuves: Number(recentDemands[0]?.approuves || 0),
+        rejetes: Number(recentDemands[0]?.rejetes || 0),
+        montant_demande: Number(recentDemands[0]?.montant_demande || 0),
+      },
+      monthly_repayments: {
+        total_rembourse: Number(monthlyRepayments[0]?.total_rembourse || 0),
+        echeances_payees: Number(monthlyRepayments[0]?.echeances_payees || 0),
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching portfolio stats:', error);
+    next(error);
+  }
+});
+
 // GET /api/loans/delinquent - Prêts en retard de paiement
 router.get('/delinquent', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_OFFICER'), async (req, res, next) => {
   try {

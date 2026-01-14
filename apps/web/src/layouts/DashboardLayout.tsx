@@ -21,6 +21,7 @@ import {
   Activity,
   Banknote,
   AlertTriangle,
+  PieChart,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth';
@@ -39,6 +40,7 @@ const navigation: NavItem[] = [
   { name: 'Comptes', href: '/accounts', icon: Wallet },
   { name: 'Transactions', href: '/transactions', icon: ArrowLeftRight },
   { name: 'Crédits', href: '/loans', icon: FileText },
+  { name: 'Portefeuille Crédits', href: '/loans/portfolio', icon: PieChart, roles: ['BRANCH_MANAGER', 'SUPER_ADMIN', 'DIRECTOR'] },
   { name: 'Retards de paiement', href: '/loans/delinquent', icon: AlertTriangle, roles: ['LOAN_OFFICER', 'BRANCH_MANAGER', 'SUPER_ADMIN', 'DIRECTOR'] },
   { name: 'Caisse', href: '/caisse', icon: Banknote, roles: ['TELLER', 'BRANCH_MANAGER', 'SUPER_ADMIN', 'DIRECTOR'] },
   { name: 'Rapports', href: '/reports', icon: BarChart3 },
