@@ -129,10 +129,15 @@ export default function LoanDetailPage() {
   const effectiveDuree = simDuree ?? Number(loan?.duree_mois || 12);
   const effectiveMontant = simMontant ?? Number(loan?.cre_mnt_octr || loan?.mnt_dem || 0);
 
-  // Générer l'échéancier simulé
+  // Générer l'échéancier simulé (utiliser la date de décaissement si disponible)
   const simulatedSchedule = useMemo(() => {
     if (!loan) return [];
-    return generateSimulatedSchedule(effectiveMontant, effectiveTaux, effectiveDuree);
+    const startDate = loan.cre_date_debloc
+      ? new Date(loan.cre_date_debloc)
+      : loan.cre_date_approb
+        ? new Date(loan.cre_date_approb)
+        : new Date();
+    return generateSimulatedSchedule(effectiveMontant, effectiveTaux, effectiveDuree, startDate);
   }, [loan, effectiveMontant, effectiveTaux, effectiveDuree]);
 
   // Calculs de la simulation
@@ -145,6 +150,9 @@ export default function LoanDetailPage() {
 
   // Le prêt est-il en phase de simulation (non décaissé)
   const isSimulationPhase = !loan?.cre_date_debloc && (loan?.cre_etat || loan?.etat) < 5;
+
+  // Le prêt n'a pas d'échéancier en base de données (même s'il est décaissé)
+  const hasNoScheduleInDB = echeances.length === 0;
 
   // Calculer le statut de chaque échéance
   const getEcheanceStatus = (echeance: Echeance) => {
@@ -492,8 +500,8 @@ export default function LoanDetailPage() {
         </motion.div>
       </div>
 
-      {/* Simulation Section - Pour les prêts non décaissés */}
-      {isSimulationPhase && (
+      {/* Simulation Section - Pour les prêts non décaissés OU décaissés sans échéancier */}
+      {(isSimulationPhase || hasNoScheduleInDB) && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -504,10 +512,13 @@ export default function LoanDetailPage() {
               <div>
                 <CardTitle className="text-lg font-semibold flex items-center gap-2">
                   <Calculator className="h-5 w-5 text-blue-600" />
-                  Simulation d'échéancier
+                  {isSimulationPhase ? "Simulation d'échéancier" : "Échéancier calculé"}
                 </CardTitle>
                 <p className="text-sm text-gray-500 mt-1">
-                  Ajustez les paramètres pour voir la simulation. Cet échéancier sera appliqué après approbation.
+                  {isSimulationPhase
+                    ? "Ajustez les paramètres pour voir la simulation. Cet échéancier sera appliqué après approbation."
+                    : "Aucun échéancier n'a été enregistré en base. Voici l'échéancier théorique basé sur les paramètres du prêt."
+                  }
                 </p>
               </div>
               <Button
@@ -635,8 +646,8 @@ export default function LoanDetailPage() {
         </motion.div>
       )}
 
-      {/* Payment Schedule - Pour les prêts décaissés */}
-      {!isSimulationPhase && (
+      {/* Payment Schedule - Pour les prêts décaissés avec échéancier en base */}
+      {!isSimulationPhase && !hasNoScheduleInDB && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

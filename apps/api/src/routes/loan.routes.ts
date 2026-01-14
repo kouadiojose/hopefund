@@ -448,7 +448,12 @@ router.get('/', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_O
     }
 
     if (status) {
-      where.cre_etat = parseInt(status);
+      const statusInt = parseInt(status);
+      // Filtrer par cre_etat OU etat (certains dossiers n'ont que etat renseigné)
+      where.OR = [
+        { cre_etat: statusInt },
+        { cre_etat: null, etat: statusInt },
+      ];
     }
 
     if (clientId) {
