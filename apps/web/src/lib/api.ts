@@ -140,6 +140,8 @@ export const loansApi = {
     api.get('/loans/clients/delinquent', { params }),
   // Portfolio statistics for CEO
   getPortfolioStats: () => api.get('/loans/portfolio/stats'),
+  // Generate schedule for existing loan without one
+  generateSchedule: (id: number) => api.post(`/loans/${id}/generate-schedule`),
 };
 
 // Reports

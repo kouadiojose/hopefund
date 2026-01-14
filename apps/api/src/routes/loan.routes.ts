@@ -9,6 +9,48 @@ const router = Router();
 
 router.use(authenticate);
 
+// Helper function to generate payment schedule
+function generatePaymentSchedule(
+  montant: number,
+  tauxAnnuel: number,
+  dureeMois: number,
+  dateDebut: Date = new Date()
+): Array<{
+  num_ech: number;
+  date_ech: Date;
+  mnt_capital: number;
+  mnt_int: number;
+  solde_capital: number;
+  solde_int: number;
+}> {
+  if (montant <= 0 || dureeMois <= 0) return [];
+
+  const tauxMensuel = tauxAnnuel / 100 / 12;
+  const capitalParEcheance = montant / dureeMois;
+  let soldeRestant = montant;
+  const echeances = [];
+
+  for (let i = 1; i <= dureeMois; i++) {
+    const interets = soldeRestant * tauxMensuel;
+    const capital = capitalParEcheance;
+    soldeRestant -= capital;
+
+    const dateEch = new Date(dateDebut);
+    dateEch.setMonth(dateEch.getMonth() + i);
+
+    echeances.push({
+      num_ech: i,
+      date_ech: dateEch,
+      mnt_capital: Math.round(capital),
+      mnt_int: Math.round(interets),
+      solde_capital: Math.round(capital), // Initially, full amount is due
+      solde_int: Math.round(interets),
+    });
+  }
+
+  return echeances;
+}
+
 // GET /api/loans/portfolio/stats - Statistiques du portefeuille pour le CEO
 router.get('/portfolio/stats', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER'), async (req, res, next) => {
   try {
@@ -774,6 +816,8 @@ router.put('/:id/disburse', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER
       throw new AppError('Loan must be approved before disbursement', 400);
     }
 
+    const disbursementDate = new Date();
+
     // Transaction pour débloquer les fonds
     await prisma.$transaction(async (tx) => {
       const account = await tx.compte.findUnique({
@@ -793,7 +837,7 @@ router.put('/:id/disburse', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER
         where: { id_cpte: accountId },
         data: {
           solde: newBalance,
-          date_modif: new Date(),
+          date_modif: disbursementDate,
         },
       });
 
@@ -802,7 +846,7 @@ router.put('/:id/disburse', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER
         data: {
           id_ag: account.id_ag,
           cpte_interne_cli: accountId,
-          date_valeur: new Date(),
+          date_valeur: disbursementDate,
           sens: 'c',
           montant: amount,
           devise: 'BIF',
@@ -816,11 +860,34 @@ router.put('/:id/disburse', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER
         data: {
           cre_etat: 5, // Débloqué
           etat: 5,
-          cre_date_debloc: new Date(),
+          cre_date_debloc: disbursementDate,
           cre_id_cpte: accountId,
-          date_modif: new Date(),
+          date_modif: disbursementDate,
         },
       });
+
+      // Générer et créer l'échéancier
+      const duree = Number(loan.duree_mois || 12);
+      const taux = Number(loan.tx_interet_lcr || 0);
+      const schedule = generatePaymentSchedule(amount, taux, duree, disbursementDate);
+
+      // Créer les échéances en base
+      for (const ech of schedule) {
+        await tx.echeance.create({
+          data: {
+            id_ag: loan.id_ag,
+            id_doss: loanId,
+            num_ech: ech.num_ech,
+            date_ech: ech.date_ech,
+            mnt_capital: ech.mnt_capital,
+            mnt_int: ech.mnt_int,
+            solde_capital: ech.solde_capital,
+            solde_int: ech.solde_int,
+            mnt_paye: 0,
+            etat: 1, // Non échu
+          },
+        });
+      }
     });
 
     await prisma.auditLog.create({
@@ -835,6 +902,87 @@ router.put('/:id/disburse', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER
     });
 
     res.json({ message: 'Loan disbursed successfully' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST /api/loans/:id/generate-schedule - Générer l'échéancier pour un prêt existant sans échéancier
+router.post('/:id/generate-schedule', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER'), async (req, res, next) => {
+  try {
+    const loanId = parseInt(req.params.id);
+
+    const loan = await prisma.dossierCredit.findUnique({
+      where: { id_doss: loanId },
+      include: { echeances: true },
+    });
+
+    if (!loan) {
+      throw new AppError('Loan not found', 404);
+    }
+
+    // Vérifier si le prêt a déjà des échéances
+    if (loan.echeances && loan.echeances.length > 0) {
+      throw new AppError('Ce prêt a déjà un échéancier. Utilisez un autre endpoint pour le régénérer.', 400);
+    }
+
+    // Vérifier que le prêt est décaissé
+    if (!loan.cre_date_debloc && loan.cre_etat !== 5 && loan.etat !== 5) {
+      throw new AppError('Ce prêt n\'est pas encore décaissé', 400);
+    }
+
+    const amount = Number(loan.cre_mnt_octr || loan.mnt_dem || 0);
+    const duree = Number(loan.duree_mois || 12);
+    const taux = Number(loan.tx_interet_lcr || 0);
+    const startDate = loan.cre_date_debloc || loan.cre_date_approb || new Date();
+
+    if (amount <= 0) {
+      throw new AppError('Montant du prêt invalide', 400);
+    }
+
+    const schedule = generatePaymentSchedule(amount, taux, duree, new Date(startDate));
+
+    // Créer les échéances en base
+    await prisma.$transaction(async (tx) => {
+      for (const ech of schedule) {
+        await tx.echeance.create({
+          data: {
+            id_ag: loan.id_ag,
+            id_doss: loanId,
+            num_ech: ech.num_ech,
+            date_ech: ech.date_ech,
+            mnt_capital: ech.mnt_capital,
+            mnt_int: ech.mnt_int,
+            solde_capital: ech.solde_capital,
+            solde_int: ech.solde_int,
+            mnt_paye: 0,
+            etat: 1, // Non échu
+          },
+        });
+      }
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        user_id: req.user!.userId,
+        action: 'GENERATE_SCHEDULE',
+        entity: 'DossierCredit',
+        entity_id: loanId.toString(),
+        new_values: { echeances_count: schedule.length, montant: amount, duree, taux },
+        ip_address: req.ip || null,
+      },
+    });
+
+    res.json({
+      message: `Échéancier généré avec succès (${schedule.length} échéances)`,
+      schedule: schedule.map(e => ({
+        num_ech: e.num_ech,
+        date_ech: e.date_ech,
+        mnt_capital: e.mnt_capital,
+        mnt_int: e.mnt_int,
+        total: e.mnt_capital + e.mnt_int,
+      })),
+    });
   } catch (error) {
     next(error);
   }

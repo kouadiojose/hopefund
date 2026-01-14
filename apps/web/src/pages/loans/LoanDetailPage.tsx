@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft,
@@ -18,6 +18,8 @@ import {
   Calculator,
   Settings,
   RefreshCw,
+  PlusCircle,
+  Loader2,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -108,6 +110,8 @@ export default function LoanDetailPage() {
   const [simMontant, setSimMontant] = useState<number | null>(null);
   const [showSimulation, setShowSimulation] = useState(false);
 
+  const queryClient = useQueryClient();
+
   const { data: loanData, isLoading, error } = useQuery({
     queryKey: ['loan', loanId],
     queryFn: async () => {
@@ -118,6 +122,14 @@ export default function LoanDetailPage() {
       return response.data;
     },
     enabled: !!loanId && !isNaN(loanId),
+  });
+
+  // Mutation pour générer l'échéancier
+  const generateScheduleMutation = useMutation({
+    mutationFn: () => loansApi.generateSchedule(loanId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['loan', loanId] });
+    },
   });
 
   const loan = loanData;
@@ -522,15 +534,33 @@ export default function LoanDetailPage() {
                   }
                 </p>
               </div>
-              <Button
-                variant={showSimulation ? 'default' : 'outline'}
-                size="sm"
-                className="gap-2"
-                onClick={() => setShowSimulation(!showSimulation)}
-              >
-                <Settings className="h-4 w-4" />
-                {showSimulation ? 'Masquer paramètres' : 'Ajuster paramètres'}
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant={showSimulation ? 'default' : 'outline'}
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => setShowSimulation(!showSimulation)}
+                >
+                  <Settings className="h-4 w-4" />
+                  {showSimulation ? 'Masquer' : 'Ajuster'}
+                </Button>
+                {/* Bouton pour générer l'échéancier en base (seulement pour prêts décaissés sans échéancier) */}
+                {!isSimulationPhase && hasNoScheduleInDB && (
+                  <Button
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => generateScheduleMutation.mutate()}
+                    disabled={generateScheduleMutation.isPending}
+                  >
+                    {generateScheduleMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <PlusCircle className="h-4 w-4" />
+                    )}
+                    Créer l'échéancier
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               {/* Paramètres de simulation */}
