@@ -62,10 +62,21 @@ router.get('/', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_O
     // Build search conditions first
     const searchConditions: any[] = [];
     if (search) {
+      // Split search into words to allow searching "Darlene MANIRAMBONA"
+      // to match pp_prenom="Darlene" AND pp_nom="MANIRAMBONA"
+      const searchTerms = search.trim().split(/\s+/).filter(t => t.length > 0);
+
+      // Add conditions for each individual term
+      for (const term of searchTerms) {
+        searchConditions.push(
+          { pp_nom: { contains: term, mode: 'insensitive' } },
+          { pp_prenom: { contains: term, mode: 'insensitive' } },
+          { pm_raison_sociale: { contains: term, mode: 'insensitive' } },
+        );
+      }
+
+      // Also search in phone, email with full search string
       searchConditions.push(
-        { pp_nom: { contains: search, mode: 'insensitive' } },
-        { pp_prenom: { contains: search, mode: 'insensitive' } },
-        { pm_raison_sociale: { contains: search, mode: 'insensitive' } },
         { num_tel: { contains: search } },
         { num_port: { contains: search } },
         { email: { contains: search, mode: 'insensitive' } },
