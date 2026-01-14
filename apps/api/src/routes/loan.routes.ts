@@ -350,14 +350,15 @@ router.get('/:id', async (req, res, next) => {
   try {
     const loanId = parseInt(req.params.id);
 
+    if (isNaN(loanId)) {
+      throw new AppError('Invalid loan ID', 400);
+    }
+
+    // Récupérer le dossier de crédit
     const loan = await prisma.dossierCredit.findUnique({
       where: { id_doss: loanId },
       include: {
         client: true,
-        echeances: {
-          orderBy: { date_ech: 'asc' },
-        },
-        garanties: true,
       },
     });
 
@@ -365,15 +366,34 @@ router.get('/:id', async (req, res, next) => {
       throw new AppError('Loan not found', 404);
     }
 
+    // Récupérer les échéances séparément (éviter les problèmes de clé composite)
+    const echeances = await prisma.echeance.findMany({
+      where: {
+        id_doss: loanId,
+        id_ag: loan.id_ag,
+      },
+      orderBy: { date_ech: 'asc' },
+    });
+
+    // Récupérer les garanties séparément
+    const garanties = await prisma.garantie.findMany({
+      where: {
+        id_doss: loanId,
+        id_ag: loan.id_ag,
+      },
+    });
+
     // Calculer les totaux
-    const totalCapital = loan.echeances.reduce((sum, e) => sum + Number(e.mnt_capital || 0), 0);
-    const totalInteret = loan.echeances.reduce((sum, e) => sum + Number(e.mnt_int || 0), 0);
-    const totalPaye = loan.echeances.reduce((sum, e) => sum + Number(e.mnt_paye || 0), 0);
-    const soldeCapital = loan.echeances.reduce((sum, e) => sum + Number(e.solde_capital || 0), 0);
-    const soldeInteret = loan.echeances.reduce((sum, e) => sum + Number(e.solde_int || 0), 0);
+    const totalCapital = echeances.reduce((sum, e) => sum + Number(e.mnt_capital || 0), 0);
+    const totalInteret = echeances.reduce((sum, e) => sum + Number(e.mnt_int || 0), 0);
+    const totalPaye = echeances.reduce((sum, e) => sum + Number(e.mnt_paye || 0), 0);
+    const soldeCapital = echeances.reduce((sum, e) => sum + Number(e.solde_capital || 0), 0);
+    const soldeInteret = echeances.reduce((sum, e) => sum + Number(e.solde_int || 0), 0);
 
     res.json({
       ...loan,
+      echeances,
+      garanties,
       resume: {
         totalCapital,
         totalInteret,

@@ -302,7 +302,7 @@ export default function LoansPage() {
                           <div className="w-8 h-8 bg-hopefund-100 rounded-full flex items-center justify-center">
                             <User className="h-4 w-4 text-hopefund-600" />
                           </div>
-                          <span className="font-medium">Client #{loan.id_client}</span>
+                          <span className="font-medium">{loan.client_nom || `Client #${loan.id_client}`}</span>
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
