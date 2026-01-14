@@ -131,6 +131,13 @@ export const loansApi = {
     api.put(`/loans/${id}/reject`, data),
   disburse: (id: number, accountId: number) =>
     api.put(`/loans/${id}/disburse`, { accountId }),
+  // Delinquent loans and schedules
+  getDelinquent: (params?: { page?: number; limit?: number; daysOverdue?: number }) =>
+    api.get('/loans/delinquent', { params }),
+  getUpcomingSchedules: (params?: { days?: number; limit?: number }) =>
+    api.get('/loans/schedule/upcoming', { params }),
+  getDelinquentClients: (params?: { page?: number; limit?: number }) =>
+    api.get('/loans/clients/delinquent', { params }),
 };
 
 // Reports

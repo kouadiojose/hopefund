@@ -17,6 +17,7 @@ import AccountDetailPage from '@/pages/accounts/AccountDetailPage';
 import TransactionsPage from '@/pages/transactions/TransactionsPage';
 import LoansPage from '@/pages/loans/LoansPage';
 import LoanDetailPage from '@/pages/loans/LoanDetailPage';
+import DelinquentClientsPage from '@/pages/loans/DelinquentClientsPage';
 import ReportsPage from '@/pages/reports/ReportsPage';
 import SettingsPage from '@/pages/settings/SettingsPage';
 
@@ -63,6 +64,7 @@ function App() {
         <Route path="/accounts/:id" element={<AccountDetailPage />} />
         <Route path="/transactions" element={<TransactionsPage />} />
         <Route path="/loans" element={<LoansPage />} />
+        <Route path="/loans/delinquent" element={<DelinquentClientsPage />} />
         <Route path="/loans/:id" element={<LoanDetailPage />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/caisse" element={<CaissePage />} />

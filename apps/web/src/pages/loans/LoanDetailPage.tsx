@@ -12,6 +12,8 @@ import {
   Clock,
   Download,
   Printer,
+  AlertTriangle,
+  XCircle,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,16 +29,18 @@ import {
 import { loansApi } from '@/lib/api';
 import { formatCurrency, formatDate, cn } from '@/lib/utils';
 
-// Mock schedule data
-const mockSchedule = Array.from({ length: 12 }, (_, i) => ({
-  echeance: i + 1,
-  date: new Date(2024, i, 15).toISOString(),
-  principal: 83333,
-  interet: 15000 - i * 1000,
-  total: 83333 + 15000 - i * 1000,
-  solde: 1000000 - (i + 1) * 83333,
-  status: i < 6 ? 'paid' : i === 6 ? 'pending' : 'future',
-}));
+interface Echeance {
+  id_ech: number;
+  num_ech: number;
+  date_ech: string;
+  mnt_capital: number;
+  mnt_int: number;
+  solde_capital: number;
+  solde_int: number;
+  mnt_paye: number;
+  date_paiement: string | null;
+  etat: number | null;
+}
 
 export default function LoanDetailPage() {
   const { id } = useParams();
@@ -52,6 +56,50 @@ export default function LoanDetailPage() {
   });
 
   const loan = loanData;
+  const echeances: Echeance[] = loan?.echeances || [];
+  const resume = loan?.resume || {};
+
+  // Calculer le statut de chaque échéance
+  const getEcheanceStatus = (echeance: Echeance) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dateEch = new Date(echeance.date_ech);
+    dateEch.setHours(0, 0, 0, 0);
+
+    const soldeRestant = Number(echeance.solde_capital || 0) + Number(echeance.solde_int || 0);
+
+    // Si payé (etat = 2 ou solde = 0)
+    if (echeance.etat === 2 || soldeRestant === 0) {
+      return 'paid';
+    }
+
+    // Si date passée et non payé
+    if (dateEch < today && soldeRestant > 0) {
+      return 'overdue';
+    }
+
+    // Si date = aujourd'hui
+    if (dateEch.getTime() === today.getTime()) {
+      return 'pending';
+    }
+
+    // À venir
+    return 'future';
+  };
+
+  // Statistiques des échéances
+  const echeanceStats = {
+    total: echeances.length,
+    paid: echeances.filter(e => getEcheanceStatus(e) === 'paid').length,
+    overdue: echeances.filter(e => getEcheanceStatus(e) === 'overdue').length,
+    pending: echeances.filter(e => getEcheanceStatus(e) === 'pending').length,
+    future: echeances.filter(e => getEcheanceStatus(e) === 'future').length,
+  };
+
+  // Calculer le pourcentage de remboursement
+  const totalDu = Number(resume.totalDu || 0);
+  const totalPaye = Number(resume.totalPaye || 0);
+  const progress = totalDu > 0 ? Math.round((totalPaye / totalDu) * 100) : 0;
 
   if (isLoading) {
     return (
@@ -76,20 +124,23 @@ export default function LoanDetailPage() {
     const statuses: Record<number, { label: string; variant: any }> = {
       1: { label: 'En cours d\'analyse', variant: 'warning' },
       2: { label: 'Approuvé', variant: 'info' },
-      3: { label: 'Décaissé', variant: 'success' },
-      4: { label: 'Remboursé', variant: 'secondary' },
-      5: { label: 'En retard', variant: 'warning' },
-      6: { label: 'Défaut', variant: 'destructive' },
-      0: { label: 'Rejeté', variant: 'destructive' },
+      3: { label: 'En attente décaissement', variant: 'info' },
+      5: { label: 'Décaissé - Actif', variant: 'success' },
+      8: { label: 'En retard', variant: 'destructive' },
+      9: { label: 'Rejeté/Défaut', variant: 'destructive' },
     };
     const info = statuses[status] || { label: 'Inconnu', variant: 'secondary' };
     return <Badge variant={info.variant}>{info.label}</Badge>;
   };
 
-  const montant = Number(loan.mnt_dem || 0);
-  const taux = Number(loan.taux_interet || 18);
+  const montantOctroi = Number(loan.cre_mnt_octr || loan.mnt_dem || 0);
+  const taux = Number(loan.tx_interet_lcr || 18);
   const duree = Number(loan.duree_mois || 12);
-  const progress = 50; // Percentage of loan repaid
+
+  // Nom du client
+  const clientNom = loan.client?.statut_juridique === 1
+    ? `${loan.client?.pp_prenom || ''} ${loan.client?.pp_nom || ''}`.trim()
+    : loan.client?.pm_raison_sociale || `Client #${loan.id_client}`;
 
   return (
     <div className="space-y-6">
@@ -103,9 +154,11 @@ export default function LoanDetailPage() {
             <h1 className="text-2xl font-bold text-gray-900">
               Dossier DCR-{String(loan.id_doss).padStart(6, '0')}
             </h1>
-            {getStatusBadge(loan.etat_doss)}
+            {getStatusBadge(loan.cre_etat || loan.etat)}
           </div>
-          <p className="text-gray-500">Demandé le {formatDate(loan.date_dem)}</p>
+          <p className="text-gray-500">
+            Client: {clientNom} | Demandé le {formatDate(loan.date_dem)}
+          </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" className="gap-2">
@@ -119,6 +172,29 @@ export default function LoanDetailPage() {
         </div>
       </div>
 
+      {/* Alert for overdue payments */}
+      {echeanceStats.overdue > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3"
+        >
+          <AlertTriangle className="h-5 w-5 text-red-600" />
+          <div>
+            <p className="font-medium text-red-800">
+              {echeanceStats.overdue} échéance(s) en retard de paiement
+            </p>
+            <p className="text-sm text-red-600">
+              Montant total en retard: {formatCurrency(
+                echeances
+                  .filter(e => getEcheanceStatus(e) === 'overdue')
+                  .reduce((sum, e) => sum + Number(e.solde_capital || 0) + Number(e.solde_int || 0), 0)
+              )}
+            </p>
+          </div>
+        </motion.div>
+      )}
+
       {/* Loan Summary Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <motion.div
@@ -130,8 +206,8 @@ export default function LoanDetailPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-hopefund-100 text-sm">Montant Accordé</p>
-                  <p className="text-3xl font-bold mt-1">{formatCurrency(montant)}</p>
+                  <p className="text-hopefund-100 text-sm">Montant Octroyé</p>
+                  <p className="text-3xl font-bold mt-1">{formatCurrency(montantOctroi)}</p>
                 </div>
                 <div className="p-3 bg-white/20 rounded-xl">
                   <Banknote className="h-6 w-6 text-white" />
@@ -174,7 +250,7 @@ export default function LoanDetailPage() {
                   <p className="text-sm text-gray-500">Durée</p>
                   <p className="text-2xl font-bold text-gray-900">{duree} mois</p>
                   <p className="text-sm text-gray-500">
-                    Échéance: {formatDate(loan.date_ech)}
+                    {echeanceStats.total} échéances
                   </p>
                 </div>
                 <div className="p-3 bg-purple-100 rounded-xl">
@@ -194,8 +270,11 @@ export default function LoanDetailPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500">Client</p>
-                  <p className="text-2xl font-bold text-gray-900">#{loan.id_client}</p>
+                  <p className="text-sm text-gray-500">Solde Restant</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {formatCurrency(resume.soldeRestant || 0)}
+                  </p>
+                  <p className="text-sm text-gray-500">{progress}% remboursé</p>
                 </div>
                 <div className="p-3 bg-orange-100 rounded-xl">
                   <User className="h-6 w-6 text-orange-600" />
@@ -229,33 +308,44 @@ export default function LoanDetailPage() {
                     initial={{ width: 0 }}
                     animate={{ width: `${progress}%` }}
                     transition={{ duration: 1, delay: 0.5 }}
-                    className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-hopefund-500"
+                    className={cn(
+                      "shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center",
+                      echeanceStats.overdue > 0 ? "bg-red-500" : "bg-hopefund-500"
+                    )}
                   />
                 </div>
               </div>
 
               <div className="space-y-4">
                 <div className="flex justify-between items-center py-3 border-b">
-                  <span className="text-gray-500">Capital remboursé</span>
+                  <span className="text-gray-500">Total Capital</span>
+                  <span className="font-semibold">
+                    {formatCurrency(resume.totalCapital || 0)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-3 border-b">
+                  <span className="text-gray-500">Total Intérêts</span>
+                  <span className="font-semibold">
+                    {formatCurrency(resume.totalInteret || 0)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-3 border-b">
+                  <span className="text-gray-500">Total Payé</span>
                   <span className="font-semibold text-green-600">
-                    {formatCurrency(montant * (progress / 100))}
+                    {formatCurrency(resume.totalPaye || 0)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center py-3 border-b">
-                  <span className="text-gray-500">Capital restant</span>
-                  <span className="font-semibold">
-                    {formatCurrency(montant * (1 - progress / 100))}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center py-3 border-b">
-                  <span className="text-gray-500">Intérêts payés</span>
-                  <span className="font-semibold">
-                    {formatCurrency(montant * 0.09)}
+                  <span className="text-gray-500">Solde Restant</span>
+                  <span className="font-semibold text-orange-600">
+                    {formatCurrency(resume.soldeRestant || 0)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center py-3">
                   <span className="text-gray-500">Échéances payées</span>
-                  <span className="font-semibold">6 / {duree}</span>
+                  <span className="font-semibold">
+                    {echeanceStats.paid} / {echeanceStats.total}
+                  </span>
                 </div>
               </div>
             </CardContent>
@@ -277,30 +367,36 @@ export default function LoanDetailPage() {
               <div className="grid gap-6 sm:grid-cols-2">
                 <div className="space-y-4">
                   <div className="p-4 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-500 mb-1">Type de crédit</p>
-                    <p className="font-semibold">Crédit Ordinaire</p>
+                    <p className="text-sm text-gray-500 mb-1">Client</p>
+                    <p className="font-semibold">{clientNom}</p>
                   </div>
                   <div className="p-4 bg-gray-50 rounded-lg">
                     <p className="text-sm text-gray-500 mb-1">Objet du crédit</p>
-                    <p className="font-semibold">{loan.objet_dem || 'Fonds de commerce'}</p>
+                    <p className="font-semibold">{loan.detail_obj_dem || 'Non spécifié'}</p>
                   </div>
                   <div className="p-4 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-500 mb-1">Mode de remboursement</p>
-                    <p className="font-semibold">Mensuel</p>
+                    <p className="text-sm text-gray-500 mb-1">Date d'approbation</p>
+                    <p className="font-semibold">
+                      {loan.cre_date_approb ? formatDate(loan.cre_date_approb) : 'Non approuvé'}
+                    </p>
                   </div>
                 </div>
                 <div className="space-y-4">
                   <div className="p-4 bg-gray-50 rounded-lg">
                     <p className="text-sm text-gray-500 mb-1">Date de décaissement</p>
-                    <p className="font-semibold">{formatDate(loan.date_decais)}</p>
+                    <p className="font-semibold">
+                      {loan.cre_date_debloc ? formatDate(loan.cre_date_debloc) : 'Non décaissé'}
+                    </p>
                   </div>
                   <div className="p-4 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-500 mb-1">Compte de prélèvement</p>
-                    <p className="font-semibold font-mono">{loan.cpte_prelev || 'N/A'}</p>
+                    <p className="text-sm text-gray-500 mb-1">Compte de décaissement</p>
+                    <p className="font-semibold font-mono">
+                      {loan.cre_id_cpte ? `Compte #${loan.cre_id_cpte}` : 'N/A'}
+                    </p>
                   </div>
                   <div className="p-4 bg-gray-50 rounded-lg">
                     <p className="text-sm text-gray-500 mb-1">Gestionnaire</p>
-                    <p className="font-semibold">Agent #{loan.id_gest || loan.id_utilisateur}</p>
+                    <p className="font-semibold">Agent #{loan.id_agent_gest || 'N/A'}</p>
                   </div>
                 </div>
               </div>
@@ -317,75 +413,105 @@ export default function LoanDetailPage() {
       >
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-lg font-semibold flex items-center gap-2">
-              <FileText className="h-5 w-5 text-gray-500" />
-              Échéancier de remboursement
-            </CardTitle>
+            <div>
+              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <FileText className="h-5 w-5 text-gray-500" />
+                Échéancier de remboursement
+              </CardTitle>
+              <p className="text-sm text-gray-500 mt-1">
+                {echeanceStats.paid} payées | {echeanceStats.overdue} en retard | {echeanceStats.future} à venir
+              </p>
+            </div>
             <Button variant="outline" size="sm" className="gap-2">
               <Download className="h-4 w-4" />
               Télécharger PDF
             </Button>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Échéance</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead className="text-right">Principal</TableHead>
-                  <TableHead className="text-right">Intérêts</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                  <TableHead className="text-right">Solde restant</TableHead>
-                  <TableHead>Statut</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {mockSchedule.map((row, index) => (
-                  <motion.tr
-                    key={row.echeance}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.7 + index * 0.03 }}
-                    className={cn(
-                      'hover:bg-gray-50',
-                      row.status === 'pending' && 'bg-yellow-50'
-                    )}
-                  >
-                    <TableCell className="font-medium">#{row.echeance}</TableCell>
-                    <TableCell>{formatDate(row.date)}</TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatCurrency(row.principal)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatCurrency(row.interet)}
-                    </TableCell>
-                    <TableCell className="text-right font-semibold tabular-nums">
-                      {formatCurrency(row.total)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatCurrency(row.solde)}
-                    </TableCell>
-                    <TableCell>
-                      {row.status === 'paid' && (
-                        <Badge variant="success" className="gap-1">
-                          <CheckCircle className="h-3 w-3" />
-                          Payé
-                        </Badge>
-                      )}
-                      {row.status === 'pending' && (
-                        <Badge variant="warning" className="gap-1">
-                          <Clock className="h-3 w-3" />
-                          En attente
-                        </Badge>
-                      )}
-                      {row.status === 'future' && (
-                        <Badge variant="secondary">À venir</Badge>
-                      )}
-                    </TableCell>
-                  </motion.tr>
-                ))}
-              </TableBody>
-            </Table>
+            {echeances.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                <p>Aucun échéancier disponible pour ce prêt</p>
+                <p className="text-sm">L'échéancier sera généré après le décaissement</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>N°</TableHead>
+                    <TableHead>Date échéance</TableHead>
+                    <TableHead className="text-right">Capital</TableHead>
+                    <TableHead className="text-right">Intérêts</TableHead>
+                    <TableHead className="text-right">Total dû</TableHead>
+                    <TableHead className="text-right">Payé</TableHead>
+                    <TableHead className="text-right">Solde</TableHead>
+                    <TableHead>Statut</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {echeances.map((echeance, index) => {
+                    const status = getEcheanceStatus(echeance);
+                    const soldeRestant = Number(echeance.solde_capital || 0) + Number(echeance.solde_int || 0);
+                    const totalDu = Number(echeance.mnt_capital || 0) + Number(echeance.mnt_int || 0);
+
+                    return (
+                      <motion.tr
+                        key={echeance.id_ech}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.7 + index * 0.02 }}
+                        className={cn(
+                          'hover:bg-gray-50',
+                          status === 'pending' && 'bg-yellow-50',
+                          status === 'overdue' && 'bg-red-50'
+                        )}
+                      >
+                        <TableCell className="font-medium">#{echeance.num_ech}</TableCell>
+                        <TableCell>{formatDate(echeance.date_ech)}</TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatCurrency(echeance.mnt_capital || 0)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatCurrency(echeance.mnt_int || 0)}
+                        </TableCell>
+                        <TableCell className="text-right font-semibold tabular-nums">
+                          {formatCurrency(totalDu)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums text-green-600">
+                          {formatCurrency(echeance.mnt_paye || 0)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatCurrency(soldeRestant)}
+                        </TableCell>
+                        <TableCell>
+                          {status === 'paid' && (
+                            <Badge variant="success" className="gap-1">
+                              <CheckCircle className="h-3 w-3" />
+                              Payé
+                            </Badge>
+                          )}
+                          {status === 'overdue' && (
+                            <Badge variant="destructive" className="gap-1">
+                              <XCircle className="h-3 w-3" />
+                              En retard
+                            </Badge>
+                          )}
+                          {status === 'pending' && (
+                            <Badge variant="warning" className="gap-1">
+                              <Clock className="h-3 w-3" />
+                              Aujourd'hui
+                            </Badge>
+                          )}
+                          {status === 'future' && (
+                            <Badge variant="secondary">À venir</Badge>
+                          )}
+                        </TableCell>
+                      </motion.tr>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       </motion.div>
