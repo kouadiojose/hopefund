@@ -842,18 +842,20 @@ router.post('/clients/activate-all', authorize('SUPER_ADMIN', 'DIRECTOR'), async
 // GET /api/admin/clients/duplicates - Rechercher les doublons de clients
 router.get('/clients/duplicates', authorize('SUPER_ADMIN', 'DIRECTOR'), async (req, res, next) => {
   try {
-    // Find clients with same name/prenom
+    // Find clients with same name/prenom (case-insensitive)
     const duplicates = await prisma.$queryRaw`
       SELECT
-        pp_nom,
-        pp_prenom,
+        LOWER(TRIM(pp_nom)) as nom_lower,
+        LOWER(TRIM(pp_prenom)) as prenom_lower,
+        MAX(pp_nom) as pp_nom,
+        MAX(pp_prenom) as pp_prenom,
         COUNT(*) as count,
         STRING_AGG(id_client::text, ', ' ORDER BY id_client) as client_ids,
-        STRING_AGG(COALESCE(etat::text, 'null'), ', ' ORDER BY id_client) as etats
+        STRING_AGG(COALESCE(etat::text, '0'), ', ' ORDER BY id_client) as etats
       FROM ad_cli
       WHERE pp_nom IS NOT NULL AND pp_prenom IS NOT NULL
         AND TRIM(pp_nom) != '' AND TRIM(pp_prenom) != ''
-      GROUP BY LOWER(TRIM(pp_nom)), LOWER(TRIM(pp_prenom)), pp_nom, pp_prenom
+      GROUP BY LOWER(TRIM(pp_nom)), LOWER(TRIM(pp_prenom))
       HAVING COUNT(*) > 1
       ORDER BY COUNT(*) DESC
       LIMIT 100
@@ -872,8 +874,8 @@ router.get('/clients/duplicates', authorize('SUPER_ADMIN', 'DIRECTOR'), async (r
         nom: d.pp_nom,
         prenom: d.pp_prenom,
         count: Number(d.count),
-        clientIds: d.client_ids.split(', ').map((id: string) => parseInt(id)),
-        etats: d.etats.split(', '),
+        clientIds: d.client_ids ? d.client_ids.split(', ').map((id: string) => parseInt(id)) : [],
+        etats: d.etats ? d.etats.split(', ') : [],
       })),
       statistics: {
         totalClients,
@@ -884,6 +886,7 @@ router.get('/clients/duplicates', authorize('SUPER_ADMIN', 'DIRECTOR'), async (r
       }
     });
   } catch (error) {
+    logger.error('Error fetching duplicates:', error);
     next(error);
   }
 });
