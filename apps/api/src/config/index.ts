@@ -20,7 +20,7 @@ export const config = {
 
   // Rate Limiting
   rateLimitWindowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10),
-  rateLimitMax: parseInt(process.env.RATE_LIMIT_MAX || '100', 10),
+  rateLimitMax: parseInt(process.env.RATE_LIMIT_MAX || '1000', 10),
 
   // Pagination
   defaultPageSize: 20,
