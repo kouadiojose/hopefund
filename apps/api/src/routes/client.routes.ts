@@ -120,9 +120,26 @@ router.get('/', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_O
     // Debug logging
     logger.info(`Client search: search="${search}", etat=${etat}, role=${req.user!.role}, agencyId=${agencyId}, whereHasOR=${!!where.OR}, whereHasEtat=${where.etat !== undefined}`);
 
-    const [clients, total] = await Promise.all([
-      prisma.client.findMany({
-        where,
+    // Check if search is an exact ID match - this client should appear first
+    const searchAsNumber = search ? parseInt(search, 10) : NaN;
+    let exactIdMatch: any = null;
+
+    if (!isNaN(searchAsNumber) && page === 1) {
+      // Build where clause for exact ID match
+      const exactWhere: any = { id_client: searchAsNumber };
+      if (etat !== undefined && !isNaN(etat)) {
+        exactWhere.etat = etat;
+      }
+      // Apply agency filter for non-admin users
+      if (agencyId && !['SUPER_ADMIN', 'DIRECTOR'].includes(req.user!.role)) {
+        exactWhere.OR = [
+          { id_ag: agencyId },
+          { dossiers_credit: { some: { id_ag: agencyId } } },
+        ];
+      }
+
+      exactIdMatch = await prisma.client.findFirst({
+        where: exactWhere,
         include: {
           comptes: {
             select: {
@@ -139,12 +156,49 @@ router.get('/', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_O
             },
           },
         },
-        skip: (page - 1) * limit,
-        take: limit,
+      });
+
+      if (exactIdMatch) {
+        logger.info(`Found exact ID match for client ${searchAsNumber}`);
+      }
+    }
+
+    // Modify where clause to exclude exact ID match from regular results (to avoid duplicates)
+    const regularWhere = { ...where };
+    if (exactIdMatch) {
+      regularWhere.id_client = { not: exactIdMatch.id_client };
+    }
+
+    const [regularClients, total] = await Promise.all([
+      prisma.client.findMany({
+        where: regularWhere,
+        include: {
+          comptes: {
+            select: {
+              id_cpte: true,
+              solde: true,
+              etat_cpte: true,
+            },
+          },
+          dossiers_credit: {
+            select: {
+              id_doss: true,
+              cre_mnt_octr: true,
+              cre_etat: true,
+            },
+          },
+        },
+        skip: exactIdMatch && page === 1 ? 0 : (page - 1) * limit - (exactIdMatch ? 1 : 0),
+        take: exactIdMatch && page === 1 ? limit - 1 : limit,
         orderBy: { date_creation: 'desc' },
       }),
-      prisma.client.count({ where }),
+      prisma.client.count({ where }), // Count total with original where (includes exact match)
     ]);
+
+    // Combine results: exact ID match first (on page 1), then regular results
+    const clients = page === 1 && exactIdMatch
+      ? [exactIdMatch, ...regularClients]
+      : regularClients;
 
     res.json({
       data: clients.map(c => {
