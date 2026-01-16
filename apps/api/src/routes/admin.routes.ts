@@ -896,16 +896,12 @@ router.get('/clients/:id/full-analysis', authorize('SUPER_ADMIN', 'DIRECTOR'), a
   try {
     const clientId = parseInt(req.params.id);
 
-    // Get client details - select only columns that exist in the database
+    // Get client details - without nested includes that might fail due to schema mismatches
     const client = await prisma.client.findUnique({
       where: { id_client: clientId },
       include: {
         comptes: true,
-        dossiers_credit: {
-          include: {
-            garanties: true,
-          }
-        },
+        dossiers_credit: true,
       }
     });
 
@@ -913,13 +909,31 @@ router.get('/clients/:id/full-analysis', authorize('SUPER_ADMIN', 'DIRECTOR'), a
       return res.status(404).json({ error: 'Client non trouvé' });
     }
 
-    // Fetch echeances count separately to avoid column issues
+    // Fetch echeances and garanties counts separately to avoid column issues
     const echeancesCounts = await Promise.all(
       client.dossiers_credit.map(async (dossier: any) => {
-        const count = await prisma.echeance.count({
-          where: { id_doss: dossier.id_doss }
-        });
-        return { id_doss: dossier.id_doss, count };
+        try {
+          const count = await prisma.echeance.count({
+            where: { id_doss: dossier.id_doss }
+          });
+          return { id_doss: dossier.id_doss, count };
+        } catch {
+          return { id_doss: dossier.id_doss, count: 0 };
+        }
+      })
+    );
+
+    // Fetch garanties counts separately
+    const garantiesCounts = await Promise.all(
+      client.dossiers_credit.map(async (dossier: any) => {
+        try {
+          const count = await prisma.garantie.count({
+            where: { id_doss: dossier.id_doss }
+          });
+          return { id_doss: dossier.id_doss, count };
+        } catch {
+          return { id_doss: dossier.id_doss, count: 0 };
+        }
       })
     );
 
@@ -983,6 +997,7 @@ router.get('/clients/:id/full-analysis', authorize('SUPER_ADMIN', 'DIRECTOR'), a
       })),
       credits: client.dossiers_credit.map((d: any) => {
         const echCount = echeancesCounts.find((e: any) => e.id_doss === d.id_doss);
+        const garCount = garantiesCounts.find((g: any) => g.id_doss === d.id_doss);
         return {
           id_doss: d.id_doss,
           id_ag: d.id_ag,
@@ -992,7 +1007,7 @@ router.get('/clients/:id/full-analysis', authorize('SUPER_ADMIN', 'DIRECTOR'), a
           date_deblocage: d.cre_date_debloc,
           duree_mois: d.duree_mois,
           echeances_count: echCount?.count || 0,
-          garanties_count: d.garanties?.length || 0,
+          garanties_count: garCount?.count || 0,
         };
       }),
       accountsAllAgencies: accountsAllAgencies.length,
@@ -1015,6 +1030,7 @@ router.get('/clients/:id/full-analysis', authorize('SUPER_ADMIN', 'DIRECTOR'), a
       }
     });
   } catch (error) {
+    logger.error('Error in full-analysis:', error);
     next(error);
   }
 });
