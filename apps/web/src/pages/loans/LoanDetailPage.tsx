@@ -713,10 +713,9 @@ export default function LoanDetailPage() {
                     <TableRow>
                       <TableHead>N°</TableHead>
                       <TableHead>Date échéance</TableHead>
-                      <TableHead className="text-right">Capital</TableHead>
-                      <TableHead className="text-right">Intérêts</TableHead>
                       <TableHead className="text-right">Total dû</TableHead>
                       <TableHead className="text-right">Payé</TableHead>
+                      <TableHead>Date paiement</TableHead>
                       <TableHead className="text-right">Solde</TableHead>
                       <TableHead>Statut</TableHead>
                     </TableRow>
@@ -726,6 +725,10 @@ export default function LoanDetailPage() {
                       const status = getEcheanceStatus(echeance);
                       const soldeRestant = Number(echeance.solde_capital || 0) + Number(echeance.solde_int || 0);
                       const totalDu = Number(echeance.mnt_capital || 0) + Number(echeance.mnt_int || 0);
+                      // Calculate days late if overdue
+                      const today = new Date();
+                      const dateEch = new Date(echeance.date_ech);
+                      const daysLate = status === 'overdue' ? Math.floor((today.getTime() - dateEch.getTime()) / (1000 * 60 * 60 * 24)) : 0;
 
                       return (
                         <motion.tr
@@ -740,12 +743,11 @@ export default function LoanDetailPage() {
                           )}
                         >
                           <TableCell className="font-medium">#{echeance.num_ech}</TableCell>
-                          <TableCell>{formatDate(echeance.date_ech)}</TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {formatCurrency(echeance.mnt_capital || 0)}
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {formatCurrency(echeance.mnt_int || 0)}
+                          <TableCell>
+                            <div>{formatDate(echeance.date_ech)}</div>
+                            <div className="text-xs text-gray-400">
+                              Cap: {formatCurrency(echeance.mnt_capital || 0)} | Int: {formatCurrency(echeance.mnt_int || 0)}
+                            </div>
                           </TableCell>
                           <TableCell className="text-right font-semibold tabular-nums">
                             {formatCurrency(totalDu)}
@@ -753,8 +755,19 @@ export default function LoanDetailPage() {
                           <TableCell className="text-right tabular-nums text-green-600">
                             {formatCurrency(echeance.mnt_paye || 0)}
                           </TableCell>
+                          <TableCell>
+                            {echeance.date_paiement ? (
+                              <span className="text-green-600">{formatDate(echeance.date_paiement)}</span>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </TableCell>
                           <TableCell className="text-right tabular-nums">
-                            {formatCurrency(soldeRestant)}
+                            {soldeRestant > 0 ? (
+                              <span className="text-orange-600 font-medium">{formatCurrency(soldeRestant)}</span>
+                            ) : (
+                              <span className="text-gray-400">0</span>
+                            )}
                           </TableCell>
                           <TableCell>
                             {status === 'paid' && (
@@ -764,10 +777,13 @@ export default function LoanDetailPage() {
                               </Badge>
                             )}
                             {status === 'overdue' && (
-                              <Badge variant="destructive" className="gap-1">
-                                <XCircle className="h-3 w-3" />
-                                En retard
-                              </Badge>
+                              <div>
+                                <Badge variant="destructive" className="gap-1">
+                                  <XCircle className="h-3 w-3" />
+                                  En retard
+                                </Badge>
+                                <div className="text-xs text-red-600 mt-1">{daysLate} jours</div>
+                              </div>
                             )}
                             {status === 'pending' && (
                               <Badge variant="warning" className="gap-1">

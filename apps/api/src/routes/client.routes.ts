@@ -813,6 +813,190 @@ router.get('/:id/credit-history', async (req, res, next) => {
   }
 });
 
+// GET /api/clients/:id/payment-regularity - Score de régularité de paiement
+router.get('/:id/payment-regularity', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_OFFICER', 'TELLER'), async (req, res, next) => {
+  try {
+    const clientId = parseInt(req.params.id);
+
+    // Get all credits with their schedules
+    const credits = await prisma.dossierCredit.findMany({
+      where: { id_client: clientId },
+      include: {
+        echeances: {
+          orderBy: { date_ech: 'asc' },
+        },
+      },
+    });
+
+    if (credits.length === 0) {
+      return res.json({
+        has_credit_history: false,
+        message: 'Aucun historique de crédit pour ce client',
+        score_regularite: null,
+        recommandation: 'Nouveau client - pas d\'historique',
+      });
+    }
+
+    // Analyze all payments
+    const today = new Date();
+    let totalEcheances = 0;
+    let echeancesPayees = 0;
+    let echeancesEnRetard = 0;
+    let echeancesPayeesATremp = 0;
+    let echeancesPayeesEnRetard = 0;
+    let totalJoursRetard = 0;
+    let maxJoursRetard = 0;
+    let dernierPaiement: Date | null = null;
+    let montantTotalDu = 0;
+    let montantTotalPaye = 0;
+
+    const creditAnalysis = credits.map(credit => {
+      const echeances = credit.echeances || [];
+      let creditEcheancesPayees = 0;
+      let creditEcheancesEnRetard = 0;
+      let creditPayeesATemps = 0;
+      let creditMaxRetard = 0;
+
+      echeances.forEach(e => {
+        const dateEch = e.date_ech ? new Date(e.date_ech) : null;
+        const datePaiement = e.date_paiement ? new Date(e.date_paiement) : null;
+        const soldeRestant = Number(e.solde_capital || 0) + Number(e.solde_int || 0);
+        const montantDu = Number(e.mnt_capital || 0) + Number(e.mnt_int || 0);
+        const montantPaye = Number(e.mnt_paye || 0);
+
+        // Only count past-due or paid echeances
+        if (dateEch && dateEch <= today) {
+          totalEcheances++;
+          montantTotalDu += montantDu;
+          montantTotalPaye += montantPaye;
+
+          if (e.etat === 2 || soldeRestant === 0) {
+            // Paid
+            echeancesPayees++;
+            creditEcheancesPayees++;
+
+            if (datePaiement) {
+              if (!dernierPaiement || datePaiement > dernierPaiement) {
+                dernierPaiement = datePaiement;
+              }
+
+              // Check if paid on time (within 5 days of due date)
+              const joursRetard = Math.floor((datePaiement.getTime() - dateEch.getTime()) / (1000 * 60 * 60 * 24));
+              if (joursRetard <= 5) {
+                echeancesPayeesATremp++;
+                creditPayeesATemps++;
+              } else {
+                echeancesPayeesEnRetard++;
+                totalJoursRetard += joursRetard;
+                if (joursRetard > maxJoursRetard) maxJoursRetard = joursRetard;
+                if (joursRetard > creditMaxRetard) creditMaxRetard = joursRetard;
+              }
+            } else {
+              // Paid but no payment date recorded - assume on time
+              echeancesPayeesATremp++;
+              creditPayeesATemps++;
+            }
+          } else if (soldeRestant > 0 && dateEch < today) {
+            // Overdue
+            echeancesEnRetard++;
+            creditEcheancesEnRetard++;
+            const joursRetard = Math.floor((today.getTime() - dateEch.getTime()) / (1000 * 60 * 60 * 24));
+            totalJoursRetard += joursRetard;
+            if (joursRetard > maxJoursRetard) maxJoursRetard = joursRetard;
+            if (joursRetard > creditMaxRetard) creditMaxRetard = joursRetard;
+          }
+        }
+      });
+
+      const etatLabels: Record<number, string> = {
+        1: 'En analyse', 2: 'Approuvé', 3: 'Att. décaissement',
+        5: 'Actif', 7: 'Soldé', 8: 'En retard', 9: 'Rejeté', 10: 'Soldé',
+      };
+
+      return {
+        id_doss: credit.id_doss,
+        montant: Number(credit.cre_mnt_octr || credit.mnt_dem || 0),
+        etat: credit.cre_etat || credit.etat,
+        etat_label: etatLabels[credit.cre_etat || credit.etat || 0] || 'Inconnu',
+        date_debut: credit.cre_date_debloc || credit.cre_date_approb,
+        total_echeances: echeances.length,
+        echeances_payees: creditEcheancesPayees,
+        echeances_en_retard: creditEcheancesEnRetard,
+        payees_a_temps: creditPayeesATemps,
+        max_jours_retard: creditMaxRetard,
+      };
+    });
+
+    // Calculate regularity score (0-100)
+    let scoreRegularite = 100;
+    if (totalEcheances > 0) {
+      // Base score: % of payments made on time
+      const tauxPaiementATemps = totalEcheances > 0 ? (echeancesPayeesATremp / totalEcheances) * 100 : 0;
+
+      // Penalty for overdue payments
+      const penaliteRetards = Math.min(50, echeancesEnRetard * 10);
+
+      // Penalty for late payments (average days late)
+      const moyenneJoursRetard = (echeancesPayeesEnRetard + echeancesEnRetard) > 0
+        ? totalJoursRetard / (echeancesPayeesEnRetard + echeancesEnRetard)
+        : 0;
+      const penaliteMoyenneRetard = Math.min(20, moyenneJoursRetard / 3);
+
+      scoreRegularite = Math.max(0, Math.round(tauxPaiementATemps - penaliteRetards - penaliteMoyenneRetard));
+    }
+
+    // Determine recommendation
+    let recommandation = '';
+    let niveauRisque = '';
+    if (scoreRegularite >= 80) {
+      recommandation = 'Excellent payeur - Éligible pour un nouveau crédit';
+      niveauRisque = 'faible';
+    } else if (scoreRegularite >= 60) {
+      recommandation = 'Bon payeur avec quelques retards - Éligible sous conditions';
+      niveauRisque = 'moyen';
+    } else if (scoreRegularite >= 40) {
+      recommandation = 'Payeur irrégulier - Crédit risqué, garanties supplémentaires requises';
+      niveauRisque = 'eleve';
+    } else {
+      recommandation = 'Mauvais payeur - Crédit non recommandé';
+      niveauRisque = 'critique';
+    }
+
+    // Check for current overdue
+    if (echeancesEnRetard > 0) {
+      recommandation = `ATTENTION: ${echeancesEnRetard} échéance(s) actuellement en retard. ` + recommandation;
+    }
+
+    res.json({
+      has_credit_history: true,
+      score_regularite: scoreRegularite,
+      niveau_risque: niveauRisque,
+      recommandation,
+      statistiques: {
+        total_credits: credits.length,
+        credits_soldes: credits.filter(c => c.cre_etat === 7 || c.cre_etat === 10).length,
+        credits_actifs: credits.filter(c => c.cre_etat === 5 || c.cre_etat === 8).length,
+        total_echeances: totalEcheances,
+        echeances_payees: echeancesPayees,
+        echeances_payees_a_temps: echeancesPayeesATremp,
+        echeances_payees_en_retard: echeancesPayeesEnRetard,
+        echeances_en_retard_actuel: echeancesEnRetard,
+        pourcentage_paiement_a_temps: totalEcheances > 0 ? Math.round((echeancesPayeesATremp / totalEcheances) * 100) : 0,
+        max_jours_retard: maxJoursRetard,
+        moyenne_jours_retard: (echeancesPayeesEnRetard + echeancesEnRetard) > 0
+          ? Math.round(totalJoursRetard / (echeancesPayeesEnRetard + echeancesEnRetard))
+          : 0,
+        montant_total_du: montantTotalDu,
+        montant_total_paye: montantTotalPaye,
+        dernier_paiement: dernierPaiement,
+      },
+      credits: creditAnalysis,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // POST /api/clients - Créer un client
 router.post('/', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_OFFICER', 'TELLER'), async (req, res, next) => {
   try {

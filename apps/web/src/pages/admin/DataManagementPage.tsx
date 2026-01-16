@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   Users,
@@ -13,6 +13,8 @@ import {
   Eye,
   ArrowRight,
   X,
+  Ban,
+  Undo2,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -93,6 +95,9 @@ interface ClientAnalysis {
   };
 }
 
+// Key for storing declined duplicates in localStorage
+const DECLINED_DUPLICATES_KEY = 'hopefund_declined_duplicates';
+
 export default function DataManagementPage() {
   const [searchClientId, setSearchClientId] = useState('');
   const [clientAnalysis, setClientAnalysis] = useState<ClientAnalysis | null>(null);
@@ -107,6 +112,40 @@ export default function DataManagementPage() {
     targetName: string;
   }>({ open: false, sourceId: null, targetId: null, sourceName: '', targetName: '' });
   const [activateDialog, setActivateDialog] = useState(false);
+  const [declinedDuplicates, setDeclinedDuplicates] = useState<string[]>([]);
+  const [showDeclined, setShowDeclined] = useState(false);
+
+  // Load declined duplicates from localStorage
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(DECLINED_DUPLICATES_KEY);
+      if (stored) {
+        setDeclinedDuplicates(JSON.parse(stored));
+      }
+    } catch (e) {
+      console.error('Error loading declined duplicates:', e);
+    }
+  }, []);
+
+  // Save declined duplicates to localStorage
+  const saveDeclinedDuplicates = (newDeclined: string[]) => {
+    setDeclinedDuplicates(newDeclined);
+    localStorage.setItem(DECLINED_DUPLICATES_KEY, JSON.stringify(newDeclined));
+  };
+
+  // Decline a duplicate group (mark as "not a duplicate")
+  const handleDeclineDuplicate = (nom: string, prenom: string) => {
+    const key = `${nom.toLowerCase()}-${prenom.toLowerCase()}`;
+    if (!declinedDuplicates.includes(key)) {
+      saveDeclinedDuplicates([...declinedDuplicates, key]);
+    }
+    setCompareClients([]);
+  };
+
+  // Restore a declined duplicate
+  const handleRestoreDuplicate = (key: string) => {
+    saveDeclinedDuplicates(declinedDuplicates.filter(k => k !== key));
+  };
 
   // Fetch duplicates
   const { data: duplicatesData, isLoading: loadingDuplicates, refetch: refetchDuplicates, error: duplicatesError } = useQuery({
@@ -194,6 +233,25 @@ export default function DataManagementPage() {
     }
     setExpandedDuplicates(newExpanded);
   };
+
+  // Filter out declined duplicates
+  const filteredDuplicates = useMemo(() => {
+    if (!duplicatesData?.duplicates) return [];
+    return duplicatesData.duplicates.filter((dup: Duplicate) => {
+      const key = `${dup.nom.toLowerCase()}-${dup.prenom.toLowerCase()}`;
+      return showDeclined ? true : !declinedDuplicates.includes(key);
+    });
+  }, [duplicatesData?.duplicates, declinedDuplicates, showDeclined]);
+
+  // Get the current comparison group's name/prenom for decline button
+  const currentCompareKey = useMemo(() => {
+    if (compareClients.length === 0) return null;
+    const first = compareClients[0];
+    return {
+      nom: first.client.nom || '',
+      prenom: first.client.prenom || '',
+    };
+  }, [compareClients]);
 
   const getEtatLabel = (etat: number | string | null | undefined) => {
     if (etat === null || etat === undefined) return 'Inconnu';
@@ -372,9 +430,22 @@ export default function DataManagementPage() {
               <Eye className="w-5 h-5" />
               Comparaison des doublons ({compareClients.length} clients)
             </CardTitle>
-            <Button variant="ghost" size="sm" onClick={() => setCompareClients([])}>
-              <X className="w-4 h-4" />
-            </Button>
+            <div className="flex items-center gap-2">
+              {currentCompareKey && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-orange-600 border-orange-300 hover:bg-orange-50"
+                  onClick={() => handleDeclineDuplicate(currentCompareKey.nom, currentCompareKey.prenom)}
+                >
+                  <Ban className="w-4 h-4 mr-1" />
+                  Pas un doublon
+                </Button>
+              )}
+              <Button variant="ghost" size="sm" onClick={() => setCompareClients([])}>
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -656,32 +727,63 @@ export default function DataManagementPage() {
           <div>
             <CardTitle className="flex items-center gap-2">
               <Users className="w-5 h-5" />
-              Doublons détectés ({duplicatesData?.duplicates?.length || 0})
+              Doublons détectés ({filteredDuplicates.length})
+              {declinedDuplicates.length > 0 && (
+                <Badge variant="outline" className="ml-2 text-orange-600">
+                  {declinedDuplicates.length} ignoré(s)
+                </Badge>
+              )}
             </CardTitle>
             <CardDescription>
               Clients avec le même nom et prénom
             </CardDescription>
           </div>
-          <Button variant="outline" size="sm" onClick={() => refetchDuplicates()}>
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Actualiser
-          </Button>
+          <div className="flex items-center gap-2">
+            {declinedDuplicates.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowDeclined(!showDeclined)}
+                className={showDeclined ? 'bg-orange-50' : ''}
+              >
+                {showDeclined ? (
+                  <>
+                    <Eye className="w-4 h-4 mr-2" />
+                    Masquer ignorés
+                  </>
+                ) : (
+                  <>
+                    <Ban className="w-4 h-4 mr-2" />
+                    Voir ignorés ({declinedDuplicates.length})
+                  </>
+                )}
+              </Button>
+            )}
+            <Button variant="outline" size="sm" onClick={() => refetchDuplicates()}>
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Actualiser
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {loadingDuplicates ? (
             <div className="flex items-center justify-center py-8">
               <RefreshCw className="w-8 h-8 animate-spin text-muted-foreground" />
             </div>
-          ) : !duplicatesData?.duplicates || duplicatesData.duplicates.length === 0 ? (
-            <p className="text-center py-8 text-muted-foreground">Aucun doublon détecté</p>
+          ) : filteredDuplicates.length === 0 ? (
+            <p className="text-center py-8 text-muted-foreground">
+              {declinedDuplicates.length > 0 ? 'Tous les doublons ont été marqués comme "pas un doublon"' : 'Aucun doublon détecté'}
+            </p>
           ) : (
             <div className="space-y-2">
-              {duplicatesData.duplicates.slice(0, 50).map((dup: Duplicate, idx: number) => {
+              {filteredDuplicates.slice(0, 50).map((dup: Duplicate, idx: number) => {
                 const key = `${dup.nom}-${dup.prenom}-${idx}`;
+                const declinedKey = `${dup.nom.toLowerCase()}-${dup.prenom.toLowerCase()}`;
+                const isDeclined = declinedDuplicates.includes(declinedKey);
                 const isExpanded = expandedDuplicates.has(key);
 
                 return (
-                  <div key={key} className="border rounded-lg">
+                  <div key={key} className={`border rounded-lg ${isDeclined ? 'border-orange-200 bg-orange-50/50' : ''}`}>
                     <div
                       className="flex justify-between items-center p-3 cursor-pointer hover:bg-muted/50"
                       onClick={() => toggleDuplicateExpand(key)}
@@ -694,29 +796,50 @@ export default function DataManagementPage() {
                         )}
                         <span className="font-medium">{dup.prenom} {dup.nom}</span>
                         <Badge variant="secondary">{dup.count} enregistrements</Badge>
+                        {isDeclined && (
+                          <Badge variant="outline" className="text-orange-600 border-orange-300">
+                            <Ban className="w-3 h-3 mr-1" />
+                            Ignoré
+                          </Badge>
+                        )}
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-muted-foreground">
                           IDs: {dup.clientIds?.join(', ') || 'N/A'}
                         </span>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (dup.clientIds && dup.clientIds.length > 0) {
-                              handleCompareGroup(dup.clientIds);
-                            }
-                          }}
-                          disabled={loadingCompare}
-                        >
-                          {loadingCompare ? (
-                            <RefreshCw className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <Eye className="w-4 h-4 mr-1" />
-                          )}
-                          Comparer
-                        </Button>
+                        {isDeclined ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-green-600 border-green-300"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRestoreDuplicate(declinedKey);
+                            }}
+                          >
+                            <Undo2 className="w-4 h-4 mr-1" />
+                            Restaurer
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (dup.clientIds && dup.clientIds.length > 0) {
+                                handleCompareGroup(dup.clientIds);
+                              }
+                            }}
+                            disabled={loadingCompare}
+                          >
+                            {loadingCompare ? (
+                              <RefreshCw className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Eye className="w-4 h-4 mr-1" />
+                            )}
+                            Comparer
+                          </Button>
+                        )}
                       </div>
                     </div>
 
