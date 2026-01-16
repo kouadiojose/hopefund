@@ -1078,22 +1078,29 @@ router.post('/clients/merge', authorize('SUPER_ADMIN'), async (req, res, next) =
       WHERE id_client = ${sourceClientId}
     `;
 
-    // Audit log - convert bigint to number for JSON serialization
-    await prisma.auditLog.create({
-      data: {
-        user_id: req.user!.userId,
-        action: 'MERGE',
-        entity: 'Client',
-        entity_id: `${sourceClientId}->${targetClientId}`,
-        old_values: { sourceClientId, sourceClient: { nom: sourceClient.pp_nom, prenom: sourceClient.pp_prenom } },
-        new_values: {
-          targetClientId,
-          movedAccounts: Number(movedAccountsResult),
-          movedCredits: Number(movedCreditsResult)
+    // Audit log - wrap in try-catch so merge still works even if audit fails
+    try {
+      await prisma.auditLog.create({
+        data: {
+          user_id: req.user!.userId,
+          action: 'MERGE',
+          entity: 'Client',
+          entity_id: String(sourceClientId) + '->' + String(targetClientId),
+          old_values: JSON.parse(JSON.stringify({
+            sourceClientId: Number(sourceClientId),
+            sourceClient: { nom: sourceClient.pp_nom || '', prenom: sourceClient.pp_prenom || '' }
+          })),
+          new_values: JSON.parse(JSON.stringify({
+            targetClientId: Number(targetClientId),
+            movedAccounts: Number(movedAccountsResult),
+            movedCredits: Number(movedCreditsResult)
+          })),
+          ip_address: req.ip || null,
         },
-        ip_address: req.ip || null,
-      },
-    });
+      });
+    } catch (auditError) {
+      logger.warn('Could not create audit log for merge:', auditError);
+    }
 
     logger.info(`Merged client ${sourceClientId} into ${targetClientId}: ${movedAccountsResult} accounts, ${movedCreditsResult} credits`);
 
