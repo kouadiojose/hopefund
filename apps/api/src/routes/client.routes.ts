@@ -112,10 +112,13 @@ router.get('/', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_O
       where.OR = searchConditions;
     }
 
-    // Filter by state
-    if (etat !== undefined) {
+    // Filter by state - only if a valid number was provided
+    if (etat !== undefined && !isNaN(etat)) {
       where.etat = etat;
     }
+
+    // Debug logging
+    logger.info(`Client search: search="${search}", etat=${etat}, role=${req.user!.role}, agencyId=${agencyId}, whereHasOR=${!!where.OR}, whereHasEtat=${where.etat !== undefined}`);
 
     const [clients, total] = await Promise.all([
       prisma.client.findMany({
