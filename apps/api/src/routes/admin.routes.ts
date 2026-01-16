@@ -896,14 +896,13 @@ router.get('/clients/:id/full-analysis', authorize('SUPER_ADMIN', 'DIRECTOR'), a
   try {
     const clientId = parseInt(req.params.id);
 
-    // Get client details
+    // Get client details - select only columns that exist in the database
     const client = await prisma.client.findUnique({
       where: { id_client: clientId },
       include: {
         comptes: true,
         dossiers_credit: {
           include: {
-            echeances: true,
             garanties: true,
           }
         },
@@ -913,6 +912,16 @@ router.get('/clients/:id/full-analysis', authorize('SUPER_ADMIN', 'DIRECTOR'), a
     if (!client) {
       return res.status(404).json({ error: 'Client non trouvé' });
     }
+
+    // Fetch echeances count separately to avoid column issues
+    const echeancesCounts = await Promise.all(
+      client.dossiers_credit.map(async (dossier: any) => {
+        const count = await prisma.echeance.count({
+          where: { id_doss: dossier.id_doss }
+        });
+        return { id_doss: dossier.id_doss, count };
+      })
+    );
 
     // Search for potential duplicates with same name
     const potentialDuplicates = await prisma.client.findMany({
@@ -945,12 +954,9 @@ router.get('/clients/:id/full-analysis', authorize('SUPER_ADMIN', 'DIRECTOR'), a
       where: { id_titulaire: clientId }
     });
 
-    // Check for credits across all agencies
+    // Check for credits across all agencies (don't include echeances due to schema mismatch)
     const creditsAllAgencies = await prisma.dossierCredit.findMany({
       where: { id_client: clientId },
-      include: {
-        echeances: true,
-      }
     });
 
     res.json({
@@ -975,17 +981,20 @@ router.get('/clients/:id/full-analysis', authorize('SUPER_ADMIN', 'DIRECTOR'), a
         date_ouvert: c.date_ouvert,
         date_clot: c.date_clot,
       })),
-      credits: client.dossiers_credit.map((d: any) => ({
-        id_doss: d.id_doss,
-        id_ag: d.id_ag,
-        montant_octroye: d.cre_mnt_octr,
-        etat: d.cre_etat,
-        date_demande: d.date_dem,
-        date_deblocage: d.cre_date_debloc,
-        duree_mois: d.duree_mois,
-        echeances_count: d.echeances?.length || 0,
-        garanties_count: d.garanties?.length || 0,
-      })),
+      credits: client.dossiers_credit.map((d: any) => {
+        const echCount = echeancesCounts.find((e: any) => e.id_doss === d.id_doss);
+        return {
+          id_doss: d.id_doss,
+          id_ag: d.id_ag,
+          montant_octroye: d.cre_mnt_octr,
+          etat: d.cre_etat,
+          date_demande: d.date_dem,
+          date_deblocage: d.cre_date_debloc,
+          duree_mois: d.duree_mois,
+          echeances_count: echCount?.count || 0,
+          garanties_count: d.garanties?.length || 0,
+        };
+      }),
       accountsAllAgencies: accountsAllAgencies.length,
       creditsAllAgencies: creditsAllAgencies.length,
       potentialDuplicates: potentialDuplicates.map((p: any) => ({
