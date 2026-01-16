@@ -181,7 +181,7 @@ router.post('/refresh', async (req, res, next) => {
 });
 
 // POST /api/auth/logout
-router.post('/logout', authenticate, async (req, res, next) => {
+router.post('/logout', async (req, res, next) => {
   try {
     const { refreshToken } = req.body;
 
@@ -191,17 +191,29 @@ router.post('/logout', authenticate, async (req, res, next) => {
       });
     }
 
-    // Log audit
-    await prisma.auditLog.create({
-      data: {
-        user_id: req.user!.userId,
-        action: 'LOGOUT',
-        entity: 'User',
-        entity_id: req.user!.userId.toString(),
-        ip_address: req.ip || null,
-        user_agent: req.headers['user-agent'] as string | undefined,
-      },
-    });
+    // Try to log audit if we have user info (optional)
+    try {
+      // Try to get user from token if available
+      const authHeader = req.headers.authorization;
+      if (authHeader?.startsWith('Bearer ')) {
+        const token = authHeader.substring(7);
+        const decoded = jwt.verify(token, config.jwtSecret) as any;
+        if (decoded?.userId) {
+          await prisma.auditLog.create({
+            data: {
+              user_id: decoded.userId,
+              action: 'LOGOUT',
+              entity: 'User',
+              entity_id: decoded.userId.toString(),
+              ip_address: req.ip || null,
+              user_agent: req.headers['user-agent'] as string | undefined,
+            },
+          });
+        }
+      }
+    } catch {
+      // Ignore audit errors - logout should still succeed
+    }
 
     res.json({ message: 'Logged out successfully' });
   } catch (error) {
