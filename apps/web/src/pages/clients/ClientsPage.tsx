@@ -36,6 +36,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { clientsApi } from '@/lib/api';
 import { formatDate, getInitials } from '@/lib/utils';
 
@@ -43,11 +50,16 @@ export default function ClientsPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const { data: clientsData, isLoading } = useQuery({
-    queryKey: ['clients', page, search],
+    queryKey: ['clients', page, search, statusFilter],
     queryFn: async () => {
-      const response = await clientsApi.getAll({ page, limit: 10, search });
+      const params: any = { page, limit: 10, search };
+      if (statusFilter !== 'all') {
+        params.etat = parseInt(statusFilter);
+      }
+      const response = await clientsApi.getAll(params);
       return response.data;
     },
   });
@@ -180,10 +192,18 @@ export default function ClientsPage() {
               />
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" className="gap-2">
-                <Filter className="h-4 w-4" />
-                Filtres
-              </Button>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[160px]">
+                  <Filter className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Statut" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous les statuts</SelectItem>
+                  <SelectItem value="1">Actif</SelectItem>
+                  <SelectItem value="2">Inactif</SelectItem>
+                  <SelectItem value="0">Suspendu</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardHeader>
