@@ -1057,23 +1057,26 @@ router.post('/clients/merge', authorize('SUPER_ADMIN'), async (req, res, next) =
       return res.status(404).json({ error: `Client cible #${targetClientId} non trouvé` });
     }
 
-    // Move accounts from source to target
-    const movedAccounts = await prisma.compte.updateMany({
-      where: { id_titulaire: sourceClientId },
-      data: { id_titulaire: targetClientId }
-    });
+    // Use raw SQL to update accounts (bypass composite key constraints)
+    const movedAccountsResult = await prisma.$executeRaw`
+      UPDATE ad_cpt
+      SET id_titulaire = ${targetClientId}
+      WHERE id_titulaire = ${sourceClientId}
+    `;
 
-    // Move credits from source to target
-    const movedCredits = await prisma.dossierCredit.updateMany({
-      where: { id_client: sourceClientId },
-      data: { id_client: targetClientId }
-    });
+    // Use raw SQL to update credits (bypass composite key constraints)
+    const movedCreditsResult = await prisma.$executeRaw`
+      UPDATE ad_dcr
+      SET id_client = ${targetClientId}
+      WHERE id_client = ${sourceClientId}
+    `;
 
     // Mark source client as inactive
-    await prisma.client.update({
-      where: { id_client: sourceClientId },
-      data: { etat: 2 } // Inactif
-    });
+    await prisma.$executeRaw`
+      UPDATE ad_cli
+      SET etat = 2
+      WHERE id_client = ${sourceClientId}
+    `;
 
     // Audit log
     await prisma.auditLog.create({
@@ -1085,25 +1088,26 @@ router.post('/clients/merge', authorize('SUPER_ADMIN'), async (req, res, next) =
         old_values: { sourceClientId, sourceClient: { nom: sourceClient.pp_nom, prenom: sourceClient.pp_prenom } },
         new_values: {
           targetClientId,
-          movedAccounts: movedAccounts.count,
-          movedCredits: movedCredits.count
+          movedAccounts: movedAccountsResult,
+          movedCredits: movedCreditsResult
         },
         ip_address: req.ip || null,
       },
     });
 
-    logger.info(`Merged client ${sourceClientId} into ${targetClientId}: ${movedAccounts.count} accounts, ${movedCredits.count} credits`);
+    logger.info(`Merged client ${sourceClientId} into ${targetClientId}: ${movedAccountsResult} accounts, ${movedCreditsResult} credits`);
 
     res.json({
       message: 'Fusion réussie',
       details: {
         sourceClient: { id: sourceClientId, nom: `${sourceClient.pp_prenom} ${sourceClient.pp_nom}` },
         targetClient: { id: targetClientId, nom: `${targetClient.pp_prenom} ${targetClient.pp_nom}` },
-        movedAccounts: movedAccounts.count,
-        movedCredits: movedCredits.count,
+        movedAccounts: movedAccountsResult,
+        movedCredits: movedCreditsResult,
       }
     });
   } catch (error) {
+    logger.error('Error in merge:', error);
     next(error);
   }
 });
