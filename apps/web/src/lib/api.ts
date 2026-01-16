@@ -182,6 +182,9 @@ export const adminApi = {
   updateRole: (code: string, data: { label?: string; description?: string; color?: string }) =>
     api.put(`/admin/roles/${code}`, data),
   deleteRole: (code: string) => api.delete(`/admin/roles/${code}`),
+
+  // Clients management
+  activateAllClients: () => api.post('/admin/clients/activate-all'),
 };
 
 // Permissions

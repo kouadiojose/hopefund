@@ -812,4 +812,31 @@ router.delete('/roles/:code', authorize('SUPER_ADMIN'), async (req, res, next) =
   }
 });
 
+// POST /api/admin/clients/activate-all - Activer tous les clients
+router.post('/clients/activate-all', authorize('SUPER_ADMIN', 'DIRECTOR'), async (req, res, next) => {
+  try {
+    const result = await prisma.client.updateMany({
+      where: { etat: { not: 1 } },
+      data: { etat: 1 },
+    });
+
+    // Audit log
+    await prisma.auditLog.create({
+      data: {
+        user_id: req.user!.userId,
+        action: 'BATCH_UPDATE',
+        entity: 'Client',
+        entity_id: 'ALL',
+        new_values: { etat: 1, count: result.count },
+        ip_address: req.ip || null,
+      },
+    });
+
+    logger.info(`Activated ${result.count} clients`);
+    res.json({ message: `${result.count} clients ont été activés avec succès` });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

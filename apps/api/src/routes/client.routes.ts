@@ -124,9 +124,11 @@ router.get('/', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_O
     const searchAsNumber = search ? parseInt(search, 10) : NaN;
     const isNumericSearch = !isNaN(searchAsNumber);
 
-    const [clients, total] = await Promise.all([
-      prisma.client.findMany({
-        where,
+    // For numeric searches on page 1, check for exact ID match first
+    let exactMatch: any = null;
+    if (isNumericSearch && page === 1) {
+      exactMatch = await prisma.client.findUnique({
+        where: { id_client: searchAsNumber },
         include: {
           comptes: {
             select: {
@@ -143,24 +145,53 @@ router.get('/', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_O
             },
           },
         },
-        skip: (page - 1) * limit,
-        take: limit,
-        orderBy: { date_creation: 'desc' },
-      }),
-      prisma.client.count({ where }),
-    ]);
+      });
 
-    // On page 1, if search is numeric, move exact ID match to the front
-    let sortedClients = clients;
-    if (page === 1 && isNumericSearch) {
-      const exactMatchIndex = clients.findIndex((c: any) => c.id_client === searchAsNumber);
-      if (exactMatchIndex > 0) {
-        // Move exact match to front
-        const exactMatch = clients[exactMatchIndex];
-        sortedClients = [exactMatch, ...clients.slice(0, exactMatchIndex), ...clients.slice(exactMatchIndex + 1)];
-        logger.info(`Moved exact ID match for client ${searchAsNumber} to front of results`);
+      // Check if exact match passes filters (etat filter)
+      if (exactMatch && etat !== undefined && !isNaN(etat) && exactMatch.etat !== etat) {
+        exactMatch = null;
+      }
+
+      if (exactMatch) {
+        logger.info(`Found exact ID match for client ${searchAsNumber}`);
       }
     }
+
+    // Build the main query, excluding exact match if found
+    const mainWhere = exactMatch
+      ? { ...where, id_client: { not: exactMatch.id_client } }
+      : where;
+
+    const [clients, total] = await Promise.all([
+      prisma.client.findMany({
+        where: mainWhere,
+        include: {
+          comptes: {
+            select: {
+              id_cpte: true,
+              solde: true,
+              etat_cpte: true,
+            },
+          },
+          dossiers_credit: {
+            select: {
+              id_doss: true,
+              cre_mnt_octr: true,
+              cre_etat: true,
+            },
+          },
+        },
+        skip: exactMatch ? (page - 1) * limit : (page - 1) * limit,
+        take: exactMatch && page === 1 ? limit - 1 : limit,
+        orderBy: { date_creation: 'desc' },
+      }),
+      prisma.client.count({ where }), // Count with original where (includes exact match)
+    ]);
+
+    // Combine: exact match first (on page 1), then other results
+    const sortedClients = exactMatch && page === 1
+      ? [exactMatch, ...clients]
+      : clients;
 
     res.json({
       data: sortedClients.map((c: any) => {
