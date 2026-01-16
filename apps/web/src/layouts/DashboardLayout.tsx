@@ -22,6 +22,7 @@ import {
   Banknote,
   AlertTriangle,
   PieChart,
+  Database,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth';
@@ -50,6 +51,7 @@ const adminNavigation = [
   { name: 'Utilisateurs', href: '/admin/users', icon: UserCog },
   { name: 'Rôles & Permissions', href: '/admin/roles', icon: Lock },
   { name: 'Journal d\'audit', href: '/admin/audit', icon: Activity },
+  { name: 'Gestion données', href: '/admin/data', icon: Database },
 ];
 
 const bottomNavigation = [

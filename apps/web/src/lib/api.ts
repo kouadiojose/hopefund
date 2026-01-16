@@ -185,6 +185,10 @@ export const adminApi = {
 
   // Clients management
   activateAllClients: () => api.post('/admin/clients/activate-all'),
+  getDuplicates: () => api.get('/admin/clients/duplicates'),
+  analyzeClient: (id: number) => api.get(`/admin/clients/${id}/full-analysis`),
+  mergeClients: (sourceId: number, targetId: number) =>
+    api.post('/admin/clients/merge', { sourceClientId: sourceId, targetClientId: targetId }),
 };
 
 // Permissions

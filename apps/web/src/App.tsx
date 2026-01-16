@@ -26,6 +26,7 @@ import SettingsPage from '@/pages/settings/SettingsPage';
 import UsersPage from '@/pages/admin/UsersPage';
 import RolesPage from '@/pages/admin/RolesPage';
 import AuditLogsPage from '@/pages/admin/AuditLogsPage';
+import DataManagementPage from '@/pages/admin/DataManagementPage';
 
 // Caisse Pages
 import CaissePage from '@/pages/caisse/CaissePage';
@@ -76,6 +77,7 @@ function App() {
         <Route path="/admin/users" element={<UsersPage />} />
         <Route path="/admin/roles" element={<RolesPage />} />
         <Route path="/admin/audit" element={<AuditLogsPage />} />
+        <Route path="/admin/data" element={<DataManagementPage />} />
       </Route>
 
       {/* 404 */}
