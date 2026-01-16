@@ -201,11 +201,11 @@ router.get('/', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_O
       : regularClients;
 
     res.json({
-      data: clients.map(c => {
-        const totalSolde = c.comptes.reduce((sum, cpt) => sum + toNumber(cpt.solde), 0);
-        const comptesActifs = c.comptes.filter(cpt => cpt.etat_cpte === 1).length;
-        const creditsEnCours = c.dossiers_credit.filter(d => [5, 6, 8].includes(d.cre_etat || 0)).length;
-        const totalCredits = c.dossiers_credit.reduce((sum, d) => sum + toNumber(d.cre_mnt_octr), 0);
+      data: clients.map((c: any) => {
+        const totalSolde = c.comptes.reduce((sum: number, cpt: any) => sum + toNumber(cpt.solde), 0);
+        const comptesActifs = c.comptes.filter((cpt: any) => cpt.etat_cpte === 1).length;
+        const creditsEnCours = c.dossiers_credit.filter((d: any) => [5, 6, 8].includes(d.cre_etat || 0)).length;
+        const totalCredits = c.dossiers_credit.reduce((sum: number, d: any) => sum + toNumber(d.cre_mnt_octr), 0);
 
         return {
           id_client: c.id_client,
