@@ -226,7 +226,6 @@ model Echeance {
   id_ag                      Int
   id_doss                    Int
 
-  num_ech                    Int?
   date_ech                   DateTime?
 
   mnt_capital                Decimal?  @db.Decimal(30, 6) @default(0)

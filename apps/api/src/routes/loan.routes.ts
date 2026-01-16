@@ -217,7 +217,6 @@ router.get('/delinquent', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER',
       SELECT
         e.id_ech,
         e.id_doss,
-        e.num_ech,
         e.date_ech,
         e.mnt_capital,
         e.mnt_int,
@@ -265,7 +264,7 @@ router.get('/delinquent', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER',
     const formattedResults = overdueSchedules.map((e: any) => ({
       id_ech: e.id_ech,
       id_doss: e.id_doss,
-      num_ech: e.num_ech,
+      num_ech: e.id_ech,
       date_ech: e.date_ech,
       mnt_capital: Number(e.mnt_capital || 0),
       mnt_int: Number(e.mnt_int || 0),
@@ -338,7 +337,6 @@ router.get('/schedule/upcoming', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MA
       SELECT
         e.id_ech,
         e.id_doss,
-        e.num_ech,
         e.date_ech,
         e.mnt_capital,
         e.mnt_int,
@@ -367,7 +365,7 @@ router.get('/schedule/upcoming', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MA
     const formattedResults = upcomingSchedules.map((e: any) => ({
       id_ech: e.id_ech,
       id_doss: e.id_doss,
-      num_ech: e.num_ech,
+      num_ech: e.id_ech,
       date_ech: e.date_ech,
       mnt_capital: Number(e.mnt_capital || 0),
       mnt_int: Number(e.mnt_int || 0),
@@ -877,7 +875,6 @@ router.put('/:id/disburse', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER
           data: {
             id_ag: loan.id_ag,
             id_doss: loanId,
-            num_ech: ech.num_ech,
             date_ech: ech.date_ech,
             mnt_capital: ech.mnt_capital,
             mnt_int: ech.mnt_int,
@@ -949,7 +946,6 @@ router.post('/:id/generate-schedule', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRAN
           data: {
             id_ag: loan.id_ag,
             id_doss: loanId,
-            num_ech: ech.num_ech,
             date_ech: ech.date_ech,
             mnt_capital: ech.mnt_capital,
             mnt_int: ech.mnt_int,

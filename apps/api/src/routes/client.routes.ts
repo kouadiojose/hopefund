@@ -320,7 +320,7 @@ router.get('/:id', async (req, res, next) => {
           const [echeances, garanties] = await Promise.all([
             prisma.echeance.findMany({
               where: { id_doss: dossier.id_doss },
-              orderBy: { num_ech: 'asc' },
+              orderBy: { date_ech: 'asc' },
             }),
             prisma.garantie.findMany({
               where: { id_doss: dossier.id_doss },
@@ -499,7 +499,7 @@ router.get('/:id', async (req, res, next) => {
 
           // Échéancier complet
           echeancier: (d.echeances || []).map((e: any) => ({
-            num_ech: e.num_ech,
+            num_ech: e.id_ech,
             date_ech: e.date_ech,
             mnt_capital: toNumber(e.mnt_capital),
             mnt_interet: toNumber(e.mnt_int),
@@ -575,7 +575,7 @@ router.get('/:id/loans', async (req, res, next) => {
       where: { id_client: clientId },
       include: {
         echeances: {
-          orderBy: { num_ech: 'asc' },
+          orderBy: { date_ech: 'asc' },
         },
         garanties: true,
       },
@@ -608,7 +608,7 @@ router.get('/:id/loans', async (req, res, next) => {
           valeur: toNumber(g.valeur_estimee),
         })),
         echeancier: d.echeances.map(e => ({
-          num_ech: e.num_ech,
+          num_ech: e.id_ech,
           date_ech: e.date_ech,
           mnt_capital: toNumber(e.mnt_capital),
           mnt_interet: toNumber(e.mnt_int),
@@ -709,7 +709,7 @@ router.get('/:id/credit-history', async (req, res, next) => {
       where: { id_client: clientId },
       include: {
         echeances: {
-          orderBy: { num_ech: 'asc' },
+          orderBy: { date_ech: 'asc' },
         },
         garanties: true,
       },
@@ -780,7 +780,7 @@ router.get('/:id/credit-history', async (req, res, next) => {
             : 0;
 
           return {
-            num_ech: e.num_ech,
+            num_ech: e.id_ech,
             date_ech: e.date_ech,
             mnt_capital: toNumber(e.mnt_capital),
             mnt_interet: toNumber(e.mnt_int),
