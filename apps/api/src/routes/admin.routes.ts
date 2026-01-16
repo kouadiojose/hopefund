@@ -1078,7 +1078,7 @@ router.post('/clients/merge', authorize('SUPER_ADMIN'), async (req, res, next) =
       WHERE id_client = ${sourceClientId}
     `;
 
-    // Audit log
+    // Audit log - convert bigint to number for JSON serialization
     await prisma.auditLog.create({
       data: {
         user_id: req.user!.userId,
@@ -1088,8 +1088,8 @@ router.post('/clients/merge', authorize('SUPER_ADMIN'), async (req, res, next) =
         old_values: { sourceClientId, sourceClient: { nom: sourceClient.pp_nom, prenom: sourceClient.pp_prenom } },
         new_values: {
           targetClientId,
-          movedAccounts: movedAccountsResult,
-          movedCredits: movedCreditsResult
+          movedAccounts: Number(movedAccountsResult),
+          movedCredits: Number(movedCreditsResult)
         },
         ip_address: req.ip || null,
       },
