@@ -30,13 +30,15 @@ app.use(cors({
   credentials: true,
 }));
 
-// Rate limiting
-const limiter = rateLimit({
+// Rate limiting - only for auth routes to prevent brute force
+const authLimiter = rateLimit({
   windowMs: config.rateLimitWindowMs,
-  max: config.rateLimitMax,
+  max: 50, // 50 login attempts per 15 minutes
   message: { error: 'Too many requests, please try again later' },
+  skip: (req) => !req.path.includes('/auth/login'),
 });
-app.use(limiter);
+app.use('/api/auth/login', authLimiter);
+app.use('/auth/login', authLimiter);
 
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
