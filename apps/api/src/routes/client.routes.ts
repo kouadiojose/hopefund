@@ -120,58 +120,13 @@ router.get('/', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_O
     // Debug logging
     logger.info(`Client search: search="${search}", etat=${etat}, role=${req.user!.role}, agencyId=${agencyId}, whereHasOR=${!!where.OR}, whereHasEtat=${where.etat !== undefined}`);
 
-    // Check if search is an exact ID match - this client should appear first
+    // Check if search is a numeric value (potential exact ID match)
     const searchAsNumber = search ? parseInt(search, 10) : NaN;
-    let exactIdMatch: any = null;
+    const isNumericSearch = !isNaN(searchAsNumber);
 
-    if (!isNaN(searchAsNumber) && page === 1) {
-      // Build where clause for exact ID match
-      const exactWhere: any = { id_client: searchAsNumber };
-      if (etat !== undefined && !isNaN(etat)) {
-        exactWhere.etat = etat;
-      }
-      // Apply agency filter for non-admin users
-      if (agencyId && !['SUPER_ADMIN', 'DIRECTOR'].includes(req.user!.role)) {
-        exactWhere.OR = [
-          { id_ag: agencyId },
-          { dossiers_credit: { some: { id_ag: agencyId } } },
-        ];
-      }
-
-      exactIdMatch = await prisma.client.findFirst({
-        where: exactWhere,
-        include: {
-          comptes: {
-            select: {
-              id_cpte: true,
-              solde: true,
-              etat_cpte: true,
-            },
-          },
-          dossiers_credit: {
-            select: {
-              id_doss: true,
-              cre_mnt_octr: true,
-              cre_etat: true,
-            },
-          },
-        },
-      });
-
-      if (exactIdMatch) {
-        logger.info(`Found exact ID match for client ${searchAsNumber}`);
-      }
-    }
-
-    // Modify where clause to exclude exact ID match from regular results (to avoid duplicates)
-    const regularWhere = { ...where };
-    if (exactIdMatch) {
-      regularWhere.id_client = { not: exactIdMatch.id_client };
-    }
-
-    const [regularClients, total] = await Promise.all([
+    const [clients, total] = await Promise.all([
       prisma.client.findMany({
-        where: regularWhere,
+        where,
         include: {
           comptes: {
             select: {
@@ -188,20 +143,27 @@ router.get('/', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_O
             },
           },
         },
-        skip: exactIdMatch && page === 1 ? 0 : (page - 1) * limit - (exactIdMatch ? 1 : 0),
-        take: exactIdMatch && page === 1 ? limit - 1 : limit,
+        skip: (page - 1) * limit,
+        take: limit,
         orderBy: { date_creation: 'desc' },
       }),
-      prisma.client.count({ where }), // Count total with original where (includes exact match)
+      prisma.client.count({ where }),
     ]);
 
-    // Combine results: exact ID match first (on page 1), then regular results
-    const clients = page === 1 && exactIdMatch
-      ? [exactIdMatch, ...regularClients]
-      : regularClients;
+    // On page 1, if search is numeric, move exact ID match to the front
+    let sortedClients = clients;
+    if (page === 1 && isNumericSearch) {
+      const exactMatchIndex = clients.findIndex((c: any) => c.id_client === searchAsNumber);
+      if (exactMatchIndex > 0) {
+        // Move exact match to front
+        const exactMatch = clients[exactMatchIndex];
+        sortedClients = [exactMatch, ...clients.slice(0, exactMatchIndex), ...clients.slice(exactMatchIndex + 1)];
+        logger.info(`Moved exact ID match for client ${searchAsNumber} to front of results`);
+      }
+    }
 
     res.json({
-      data: clients.map((c: any) => {
+      data: sortedClients.map((c: any) => {
         const totalSolde = c.comptes.reduce((sum: number, cpt: any) => sum + toNumber(cpt.solde), 0);
         const comptesActifs = c.comptes.filter((cpt: any) => cpt.etat_cpte === 1).length;
         const creditsEnCours = c.dossiers_credit.filter((d: any) => [5, 6, 8].includes(d.cre_etat || 0)).length;
