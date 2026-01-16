@@ -142,6 +142,10 @@ export const loansApi = {
   getPortfolioStats: () => api.get('/loans/portfolio/stats'),
   // Generate schedule for existing loan without one
   generateSchedule: (id: number) => api.post(`/loans/${id}/generate-schedule`),
+  // Mark loan as closed/paid off (for old loans without schedule)
+  markClosed: (id: number, motif?: string) => api.put(`/loans/${id}/mark-closed`, { motif }),
+  // Reopen a closed loan (if closed by mistake)
+  reopen: (id: number, motif?: string) => api.put(`/loans/${id}/reopen`, { motif }),
 };
 
 // Reports

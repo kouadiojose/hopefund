@@ -132,6 +132,30 @@ export default function LoanDetailPage() {
     },
   });
 
+  // Mutation pour marquer comme soldé
+  const markClosedMutation = useMutation({
+    mutationFn: () => loansApi.markClosed(loanId!, 'Marqué comme soldé manuellement'),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['loan', loanId] });
+      alert('Prêt marqué comme soldé avec succès');
+    },
+    onError: (error: any) => {
+      alert('Erreur: ' + (error.response?.data?.error || error.message));
+    },
+  });
+
+  // Mutation pour réouvrir un prêt soldé
+  const reopenMutation = useMutation({
+    mutationFn: () => loansApi.reopen(loanId!, 'Réouvert manuellement'),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['loan', loanId] });
+      alert('Prêt réouvert avec succès');
+    },
+    onError: (error: any) => {
+      alert('Erreur: ' + (error.response?.data?.error || error.message));
+    },
+  });
+
   const loan = loanData;
   const echeances: Echeance[] = loan?.echeances || [];
   const resume = loan?.resume || {};
@@ -233,12 +257,20 @@ export default function LoanDetailPage() {
       2: { label: 'Approuvé', variant: 'info' },
       3: { label: 'En attente décaissement', variant: 'info' },
       5: { label: 'Décaissé - Actif', variant: 'success' },
+      7: { label: 'Soldé', variant: 'secondary' },
       8: { label: 'En retard', variant: 'destructive' },
       9: { label: 'Rejeté/Défaut', variant: 'destructive' },
+      10: { label: 'Soldé', variant: 'secondary' },
     };
     const info = statuses[status] || { label: 'Inconnu', variant: 'secondary' };
     return <Badge variant={info.variant}>{info.label}</Badge>;
   };
+
+  // Check if loan is closed/paid
+  const isLoanClosed = loan?.cre_etat === 10 || loan?.cre_etat === 7 || loan?.etat === 10 || loan?.etat === 7;
+
+  // Check if loan is active and can be closed
+  const canBeClosed = (loan?.cre_etat === 5 || loan?.etat === 5) && hasNoScheduleInDB;
 
   const montantOctroi = Number(loan.cre_mnt_octr || loan.mnt_dem || 0);
   const taux = Number(loan.tx_interet_lcr || 18);
@@ -268,6 +300,46 @@ export default function LoanDetailPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          {/* Mark as closed button for active loans without schedule */}
+          {canBeClosed && (
+            <Button
+              variant="outline"
+              className="gap-2 text-green-600 border-green-300 hover:bg-green-50"
+              onClick={() => {
+                if (confirm('Êtes-vous sûr de vouloir marquer ce prêt comme soldé? Cette action indique que le prêt a été entièrement remboursé.')) {
+                  markClosedMutation.mutate();
+                }
+              }}
+              disabled={markClosedMutation.isPending}
+            >
+              {markClosedMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <CheckCircle className="h-4 w-4" />
+              )}
+              Marquer Soldé
+            </Button>
+          )}
+          {/* Reopen button for closed loans */}
+          {isLoanClosed && (
+            <Button
+              variant="outline"
+              className="gap-2 text-orange-600 border-orange-300 hover:bg-orange-50"
+              onClick={() => {
+                if (confirm('Êtes-vous sûr de vouloir réouvrir ce prêt? Il sera remis en statut Actif.')) {
+                  reopenMutation.mutate();
+                }
+              }}
+              disabled={reopenMutation.isPending}
+            >
+              {reopenMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              Réouvrir
+            </Button>
+          )}
           <Button variant="outline" className="gap-2">
             <Printer className="h-4 w-4" />
             Imprimer

@@ -984,4 +984,140 @@ router.post('/:id/generate-schedule', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRAN
   }
 });
 
+// PUT /api/loans/:id/mark-closed - Marquer un prêt comme soldé (pour anciens prêts sans échéancier)
+router.put('/:id/mark-closed', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER'), async (req, res, next) => {
+  try {
+    const loanId = parseInt(req.params.id);
+    const { motif } = req.body;
+
+    const loan = await prisma.dossierCredit.findUnique({
+      where: { id_doss: loanId },
+      include: { echeances: true },
+    });
+
+    if (!loan) {
+      throw new AppError('Prêt non trouvé', 404);
+    }
+
+    // If there are echéances with remaining balance, warn
+    const hasRemainingBalance = loan.echeances?.some(e =>
+      (Number(e.solde_capital || 0) + Number(e.solde_int || 0)) > 0
+    );
+
+    if (hasRemainingBalance) {
+      return res.status(400).json({
+        error: 'Ce prêt a encore des échéances avec un solde restant. Utilisez le remboursement normal.',
+        hasRemainingBalance: true,
+      });
+    }
+
+    // Mark all echeances as paid if any exist
+    if (loan.echeances && loan.echeances.length > 0) {
+      await prisma.echeance.updateMany({
+        where: { id_doss: loanId, id_ag: loan.id_ag },
+        data: {
+          etat: 2, // Payé
+          solde_capital: 0,
+          solde_int: 0,
+          date_paiement: new Date(),
+        },
+      });
+    }
+
+    // Update loan status to Soldé
+    await prisma.dossierCredit.update({
+      where: { id_doss: loanId },
+      data: {
+        cre_etat: 10, // Soldé
+        etat: 10,
+        date_modif: new Date(),
+      },
+    });
+
+    // Audit log
+    try {
+      await prisma.auditLog.create({
+        data: {
+          user_id: req.user!.userId,
+          action: 'CLOSE_LOAN',
+          entity: 'DossierCredit',
+          entity_id: loanId.toString(),
+          new_values: JSON.parse(JSON.stringify({
+            previous_etat: loan.cre_etat || loan.etat,
+            new_etat: 10,
+            motif: motif || 'Marqué comme soldé manuellement',
+          })),
+          ip_address: req.ip || null,
+        },
+      });
+    } catch (auditError) {
+      console.warn('Could not create audit log:', auditError);
+    }
+
+    res.json({
+      message: 'Prêt marqué comme soldé',
+      loan: { id_doss: loanId, cre_etat: 10 },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// PUT /api/loans/:id/reopen - Réouvrir un prêt soldé (si erreur)
+router.put('/:id/reopen', authorize('SUPER_ADMIN', 'DIRECTOR'), async (req, res, next) => {
+  try {
+    const loanId = parseInt(req.params.id);
+    const { motif } = req.body;
+
+    const loan = await prisma.dossierCredit.findUnique({
+      where: { id_doss: loanId },
+    });
+
+    if (!loan) {
+      throw new AppError('Prêt non trouvé', 404);
+    }
+
+    if (loan.cre_etat !== 10 && loan.cre_etat !== 7 && loan.etat !== 10 && loan.etat !== 7) {
+      throw new AppError('Ce prêt n\'est pas soldé', 400);
+    }
+
+    // Reopen loan as active
+    await prisma.dossierCredit.update({
+      where: { id_doss: loanId },
+      data: {
+        cre_etat: 5, // Actif
+        etat: 5,
+        date_modif: new Date(),
+      },
+    });
+
+    // Audit log
+    try {
+      await prisma.auditLog.create({
+        data: {
+          user_id: req.user!.userId,
+          action: 'REOPEN_LOAN',
+          entity: 'DossierCredit',
+          entity_id: loanId.toString(),
+          new_values: JSON.parse(JSON.stringify({
+            previous_etat: loan.cre_etat || loan.etat,
+            new_etat: 5,
+            motif: motif || 'Réouvert manuellement',
+          })),
+          ip_address: req.ip || null,
+        },
+      });
+    } catch (auditError) {
+      console.warn('Could not create audit log:', auditError);
+    }
+
+    res.json({
+      message: 'Prêt réouvert avec succès',
+      loan: { id_doss: loanId, cre_etat: 5 },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;
