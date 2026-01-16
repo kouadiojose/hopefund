@@ -839,4 +839,245 @@ router.post('/clients/activate-all', authorize('SUPER_ADMIN', 'DIRECTOR'), async
   }
 });
 
+// GET /api/admin/clients/duplicates - Rechercher les doublons de clients
+router.get('/clients/duplicates', authorize('SUPER_ADMIN', 'DIRECTOR'), async (req, res, next) => {
+  try {
+    // Find clients with same name/prenom
+    const duplicates = await prisma.$queryRaw`
+      SELECT
+        pp_nom,
+        pp_prenom,
+        COUNT(*) as count,
+        STRING_AGG(id_client::text, ', ' ORDER BY id_client) as client_ids,
+        STRING_AGG(COALESCE(etat::text, 'null'), ', ' ORDER BY id_client) as etats
+      FROM ad_cli
+      WHERE pp_nom IS NOT NULL AND pp_prenom IS NOT NULL
+        AND TRIM(pp_nom) != '' AND TRIM(pp_prenom) != ''
+      GROUP BY LOWER(TRIM(pp_nom)), LOWER(TRIM(pp_prenom)), pp_nom, pp_prenom
+      HAVING COUNT(*) > 1
+      ORDER BY COUNT(*) DESC
+      LIMIT 100
+    ` as any[];
+
+    // Get statistics
+    const [totalClients, inactiveClients, totalAccounts, totalCredits] = await Promise.all([
+      prisma.client.count(),
+      prisma.client.count({ where: { etat: { not: 1 } } }),
+      prisma.compte.count(),
+      prisma.dossierCredit.count(),
+    ]);
+
+    res.json({
+      duplicates: duplicates.map((d: any) => ({
+        nom: d.pp_nom,
+        prenom: d.pp_prenom,
+        count: Number(d.count),
+        clientIds: d.client_ids.split(', ').map((id: string) => parseInt(id)),
+        etats: d.etats.split(', '),
+      })),
+      statistics: {
+        totalClients,
+        inactiveClients,
+        totalAccounts,
+        totalCredits,
+        duplicateGroups: duplicates.length,
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /api/admin/clients/:id/full-analysis - Analyse complète d'un client
+router.get('/clients/:id/full-analysis', authorize('SUPER_ADMIN', 'DIRECTOR'), async (req, res, next) => {
+  try {
+    const clientId = parseInt(req.params.id);
+
+    // Get client details
+    const client = await prisma.client.findUnique({
+      where: { id_client: clientId },
+      include: {
+        comptes: true,
+        dossiers_credit: {
+          include: {
+            echeances: true,
+            garanties: true,
+          }
+        },
+      }
+    });
+
+    if (!client) {
+      return res.status(404).json({ error: 'Client non trouvé' });
+    }
+
+    // Search for potential duplicates with same name
+    const potentialDuplicates = await prisma.client.findMany({
+      where: {
+        OR: [
+          {
+            pp_nom: { equals: client.pp_nom || '', mode: 'insensitive' },
+            pp_prenom: { equals: client.pp_prenom || '', mode: 'insensitive' },
+            id_client: { not: clientId }
+          },
+          {
+            pp_nom: { contains: client.pp_nom || '', mode: 'insensitive' },
+            id_client: { not: clientId }
+          }
+        ]
+      },
+      include: {
+        comptes: {
+          select: { id_cpte: true, solde: true, etat_cpte: true }
+        },
+        dossiers_credit: {
+          select: { id_doss: true, cre_mnt_octr: true, cre_etat: true }
+        }
+      },
+      take: 20
+    });
+
+    // Check for accounts across all agencies
+    const accountsAllAgencies = await prisma.compte.findMany({
+      where: { id_titulaire: clientId }
+    });
+
+    // Check for credits across all agencies
+    const creditsAllAgencies = await prisma.dossierCredit.findMany({
+      where: { id_client: clientId },
+      include: {
+        echeances: true,
+      }
+    });
+
+    res.json({
+      client: {
+        id_client: client.id_client,
+        id_ag: client.id_ag,
+        nom: client.pp_nom,
+        prenom: client.pp_prenom,
+        nom_complet: `${client.pp_prenom || ''} ${client.pp_nom || ''}`.trim(),
+        etat: client.etat,
+        date_adh: client.date_adh,
+        telephone: client.num_tel || client.num_port,
+        email: client.email,
+      },
+      comptes: client.comptes.map((c: any) => ({
+        id_cpte: c.id_cpte,
+        id_ag: c.id_ag,
+        num_complet: c.num_complet_cpte,
+        intitule: c.intitule_compte,
+        solde: c.solde,
+        etat: c.etat_cpte,
+        date_ouvert: c.date_ouvert,
+        date_clot: c.date_clot,
+      })),
+      credits: client.dossiers_credit.map((d: any) => ({
+        id_doss: d.id_doss,
+        id_ag: d.id_ag,
+        montant_octroye: d.cre_mnt_octr,
+        etat: d.cre_etat,
+        date_demande: d.date_dem,
+        date_deblocage: d.cre_date_debloc,
+        duree_mois: d.duree_mois,
+        echeances_count: d.echeances?.length || 0,
+        garanties_count: d.garanties?.length || 0,
+      })),
+      accountsAllAgencies: accountsAllAgencies.length,
+      creditsAllAgencies: creditsAllAgencies.length,
+      potentialDuplicates: potentialDuplicates.map((p: any) => ({
+        id_client: p.id_client,
+        id_ag: p.id_ag,
+        nom: p.pp_nom,
+        prenom: p.pp_prenom,
+        etat: p.etat,
+        comptes_count: p.comptes.length,
+        credits_count: p.dossiers_credit.length,
+      })),
+      summary: {
+        totalComptes: client.comptes.length,
+        totalCredits: client.dossiers_credit.length,
+        comptesActifs: client.comptes.filter((c: any) => c.etat_cpte === 1).length,
+        creditsEnCours: client.dossiers_credit.filter((d: any) => [5, 6, 8].includes(d.cre_etat || 0)).length,
+        hasDuplicates: potentialDuplicates.length > 0,
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST /api/admin/clients/merge - Fusionner deux clients (déplacer comptes/crédits)
+router.post('/clients/merge', authorize('SUPER_ADMIN'), async (req, res, next) => {
+  try {
+    const { sourceClientId, targetClientId } = req.body;
+
+    if (!sourceClientId || !targetClientId || sourceClientId === targetClientId) {
+      return res.status(400).json({ error: 'IDs de clients invalides' });
+    }
+
+    // Verify both clients exist
+    const [sourceClient, targetClient] = await Promise.all([
+      prisma.client.findUnique({ where: { id_client: sourceClientId } }),
+      prisma.client.findUnique({ where: { id_client: targetClientId } }),
+    ]);
+
+    if (!sourceClient) {
+      return res.status(404).json({ error: `Client source #${sourceClientId} non trouvé` });
+    }
+    if (!targetClient) {
+      return res.status(404).json({ error: `Client cible #${targetClientId} non trouvé` });
+    }
+
+    // Move accounts from source to target
+    const movedAccounts = await prisma.compte.updateMany({
+      where: { id_titulaire: sourceClientId },
+      data: { id_titulaire: targetClientId }
+    });
+
+    // Move credits from source to target
+    const movedCredits = await prisma.dossierCredit.updateMany({
+      where: { id_client: sourceClientId },
+      data: { id_client: targetClientId }
+    });
+
+    // Mark source client as inactive
+    await prisma.client.update({
+      where: { id_client: sourceClientId },
+      data: { etat: 2 } // Inactif
+    });
+
+    // Audit log
+    await prisma.auditLog.create({
+      data: {
+        user_id: req.user!.userId,
+        action: 'MERGE',
+        entity: 'Client',
+        entity_id: `${sourceClientId}->${targetClientId}`,
+        old_values: { sourceClientId, sourceClient: { nom: sourceClient.pp_nom, prenom: sourceClient.pp_prenom } },
+        new_values: {
+          targetClientId,
+          movedAccounts: movedAccounts.count,
+          movedCredits: movedCredits.count
+        },
+        ip_address: req.ip || null,
+      },
+    });
+
+    logger.info(`Merged client ${sourceClientId} into ${targetClientId}: ${movedAccounts.count} accounts, ${movedCredits.count} credits`);
+
+    res.json({
+      message: 'Fusion réussie',
+      details: {
+        sourceClient: { id: sourceClientId, nom: `${sourceClient.pp_prenom} ${sourceClient.pp_nom}` },
+        targetClient: { id: targetClientId, nom: `${targetClient.pp_prenom} ${targetClient.pp_nom}` },
+        movedAccounts: movedAccounts.count,
+        movedCredits: movedCredits.count,
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;
