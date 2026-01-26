@@ -850,10 +850,21 @@ export default function ClientDetailPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {transactionHistory.transactions.map((tx) => (
-                      <tr key={tx.id_mouvement} className="border-b hover:bg-muted/50">
+                    {transactionHistory.transactions.map((tx: any) => (
+                      <tr key={tx.id_mouvement} className="border-b hover:bg-muted/50 group">
                         <td className="py-2 px-3">{formatDate(tx.date_mvt)}</td>
-                        <td className="py-2 px-3">{tx.libel_mvt || 'Transaction'}</td>
+                        <td className="py-2 px-3">
+                          <div>
+                            <span>{tx.libelle || tx.libel_mvt || 'Transaction'}</span>
+                            {(tx.ref_externe || tx.info || tx.communication) && (
+                              <div className="text-xs text-muted-foreground mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                {tx.ref_externe && <span className="mr-2">Réf: {tx.ref_externe}</span>}
+                                {tx.info && <span className="mr-2">{tx.info}</span>}
+                                {tx.communication && <span>{tx.communication}</span>}
+                              </div>
+                            )}
+                          </div>
+                        </td>
                         <td className="py-2 px-3 text-right text-red-600">
                           {tx.sens?.toLowerCase() === 'd' ? formatCurrency(tx.montant) : '-'}
                         </td>
@@ -942,11 +953,22 @@ export default function ClientDetailPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {clientTransactionHistory.transactions.map((tx) => (
-                      <tr key={tx.id_mouvement} className="border-b hover:bg-muted/50">
+                    {clientTransactionHistory.transactions.map((tx: any) => (
+                      <tr key={tx.id_mouvement} className="border-b hover:bg-muted/50 group">
                         <td className="py-2 px-3">{formatDate(tx.date_mvt)}</td>
                         <td className="py-2 px-3 font-mono text-xs">{tx.compte_numero}</td>
-                        <td className="py-2 px-3">{tx.libel_mvt || 'Transaction'}</td>
+                        <td className="py-2 px-3">
+                          <div>
+                            <span>{tx.libelle || tx.libel_mvt || 'Transaction'}</span>
+                            {(tx.ref_externe || tx.info || tx.communication) && (
+                              <div className="text-xs text-muted-foreground mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                {tx.ref_externe && <span className="mr-2">Réf: {tx.ref_externe}</span>}
+                                {tx.info && <span className="mr-2">{tx.info}</span>}
+                                {tx.communication && <span>{tx.communication}</span>}
+                              </div>
+                            )}
+                          </div>
+                        </td>
                         <td className="py-2 px-3 text-right text-red-600">
                           {tx.sens?.toLowerCase() === 'd' ? formatCurrency(tx.montant) : '-'}
                         </td>

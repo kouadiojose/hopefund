@@ -747,27 +747,60 @@ router.get('/:id/transactions', async (req, res, next) => {
       }
     });
 
-    const [transactions, total] = await Promise.all([
-      prisma.mouvement.findMany({
-        where: { cpte_interne_cli: { in: allPossibleIds } },
-        skip: all ? 0 : (page - 1) * limit,
-        take: limit,
-        orderBy: { date_valeur: 'desc' },
-      }),
-      prisma.mouvement.count({
-        where: { cpte_interne_cli: { in: allPossibleIds } },
-      }),
-    ]);
+    // Get total count
+    const countResult = await prisma.mouvement.count({
+      where: { cpte_interne_cli: { in: allPossibleIds } },
+    });
+    const total = countResult;
 
-    const formattedTransactions = transactions.map(t => ({
+    // Use raw query to join with ad_ecriture for libelle/comments
+    const offset = all ? 0 : (page - 1) * limit;
+    const actualLimit = all ? 10000 : limit;
+
+    // Build the IN clause for the raw query
+    const idsPlaceholder = allPossibleIds.join(',');
+
+    const transactions = await prisma.$queryRawUnsafe(`
+      SELECT
+        m.id_mouvement,
+        m.id_ecriture,
+        m.compte as compte_comptable,
+        m.cpte_interne_cli,
+        m.sens,
+        m.montant,
+        m.devise,
+        m.date_valeur,
+        e.date_ecriture,
+        e.libelle,
+        e.ref_externe,
+        e.type_operation,
+        e.info,
+        e.communication
+      FROM ad_mouvement m
+      LEFT JOIN ad_ecriture e ON m.id_ecriture = e.id_ecriture
+      WHERE m.cpte_interne_cli IN (${idsPlaceholder})
+      ORDER BY COALESCE(e.date_ecriture, m.date_valeur) DESC, m.id_mouvement DESC
+      LIMIT ${actualLimit}
+      OFFSET ${offset}
+    `) as any[];
+
+    const formattedTransactions = transactions.map((t: any) => ({
       id_mouvement: t.id_mouvement,
-      date_mvt: t.date_valeur,  // Renommé pour compatibilité frontend
+      date_mvt: t.date_ecriture || t.date_valeur,  // Préférer date_ecriture si disponible
+      date_valeur: t.date_valeur,
       compte_id: t.cpte_interne_cli,
       compte_numero: accountMap.get(t.cpte_interne_cli!) || 'N/A',
       sens: t.sens,
-      montant: toNumber(t.montant),
+      montant: Number(t.montant || 0),
       devise: t.devise,
-      compte_comptable: t.compte,
+      compte_comptable: t.compte_comptable,
+      id_ecriture: t.id_ecriture,
+      // Informations de l'écriture (commentaire/note)
+      libelle: t.libelle || null,
+      ref_externe: t.ref_externe || null,
+      type_operation: t.type_operation || null,
+      info: t.info || null,
+      communication: t.communication || null,
     }));
 
     res.json({

@@ -1,6 +1,7 @@
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft,
   ArrowDownCircle,
@@ -11,6 +12,9 @@ import {
   Clock,
   TrendingUp,
   TrendingDown,
+  MessageSquare,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -49,6 +53,7 @@ const balanceHistory = [
 export default function AccountDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [expandedTx, setExpandedTx] = useState<number | null>(null);
 
   const { data: accountData, isLoading } = useQuery({
     queryKey: ['account', id],
@@ -323,6 +328,7 @@ export default function AccountDetailPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-8"></TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Libellé</TableHead>
                     <TableHead>Type</TableHead>
@@ -330,43 +336,130 @@ export default function AccountDetailPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {transactions.map((tx: any, index: number) => (
-                    <motion.tr
-                      key={tx.id_mvt || index}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: index * 0.05 }}
-                      className="hover:bg-gray-50"
-                    >
-                      <TableCell className="text-gray-600">
-                        {formatDate(tx.date_mvt)}
-                      </TableCell>
-                      <TableCell>{tx.libel_mvt || tx.compte_comptable || 'Mouvement'}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {tx.sens?.toLowerCase() === 'c' ? (
-                            <ArrowDownCircle className="h-4 w-4 text-green-500" />
-                          ) : (
-                            <ArrowUpCircle className="h-4 w-4 text-red-500" />
-                          )}
-                          <span className={tx.sens?.toLowerCase() === 'c' ? 'text-green-600' : 'text-red-600'}>
-                            {tx.sens?.toLowerCase() === 'c' ? 'Crédit' : 'Débit'}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <span
+                  {transactions.map((tx: any, index: number) => {
+                    const txId = tx.id_mouvement || index;
+                    const hasDetails = tx.libelle || tx.ref_externe || tx.info || tx.communication;
+                    const isExpanded = expandedTx === txId;
+
+                    return (
+                      <React.Fragment key={txId}>
+                        <motion.tr
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ delay: index * 0.05 }}
                           className={cn(
-                            'font-semibold tabular-nums',
-                            tx.sens?.toLowerCase() === 'c' ? 'text-green-600' : 'text-red-600'
+                            'hover:bg-gray-50 cursor-pointer',
+                            isExpanded && 'bg-hopefund-50'
                           )}
+                          onClick={() => hasDetails && setExpandedTx(isExpanded ? null : txId)}
                         >
-                          {tx.sens?.toLowerCase() === 'c' ? '+' : '-'}
-                          {formatCurrency(tx.montant || 0)}
-                        </span>
-                      </TableCell>
-                    </motion.tr>
-                  ))}
+                          <TableCell className="w-8 px-2">
+                            {hasDetails ? (
+                              isExpanded ? (
+                                <ChevronUp className="h-4 w-4 text-gray-400" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4 text-gray-400" />
+                              )
+                            ) : null}
+                          </TableCell>
+                          <TableCell className="text-gray-600">
+                            {formatDate(tx.date_mvt)}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <span className="truncate max-w-xs">
+                                {tx.libelle || tx.compte_comptable || 'Mouvement'}
+                              </span>
+                              {hasDetails && (
+                                <MessageSquare className="h-3.5 w-3.5 text-blue-400 flex-shrink-0" />
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {tx.sens?.toLowerCase() === 'c' ? (
+                                <ArrowDownCircle className="h-4 w-4 text-green-500" />
+                              ) : (
+                                <ArrowUpCircle className="h-4 w-4 text-red-500" />
+                              )}
+                              <span className={tx.sens?.toLowerCase() === 'c' ? 'text-green-600' : 'text-red-600'}>
+                                {tx.sens?.toLowerCase() === 'c' ? 'Crédit' : 'Débit'}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <span
+                              className={cn(
+                                'font-semibold tabular-nums',
+                                tx.sens?.toLowerCase() === 'c' ? 'text-green-600' : 'text-red-600'
+                              )}
+                            >
+                              {tx.sens?.toLowerCase() === 'c' ? '+' : '-'}
+                              {formatCurrency(tx.montant || 0)}
+                            </span>
+                          </TableCell>
+                        </motion.tr>
+                        <AnimatePresence>
+                          {isExpanded && hasDetails && (
+                            <motion.tr
+                              key={`${txId}-details`}
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
+                              className="bg-gray-50"
+                            >
+                              <TableCell colSpan={5} className="py-3 px-4">
+                                <div className="pl-6 space-y-2 text-sm">
+                                  {tx.libelle && (
+                                    <div className="flex gap-2">
+                                      <span className="text-gray-500 font-medium min-w-24">Libellé:</span>
+                                      <span className="text-gray-700">{tx.libelle}</span>
+                                    </div>
+                                  )}
+                                  {tx.ref_externe && (
+                                    <div className="flex gap-2">
+                                      <span className="text-gray-500 font-medium min-w-24">Référence:</span>
+                                      <span className="text-gray-700 font-mono text-xs">{tx.ref_externe}</span>
+                                    </div>
+                                  )}
+                                  {tx.type_operation && (
+                                    <div className="flex gap-2">
+                                      <span className="text-gray-500 font-medium min-w-24">Type opération:</span>
+                                      <span className="text-gray-700">{tx.type_operation}</span>
+                                    </div>
+                                  )}
+                                  {tx.info && (
+                                    <div className="flex gap-2">
+                                      <span className="text-gray-500 font-medium min-w-24">Info:</span>
+                                      <span className="text-gray-700">{tx.info}</span>
+                                    </div>
+                                  )}
+                                  {tx.communication && (
+                                    <div className="flex gap-2">
+                                      <span className="text-gray-500 font-medium min-w-24">Communication:</span>
+                                      <span className="text-gray-700">{tx.communication}</span>
+                                    </div>
+                                  )}
+                                  {tx.date_valeur && (
+                                    <div className="flex gap-2">
+                                      <span className="text-gray-500 font-medium min-w-24">Date valeur:</span>
+                                      <span className="text-gray-700">{formatDate(tx.date_valeur)}</span>
+                                    </div>
+                                  )}
+                                  {tx.id_ecriture && (
+                                    <div className="flex gap-2">
+                                      <span className="text-gray-500 font-medium min-w-24">N° écriture:</span>
+                                      <span className="text-gray-700 font-mono text-xs">#{tx.id_ecriture}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </motion.tr>
+                          )}
+                        </AnimatePresence>
+                      </React.Fragment>
+                    );
+                  })}
                 </TableBody>
               </Table>
             ) : (

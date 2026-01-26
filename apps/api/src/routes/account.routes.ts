@@ -287,36 +287,68 @@ router.get('/:id/transactions', async (req, res, next) => {
       return res.status(404).json({ error: 'Compte non trouvé' });
     }
 
-    // Rechercher par cpte_interne_cli = id_cpte du compte demandé
-    const where: any = {
-      cpte_interne_cli: compte.id_cpte,
-    };
-
-    if (startDate || endDate) {
-      where.date_valeur = {};
-      if (startDate) where.date_valeur.gte = new Date(startDate);
-      if (endDate) where.date_valeur.lte = new Date(endDate);
+    // Build date filter
+    let dateFilter = '';
+    if (startDate) {
+      dateFilter += ` AND m.date_valeur >= '${startDate}'`;
+    }
+    if (endDate) {
+      dateFilter += ` AND m.date_valeur <= '${endDate}'`;
     }
 
-    const [transactions, total] = await Promise.all([
-      prisma.mouvement.findMany({
-        where,
-        skip: all ? 0 : (page - 1) * limit,
-        take: limit,
-        orderBy: { date_valeur: 'desc' },
-      }),
-      prisma.mouvement.count({ where }),
-    ]);
+    // Get total count
+    const countResult = await prisma.$queryRaw`
+      SELECT COUNT(*) as total
+      FROM ad_mouvement m
+      WHERE m.cpte_interne_cli = ${compte.id_cpte}
+    ` as any[];
+    const total = Number(countResult[0]?.total || 0);
+
+    // Use raw query to join with ad_ecriture to get libelle/comments
+    const offset = all ? 0 : (page - 1) * limit;
+    const actualLimit = all ? 10000 : limit;
+
+    // Try to get transactions with ecriture details (libelle, ref_externe, etc.)
+    const transactions = await prisma.$queryRaw`
+      SELECT
+        m.id_mouvement,
+        m.id_ecriture,
+        m.compte as compte_comptable,
+        m.cpte_interne_cli,
+        m.sens,
+        m.montant,
+        m.devise,
+        m.date_valeur,
+        e.date_ecriture,
+        e.libelle,
+        e.ref_externe,
+        e.type_operation,
+        e.info,
+        e.communication
+      FROM ad_mouvement m
+      LEFT JOIN ad_ecriture e ON m.id_ecriture = e.id_ecriture
+      WHERE m.cpte_interne_cli = ${compte.id_cpte}
+      ORDER BY COALESCE(e.date_ecriture, m.date_valeur) DESC, m.id_mouvement DESC
+      LIMIT ${actualLimit}
+      OFFSET ${offset}
+    ` as any[];
 
     // Convertir les décimales en nombres et adapter au format attendu par le frontend
-    const formattedTransactions = transactions.map(t => ({
+    const formattedTransactions = transactions.map((t: any) => ({
       id_mouvement: t.id_mouvement,
-      date_mvt: t.date_valeur,  // Renommé pour compatibilité frontend
+      date_mvt: t.date_ecriture || t.date_valeur,  // Préférer date_ecriture si disponible
+      date_valeur: t.date_valeur,
       sens: t.sens,
       montant: Number(t.montant || 0),
       devise: t.devise,
-      compte_comptable: t.compte,
+      compte_comptable: t.compte_comptable,
       id_ecriture: t.id_ecriture,
+      // Informations de l'écriture (commentaire/note)
+      libelle: t.libelle || null,
+      ref_externe: t.ref_externe || null,
+      type_operation: t.type_operation || null,
+      info: t.info || null,
+      communication: t.communication || null,
     }));
 
     res.json({
