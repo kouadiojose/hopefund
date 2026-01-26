@@ -747,61 +747,68 @@ router.get('/:id/transactions', async (req, res, next) => {
       }
     });
 
-    // Get total count
-    const countResult = await prisma.mouvement.count({
-      where: { cpte_interne_cli: { in: allPossibleIds } },
-    });
-    const total = countResult;
-
-    // Use raw query to join with ad_ecriture for libelle/comments
     const offset = all ? 0 : (page - 1) * limit;
     const actualLimit = all ? 10000 : limit;
 
-    // Build the IN clause for the raw query
-    const idsPlaceholder = allPossibleIds.join(',');
+    // Get transactions from ad_mouvement
+    const [mouvements, total] = await Promise.all([
+      prisma.mouvement.findMany({
+        where: { cpte_interne_cli: { in: allPossibleIds } },
+        skip: offset,
+        take: actualLimit,
+        orderBy: { date_valeur: 'desc' },
+      }),
+      prisma.mouvement.count({
+        where: { cpte_interne_cli: { in: allPossibleIds } },
+      }),
+    ]);
 
-    const transactions = await prisma.$queryRawUnsafe(`
-      SELECT
-        m.id_mouvement,
-        m.id_ecriture,
-        m.compte as compte_comptable,
-        m.cpte_interne_cli,
-        m.sens,
-        m.montant,
-        m.devise,
-        m.date_valeur,
-        e.date_ecriture,
-        e.libelle,
-        e.ref_externe,
-        e.type_operation,
-        e.info,
-        e.communication
-      FROM ad_mouvement m
-      LEFT JOIN ad_ecriture e ON m.id_ecriture = e.id_ecriture
-      WHERE m.cpte_interne_cli IN (${idsPlaceholder})
-      ORDER BY COALESCE(e.date_ecriture, m.date_valeur) DESC, m.id_mouvement DESC
-      LIMIT ${actualLimit}
-      OFFSET ${offset}
-    `) as any[];
+    // Try to get ecriture details for transactions that have id_ecriture
+    const ecritureIds = mouvements
+      .filter(m => m.id_ecriture != null)
+      .map(m => m.id_ecriture!);
 
-    const formattedTransactions = transactions.map((t: any) => ({
-      id_mouvement: t.id_mouvement,
-      date_mvt: t.date_ecriture || t.date_valeur,  // Préférer date_ecriture si disponible
-      date_valeur: t.date_valeur,
-      compte_id: t.cpte_interne_cli,
-      compte_numero: accountMap.get(t.cpte_interne_cli!) || 'N/A',
-      sens: t.sens,
-      montant: Number(t.montant || 0),
-      devise: t.devise,
-      compte_comptable: t.compte_comptable,
-      id_ecriture: t.id_ecriture,
-      // Informations de l'écriture (commentaire/note)
-      libelle: t.libelle || null,
-      ref_externe: t.ref_externe || null,
-      type_operation: t.type_operation || null,
-      info: t.info || null,
-      communication: t.communication || null,
-    }));
+    let ecrituresMap = new Map<number, any>();
+
+    if (ecritureIds.length > 0) {
+      try {
+        // Try to get ecriture details - this may fail if table structure is different
+        const ecritures = await prisma.$queryRawUnsafe(`
+          SELECT id_ecriture, date_ecriture, libelle, ref_externe, info
+          FROM ad_ecriture
+          WHERE id_ecriture IN (${ecritureIds.join(',')})
+        `) as any[];
+
+        ecritures.forEach((e: any) => {
+          ecrituresMap.set(e.id_ecriture, e);
+        });
+      } catch (ecritureError) {
+        // If the query fails, just continue without ecriture details
+        console.log('Could not fetch ecriture details:', ecritureError);
+      }
+    }
+
+    // Format transactions with ecriture details if available
+    const formattedTransactions = mouvements.map(t => {
+      const ecriture = t.id_ecriture ? ecrituresMap.get(t.id_ecriture) : null;
+
+      return {
+        id_mouvement: t.id_mouvement,
+        date_mvt: ecriture?.date_ecriture || t.date_valeur,
+        date_valeur: t.date_valeur,
+        compte_id: t.cpte_interne_cli,
+        compte_numero: accountMap.get(t.cpte_interne_cli!) || 'N/A',
+        sens: t.sens,
+        montant: toNumber(t.montant),
+        devise: t.devise,
+        compte_comptable: t.compte,
+        id_ecriture: t.id_ecriture,
+        // Informations de l'écriture (commentaire/note) si disponibles
+        libelle: ecriture?.libelle || null,
+        ref_externe: ecriture?.ref_externe || null,
+        info: ecriture?.info || null,
+      };
+    });
 
     res.json({
       data: formattedTransactions,
