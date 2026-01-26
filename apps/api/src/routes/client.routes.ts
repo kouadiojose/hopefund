@@ -772,9 +772,25 @@ router.get('/:id/transactions', async (req, res, next) => {
 
     if (ecritureIds.length > 0) {
       try {
-        // Try to get ecriture details - this may fail if table structure is different
+        // First, discover which columns exist in ad_ecriture
+        const columnsResult = await prisma.$queryRaw`
+          SELECT column_name FROM information_schema.columns
+          WHERE table_name = 'ad_ecriture'
+        ` as any[];
+
+        const availableColumns = new Set(columnsResult.map((c: any) => c.column_name));
+
+        // Build select clause based on available columns
+        const selectCols = ['id_ecriture'];
+        if (availableColumns.has('date_ecriture')) selectCols.push('date_ecriture');
+        if (availableColumns.has('libelle')) selectCols.push('libelle');
+        if (availableColumns.has('ref_externe')) selectCols.push('ref_externe');
+        if (availableColumns.has('info')) selectCols.push('info');
+        if (availableColumns.has('communication')) selectCols.push('communication');
+        if (availableColumns.has('type_ope')) selectCols.push('type_ope');
+
         const ecritures = await prisma.$queryRawUnsafe(`
-          SELECT id_ecriture, date_ecriture, libelle, ref_externe, info
+          SELECT ${selectCols.join(', ')}
           FROM ad_ecriture
           WHERE id_ecriture IN (${ecritureIds.join(',')})
         `) as any[];
@@ -807,6 +823,8 @@ router.get('/:id/transactions', async (req, res, next) => {
         libelle: ecriture?.libelle || null,
         ref_externe: ecriture?.ref_externe || null,
         info: ecriture?.info || null,
+        communication: ecriture?.communication || null,
+        type_ope: ecriture?.type_ope || null,
       };
     });
 

@@ -856,8 +856,9 @@ export default function ClientDetailPage() {
                         <td className="py-2 px-3">
                           <div>
                             <span>{tx.libelle || tx.libel_mvt || 'Transaction'}</span>
-                            {(tx.ref_externe || tx.info || tx.communication) && (
+                            {(tx.ref_externe || tx.info || tx.communication || tx.type_ope) && (
                               <div className="text-xs text-muted-foreground mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                {tx.type_ope && <span className="mr-2">[{tx.type_ope}]</span>}
                                 {tx.ref_externe && <span className="mr-2">Réf: {tx.ref_externe}</span>}
                                 {tx.info && <span className="mr-2">{tx.info}</span>}
                                 {tx.communication && <span>{tx.communication}</span>}
@@ -960,8 +961,9 @@ export default function ClientDetailPage() {
                         <td className="py-2 px-3">
                           <div>
                             <span>{tx.libelle || tx.libel_mvt || 'Transaction'}</span>
-                            {(tx.ref_externe || tx.info || tx.communication) && (
+                            {(tx.ref_externe || tx.info || tx.communication || tx.type_ope) && (
                               <div className="text-xs text-muted-foreground mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                {tx.type_ope && <span className="mr-2">[{tx.type_ope}]</span>}
                                 {tx.ref_externe && <span className="mr-2">Réf: {tx.ref_externe}</span>}
                                 {tx.info && <span className="mr-2">{tx.info}</span>}
                                 {tx.communication && <span>{tx.communication}</span>}

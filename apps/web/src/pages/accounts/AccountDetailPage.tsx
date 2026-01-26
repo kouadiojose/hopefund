@@ -338,7 +338,7 @@ export default function AccountDetailPage() {
                 <TableBody>
                   {transactions.map((tx: any, index: number) => {
                     const txId = tx.id_mouvement || index;
-                    const hasDetails = tx.libelle || tx.ref_externe || tx.info || tx.communication;
+                    const hasDetails = tx.libelle || tx.ref_externe || tx.info || tx.communication || tx.type_ope;
                     const isExpanded = expandedTx === txId;
 
                     return (
@@ -422,10 +422,10 @@ export default function AccountDetailPage() {
                                       <span className="text-gray-700 font-mono text-xs">{tx.ref_externe}</span>
                                     </div>
                                   )}
-                                  {tx.type_operation && (
+                                  {tx.type_ope && (
                                     <div className="flex gap-2">
                                       <span className="text-gray-500 font-medium min-w-24">Type opération:</span>
-                                      <span className="text-gray-700">{tx.type_operation}</span>
+                                      <span className="text-gray-700">{tx.type_ope}</span>
                                     </div>
                                   )}
                                   {tx.info && (
