@@ -47,6 +47,104 @@ router.get('/debug-search', async (req, res) => {
   }
 });
 
+// DEBUG: Investigate if a client was deleted (temporary)
+router.get('/debug-deleted', async (req, res) => {
+  try {
+    const search = req.query.q as string || 'Marc Kagisye';
+    const result: any = {
+      search,
+      timestamp: new Date().toISOString(),
+    };
+
+    // 1. Search audit logs for any DELETE actions on Client entity mentioning this name
+    const deleteAudits = await prisma.auditLog.findMany({
+      where: {
+        OR: [
+          { action: 'DELETE', entity: 'Client' },
+          { action: 'DELETE', entity: 'client' },
+        ],
+      },
+      orderBy: { created_at: 'desc' },
+      take: 50,
+    });
+    result.deleteAudits = deleteAudits;
+
+    // 2. Search for any audit logs that might contain the name
+    const searchTerms = search.trim().split(/\s+/).filter(t => t.length > 0);
+    // Convert to JSON search - look for the name in old_values or new_values
+    const auditMentions = await prisma.$queryRawUnsafe(`
+      SELECT *
+      FROM app_audit_logs
+      WHERE entity = 'Client'
+        AND (
+          CAST(old_values AS TEXT) ILIKE $1
+          OR CAST(new_values AS TEXT) ILIKE $1
+          OR CAST(old_values AS TEXT) ILIKE $2
+          OR CAST(new_values AS TEXT) ILIKE $2
+        )
+      ORDER BY created_at DESC
+      LIMIT 50
+    `, `%${searchTerms[0] || ''}%`, `%${searchTerms[1] || ''}%`) as any[];
+    result.auditMentions = auditMentions;
+
+    // 3. Search ALL clients including inactive ones (etat != 1)
+    const allMatchingClients = await prisma.$queryRawUnsafe(`
+      SELECT id_client, id_ag, pp_nom, pp_prenom, pm_raison_sociale, etat, statut_juridique,
+             date_creation, date_modif,
+             CASE etat
+               WHEN 1 THEN 'Actif'
+               WHEN 2 THEN 'Inactif'
+               WHEN 3 THEN 'Bloqué'
+               WHEN 4 THEN 'Supprimé'
+               WHEN 5 THEN 'Décédé'
+               ELSE 'État ' || COALESCE(etat::text, 'NULL')
+             END as etat_label
+      FROM ad_cli
+      WHERE LOWER(pp_nom) LIKE LOWER($1)
+         OR LOWER(pp_prenom) LIKE LOWER($1)
+         OR LOWER(pp_nom) LIKE LOWER($2)
+         OR LOWER(pp_prenom) LIKE LOWER($2)
+         OR LOWER(pm_raison_sociale) LIKE LOWER($1)
+         OR LOWER(pm_raison_sociale) LIKE LOWER($2)
+      ORDER BY id_client DESC
+      LIMIT 100
+    `, `%${searchTerms[0] || ''}%`, `%${searchTerms[1] || ''}%`) as any[];
+    result.allMatchingClients = allMatchingClients;
+
+    // 4. Count clients by etat (state)
+    const clientsByState = await prisma.$queryRaw`
+      SELECT etat, COUNT(*) as count
+      FROM ad_cli
+      GROUP BY etat
+      ORDER BY etat
+    ` as any[];
+    result.clientsByState = clientsByState;
+
+    // 5. Check for exact match "Marc Kagisye" (first name + last name)
+    const exactMatch = await prisma.$queryRaw`
+      SELECT *
+      FROM ad_cli
+      WHERE (LOWER(pp_prenom) = LOWER('Marc') AND LOWER(pp_nom) = LOWER('Kagisye'))
+         OR (LOWER(pp_prenom) = LOWER('Kagisye') AND LOWER(pp_nom) = LOWER('Marc'))
+    ` as any[];
+    result.exactMatch = exactMatch;
+
+    // 6. List all clients with "Kagisye" in name (exact)
+    const kagisyeClients = await prisma.$queryRaw`
+      SELECT id_client, pp_nom, pp_prenom, etat, date_creation
+      FROM ad_cli
+      WHERE LOWER(pp_nom) = LOWER('Kagisye')
+         OR LOWER(pp_prenom) = LOWER('Kagisye')
+      ORDER BY id_client
+    ` as any[];
+    result.kagisyeClients = kagisyeClients;
+
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message, stack: error.stack });
+  }
+});
+
 // All routes require authentication
 router.use(authenticate);
 
