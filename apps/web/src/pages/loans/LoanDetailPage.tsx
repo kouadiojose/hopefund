@@ -782,14 +782,16 @@ export default function LoanDetailPage() {
               ) : (
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>N°</TableHead>
-                      <TableHead>Date échéance</TableHead>
-                      <TableHead className="text-right">Total dû</TableHead>
-                      <TableHead className="text-right">Payé</TableHead>
-                      <TableHead>Date paiement</TableHead>
-                      <TableHead className="text-right">Solde</TableHead>
-                      <TableHead>Statut</TableHead>
+                    <TableRow className="bg-gray-50">
+                      <TableHead className="w-12">N°</TableHead>
+                      <TableHead>Échéance prévue</TableHead>
+                      <TableHead className="text-right">Capital</TableHead>
+                      <TableHead className="text-right">Intérêts</TableHead>
+                      <TableHead className="text-right font-semibold">Total dû</TableHead>
+                      <TableHead className="text-right text-green-700">Montant payé</TableHead>
+                      <TableHead className="text-green-700">Date paiement</TableHead>
+                      <TableHead className="text-right text-orange-700">Solde restant</TableHead>
+                      <TableHead className="text-center">Statut</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -797,6 +799,7 @@ export default function LoanDetailPage() {
                       const status = getEcheanceStatus(echeance);
                       const soldeRestant = Number(echeance.solde_capital || 0) + Number(echeance.solde_int || 0);
                       const totalDu = Number(echeance.mnt_capital || 0) + Number(echeance.mnt_int || 0);
+                      const montantPaye = Number(echeance.mnt_paye || 0);
                       // Calculate days late if overdue
                       const today = new Date();
                       const dateEch = new Date(echeance.date_ech);
@@ -810,38 +813,49 @@ export default function LoanDetailPage() {
                           transition={{ delay: 0.7 + index * 0.02 }}
                           className={cn(
                             'hover:bg-gray-50',
+                            status === 'paid' && 'bg-green-50/50',
                             status === 'pending' && 'bg-yellow-50',
                             status === 'overdue' && 'bg-red-50'
                           )}
                         >
                           <TableCell className="font-medium">#{echeance.num_ech}</TableCell>
                           <TableCell>
-                            <div>{formatDate(echeance.date_ech)}</div>
-                            <div className="text-xs text-gray-400">
-                              Cap: {formatCurrency(echeance.mnt_capital || 0)} | Int: {formatCurrency(echeance.mnt_int || 0)}
-                            </div>
+                            <div className="font-medium">{formatDate(echeance.date_ech)}</div>
+                            {status === 'overdue' && (
+                              <div className="text-xs text-red-600">{daysLate} jours de retard</div>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {formatCurrency(echeance.mnt_capital || 0)}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums text-blue-600">
+                            {formatCurrency(echeance.mnt_int || 0)}
                           </TableCell>
                           <TableCell className="text-right font-semibold tabular-nums">
                             {formatCurrency(totalDu)}
                           </TableCell>
-                          <TableCell className="text-right tabular-nums text-green-600">
-                            {formatCurrency(echeance.mnt_paye || 0)}
+                          <TableCell className="text-right tabular-nums">
+                            {montantPaye > 0 ? (
+                              <span className="text-green-600 font-semibold">{formatCurrency(montantPaye)}</span>
+                            ) : (
+                              <span className="text-gray-300">-</span>
+                            )}
                           </TableCell>
                           <TableCell>
                             {echeance.date_paiement ? (
-                              <span className="text-green-600">{formatDate(echeance.date_paiement)}</span>
+                              <span className="text-green-600 font-medium">{formatDate(echeance.date_paiement)}</span>
                             ) : (
-                              <span className="text-gray-400">-</span>
+                              <span className="text-gray-300">-</span>
                             )}
                           </TableCell>
                           <TableCell className="text-right tabular-nums">
                             {soldeRestant > 0 ? (
-                              <span className="text-orange-600 font-medium">{formatCurrency(soldeRestant)}</span>
+                              <span className="text-orange-600 font-semibold">{formatCurrency(soldeRestant)}</span>
                             ) : (
-                              <span className="text-gray-400">0</span>
+                              <span className="text-green-600">0</span>
                             )}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="text-center">
                             {status === 'paid' && (
                               <Badge variant="success" className="gap-1">
                                 <CheckCircle className="h-3 w-3" />
@@ -849,13 +863,10 @@ export default function LoanDetailPage() {
                               </Badge>
                             )}
                             {status === 'overdue' && (
-                              <div>
-                                <Badge variant="destructive" className="gap-1">
-                                  <XCircle className="h-3 w-3" />
-                                  En retard
-                                </Badge>
-                                <div className="text-xs text-red-600 mt-1">{daysLate} jours</div>
-                              </div>
+                              <Badge variant="destructive" className="gap-1">
+                                <XCircle className="h-3 w-3" />
+                                Impayé
+                              </Badge>
                             )}
                             {status === 'pending' && (
                               <Badge variant="warning" className="gap-1">
@@ -870,6 +881,37 @@ export default function LoanDetailPage() {
                         </motion.tr>
                       );
                     })}
+                    {/* Total row */}
+                    <TableRow className="bg-gray-100 font-semibold border-t-2">
+                      <TableCell colSpan={2} className="text-right">
+                        TOTAUX
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatCurrency(echeances.reduce((sum, e) => sum + Number(e.mnt_capital || 0), 0))}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-blue-600">
+                        {formatCurrency(echeances.reduce((sum, e) => sum + Number(e.mnt_int || 0), 0))}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatCurrency(echeances.reduce((sum, e) => sum + Number(e.mnt_capital || 0) + Number(e.mnt_int || 0), 0))}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-green-600">
+                        {formatCurrency(echeances.reduce((sum, e) => sum + Number(e.mnt_paye || 0), 0))}
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-xs text-gray-500">
+                          {echeances.filter(e => e.date_paiement).length} paiements
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-orange-600">
+                        {formatCurrency(echeances.reduce((sum, e) => sum + Number(e.solde_capital || 0) + Number(e.solde_int || 0), 0))}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <span className="text-xs">
+                          {echeances.filter(e => getEcheanceStatus(e) === 'paid').length}/{echeances.length}
+                        </span>
+                      </TableCell>
+                    </TableRow>
                   </TableBody>
                 </Table>
               )}

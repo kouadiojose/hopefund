@@ -751,35 +751,44 @@ export default function ClientDetailPage() {
                           <div className="overflow-x-auto">
                             <table className="w-full text-sm">
                               <thead>
-                                <tr className="border-b">
-                                  <th className="text-left py-2 px-2">N</th>
-                                  <th className="text-left py-2 px-2">Date</th>
-                                  <th className="text-right py-2 px-2">Capital</th>
-                                  <th className="text-right py-2 px-2">Interets</th>
-                                  <th className="text-right py-2 px-2">Total</th>
-                                  <th className="text-right py-2 px-2">Restant</th>
-                                  <th className="text-center py-2 px-2">Etat</th>
+                                <tr className="border-b bg-muted/50">
+                                  <th className="text-left py-2 px-2">N°</th>
+                                  <th className="text-left py-2 px-2">Échéance</th>
+                                  <th className="text-right py-2 px-2">Dû</th>
+                                  <th className="text-right py-2 px-2 text-green-700">Payé</th>
+                                  <th className="text-left py-2 px-2 text-green-700">Date paiement</th>
+                                  <th className="text-right py-2 px-2 text-orange-700">Reste</th>
+                                  <th className="text-center py-2 px-2">Statut</th>
                                 </tr>
                               </thead>
                               <tbody>
                                 {credit.echeancier.map((ech) => (
                                   <tr
                                     key={ech.num_ech}
-                                    className={`border-b ${ech.en_retard ? 'bg-red-50' : ''}`}
+                                    className={`border-b hover:bg-muted/30 ${ech.en_retard ? 'bg-red-50' : ech.etat === 2 ? 'bg-green-50/50' : ''}`}
                                   >
-                                    <td className="py-2 px-2">{ech.num_ech}</td>
+                                    <td className="py-2 px-2 font-medium">{ech.num_ech}</td>
                                     <td className="py-2 px-2">
-                                      {formatDate(ech.date_ech)}
+                                      <div>{formatDate(ech.date_ech)}</div>
                                       {ech.en_retard && (
-                                        <span className="text-xs text-red-600 ml-1">
-                                          ({getDaysOverdue(ech.date_ech)}j)
+                                        <span className="text-xs text-red-600">
+                                          {getDaysOverdue(ech.date_ech)} jours de retard
                                         </span>
                                       )}
+                                      <div className="text-xs text-muted-foreground">
+                                        Cap: {formatCurrency(ech.mnt_capital)} | Int: {formatCurrency(ech.mnt_interet)}
+                                      </div>
                                     </td>
-                                    <td className="text-right py-2 px-2">{formatCurrency(ech.mnt_capital)}</td>
-                                    <td className="text-right py-2 px-2">{formatCurrency(ech.mnt_interet)}</td>
                                     <td className="text-right py-2 px-2 font-medium">{formatCurrency(ech.montant_total)}</td>
-                                    <td className="text-right py-2 px-2">{formatCurrency(ech.solde_total)}</td>
+                                    <td className="text-right py-2 px-2 font-medium text-green-600">
+                                      {ech.mnt_paye > 0 ? formatCurrency(ech.mnt_paye) : '-'}
+                                    </td>
+                                    <td className="py-2 px-2 text-green-600">
+                                      {ech.date_paiement ? formatDate(ech.date_paiement) : '-'}
+                                    </td>
+                                    <td className="text-right py-2 px-2 font-medium text-orange-600">
+                                      {ech.solde_total > 0 ? formatCurrency(ech.solde_total) : '-'}
+                                    </td>
                                     <td className="text-center py-2 px-2">
                                       <Badge className={`text-xs ${getEcheanceStatusColor(ech.etat_label)}`}>
                                         {ech.etat_label}
@@ -787,6 +796,25 @@ export default function ClientDetailPage() {
                                     </td>
                                   </tr>
                                 ))}
+                                {/* Total row */}
+                                <tr className="bg-muted font-semibold border-t-2">
+                                  <td colSpan={2} className="py-2 px-2 text-right">TOTAUX</td>
+                                  <td className="text-right py-2 px-2">
+                                    {formatCurrency(credit.echeancier.reduce((sum, e) => sum + e.montant_total, 0))}
+                                  </td>
+                                  <td className="text-right py-2 px-2 text-green-600">
+                                    {formatCurrency(credit.echeancier.reduce((sum, e) => sum + e.mnt_paye, 0))}
+                                  </td>
+                                  <td className="py-2 px-2 text-xs text-muted-foreground">
+                                    {credit.echeancier.filter(e => e.date_paiement).length} paiements
+                                  </td>
+                                  <td className="text-right py-2 px-2 text-orange-600">
+                                    {formatCurrency(credit.echeancier.reduce((sum, e) => sum + e.solde_total, 0))}
+                                  </td>
+                                  <td className="text-center py-2 px-2 text-xs">
+                                    {credit.echeances_payees}/{credit.echeancier.length}
+                                  </td>
+                                </tr>
                               </tbody>
                             </table>
                           </div>
