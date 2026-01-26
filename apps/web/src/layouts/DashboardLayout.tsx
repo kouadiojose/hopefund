@@ -13,7 +13,6 @@ import {
   Menu,
   X,
   Bell,
-  Search,
   ChevronDown,
   Shield,
   UserCog,
@@ -26,7 +25,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth';
-import { Input } from '@/components/ui/input';
+import GlobalSearch from '@/components/GlobalSearch';
 
 type NavItem = {
   name: string;
@@ -182,13 +181,8 @@ export default function DashboardLayout() {
                 <Menu className="h-5 w-5" />
               </button>
 
-              <div className="hidden sm:block relative w-64">
-                <Input
-                  type="search"
-                  placeholder="Rechercher..."
-                  icon={<Search className="h-4 w-4" />}
-                  className="bg-gray-50"
-                />
+              <div className="hidden sm:block">
+                <GlobalSearch />
               </div>
             </div>
 
