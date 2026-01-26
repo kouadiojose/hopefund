@@ -15,74 +15,32 @@ router.get('/debug-search', async (req, res) => {
     const search = req.query.q as string || 'Marc Kagisye';
     const searchTerms = search.trim().split(/\s+/).filter(t => t.length > 0);
 
-    // Build OR conditions for each term
-    const searchConditions: any[] = [];
-    for (const term of searchTerms) {
-      searchConditions.push(
-        { pp_nom: { contains: term, mode: 'insensitive' } },
-        { pp_prenom: { contains: term, mode: 'insensitive' } },
-        { pm_raison_sociale: { contains: term, mode: 'insensitive' } },
-      );
-    }
+    // Use raw SQL to search - avoids TypeScript issues with Prisma mode
+    const term1 = searchTerms[0] || '';
+    const term2 = searchTerms[1] || '';
 
-    // Search without any filters
-    const clients = await prisma.client.findMany({
-      where: { OR: searchConditions },
-      select: {
-        id_client: true,
-        id_ag: true,
-        pp_nom: true,
-        pp_prenom: true,
-        pm_raison_sociale: true,
-        etat: true,
-        statut_juridique: true,
-      },
-      take: 50,
-    });
-
-    // Also try exact match
-    const exactMatches = await prisma.client.findMany({
-      where: {
-        OR: [
-          { pp_nom: { equals: search, mode: 'insensitive' } },
-          { pp_prenom: { equals: search, mode: 'insensitive' } },
-          // Try each term separately
-          ...searchTerms.map(term => ({ pp_nom: { equals: term, mode: 'insensitive' } })),
-          ...searchTerms.map(term => ({ pp_prenom: { equals: term, mode: 'insensitive' } })),
-        ],
-      },
-      select: {
-        id_client: true,
-        id_ag: true,
-        pp_nom: true,
-        pp_prenom: true,
-        pm_raison_sociale: true,
-        etat: true,
-        statut_juridique: true,
-      },
-      take: 20,
-    });
-
-    // Also try a LIKE query with raw SQL
     const rawResults = await prisma.$queryRawUnsafe(`
       SELECT id_client, id_ag, pp_nom, pp_prenom, pm_raison_sociale, etat, statut_juridique
       FROM ad_cli
-      WHERE LOWER(pp_nom) LIKE LOWER('%${searchTerms[0] || ''}%')
-         OR LOWER(pp_prenom) LIKE LOWER('%${searchTerms[0] || ''}%')
-         ${searchTerms[1] ? `OR LOWER(pp_nom) LIKE LOWER('%${searchTerms[1]}%')` : ''}
-         ${searchTerms[1] ? `OR LOWER(pp_prenom) LIKE LOWER('%${searchTerms[1]}%')` : ''}
-      LIMIT 50
-    `);
+      WHERE LOWER(pp_nom) LIKE LOWER($1)
+         OR LOWER(pp_prenom) LIKE LOWER($1)
+         OR LOWER(pp_nom) LIKE LOWER($2)
+         OR LOWER(pp_prenom) LIKE LOWER($2)
+         OR LOWER(pm_raison_sociale) LIKE LOWER($1)
+         OR LOWER(pm_raison_sociale) LIKE LOWER($2)
+      ORDER BY id_client DESC
+      LIMIT 100
+    `, `%${term1}%`, `%${term2}%`) as any[];
+
+    // Get total client count
+    const totalClients = await prisma.client.count();
 
     res.json({
       search,
       searchTerms,
-      prismaResults: clients,
-      exactMatches,
-      rawResults,
-      totalPrisma: clients.length,
-      totalExact: exactMatches.length,
-      totalRaw: (rawResults as any[]).length,
+      results: rawResults,
+      totalFound: rawResults.length,
+      totalClientsInDb: totalClients,
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message, stack: error.stack });
