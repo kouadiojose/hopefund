@@ -162,8 +162,16 @@ router.get('/', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_O
       ? { ...where, id_client: { not: exactMatch.id_client } }
       : where;
 
-    const [clients, total] = await Promise.all([
-      prisma.client.findMany({
+    // For search queries, use raw SQL to order by relevance
+    let clients: any[];
+    let total: number;
+
+    if (search && search.trim().length > 0) {
+      const searchTerms = search.trim().split(/\s+/).filter(t => t.length > 0);
+      const searchLower = search.toLowerCase();
+
+      // Get all matching clients with relevance scoring
+      const allMatches = await prisma.client.findMany({
         where: mainWhere,
         include: {
           comptes: {
@@ -181,15 +189,92 @@ router.get('/', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_O
             },
           },
         },
-        skip: exactMatch ? (page - 1) * limit : (page - 1) * limit,
-        take: exactMatch && page === 1 ? limit - 1 : limit,
-        orderBy: { date_creation: 'desc' },
-      }),
-      prisma.client.count({ where }), // Count with original where (includes exact match)
-    ]);
+        take: 500, // Limit for performance
+      });
 
-    // Combine: exact match first (on page 1), then other results
-    const sortedClients = exactMatch && page === 1
+      // Score and sort by relevance
+      const scoredClients = allMatches.map((c: any) => {
+        let score = 0;
+        const nom = (c.pp_nom || '').toLowerCase();
+        const prenom = (c.pp_prenom || '').toLowerCase();
+        const raisonSociale = (c.pm_raison_sociale || '').toLowerCase();
+        const fullName = `${prenom} ${nom}`.trim();
+        const fullNameReverse = `${nom} ${prenom}`.trim();
+
+        // Exact full name match (highest priority)
+        if (fullName === searchLower || fullNameReverse === searchLower) {
+          score += 1000;
+        }
+
+        // Exact match on nom or prenom
+        for (const term of searchTerms) {
+          const termLower = term.toLowerCase();
+          if (nom === termLower) score += 100;
+          if (prenom === termLower) score += 100;
+          if (raisonSociale === termLower) score += 100;
+
+          // Starts with
+          if (nom.startsWith(termLower)) score += 50;
+          if (prenom.startsWith(termLower)) score += 50;
+          if (raisonSociale.startsWith(termLower)) score += 50;
+
+          // Contains
+          if (nom.includes(termLower)) score += 10;
+          if (prenom.includes(termLower)) score += 10;
+          if (raisonSociale.includes(termLower)) score += 10;
+        }
+
+        // Bonus for active clients with accounts/credits
+        if (c.comptes.length > 0) score += 5;
+        if (c.dossiers_credit.length > 0) score += 5;
+        if (c.etat === 1) score += 3; // Active client
+
+        return { ...c, _relevanceScore: score };
+      });
+
+      // Sort by relevance score (descending), then by ID (for consistency)
+      scoredClients.sort((a, b) => {
+        if (b._relevanceScore !== a._relevanceScore) {
+          return b._relevanceScore - a._relevanceScore;
+        }
+        return b.id_client - a.id_client;
+      });
+
+      total = scoredClients.length;
+      const startIndex = (page - 1) * limit;
+      clients = scoredClients.slice(startIndex, startIndex + limit);
+    } else {
+      // No search - use standard pagination
+      [clients, total] = await Promise.all([
+        prisma.client.findMany({
+          where: mainWhere,
+          include: {
+            comptes: {
+              select: {
+                id_cpte: true,
+                solde: true,
+                etat_cpte: true,
+              },
+            },
+            dossiers_credit: {
+              select: {
+                id_doss: true,
+                cre_mnt_octr: true,
+                cre_etat: true,
+              },
+            },
+          },
+          skip: (page - 1) * limit,
+          take: limit,
+          orderBy: { date_creation: 'desc' },
+        }),
+        prisma.client.count({ where }),
+      ]);
+    }
+
+    // For search with relevance, exact ID match is already handled
+    // For no search, combine exact match first on page 1
+    const sortedClients = (!search && exactMatch && page === 1)
       ? [exactMatch, ...clients]
       : clients;
 

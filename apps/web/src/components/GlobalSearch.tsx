@@ -20,13 +20,18 @@ interface Client {
   pp_nom: string;
   pp_prenom: string;
   pm_raison_sociale: string;
+  nom_complet: string;
   statut_juridique: number;
-  num_port: string;
+  num_tel: string;
   email: string;
   etat: number;
-  comptes?: Array<{ id_cpte: number; solde: any; etat_cpte: number }>;
-  dossiers_credit?: Array<{ id_doss: number; cre_mnt_octr: any; cre_etat: number }>;
-  _count?: { comptes: number; dossiers_credit: number };
+  // Summary data from API
+  nombre_comptes?: number;
+  comptes_actifs?: number;
+  total_solde?: number;
+  nombre_credits?: number;
+  credits_en_cours?: number;
+  total_credits?: number;
 }
 
 export default function GlobalSearch() {
@@ -72,10 +77,11 @@ export default function GlobalSearch() {
   const showLoading = isLoading || isFetching;
 
   const getClientName = (client: Client) => {
-    if (client.statut_juridique === 1) {
-      return `${client.pp_prenom || ''} ${client.pp_nom || ''}`.trim();
-    }
-    return client.pm_raison_sociale || `Client #${client.id_client}`;
+    return client.nom_complet || (
+      client.statut_juridique === 1
+        ? `${client.pp_prenom || ''} ${client.pp_nom || ''}`.trim()
+        : client.pm_raison_sociale || `Client #${client.id_client}`
+    );
   };
 
   const getStatusLabel = (etat: number) => {
@@ -100,17 +106,16 @@ export default function GlobalSearch() {
     }
   };
 
-  // Calculate totals for each client
+  // Get stats from client (already computed by API)
   const getClientStats = (client: Client) => {
-    const comptes = client.comptes || [];
-    const credits = client.dossiers_credit || [];
-
-    const comptesActifs = comptes.filter(c => c.etat_cpte === 1).length;
-    const totalSolde = comptes.reduce((sum, c) => sum + Number(c.solde || 0), 0);
-    const creditsActifs = credits.filter(c => [5, 8].includes(c.cre_etat)).length;
-    const totalCredits = credits.reduce((sum, c) => sum + Number(c.cre_mnt_octr || 0), 0);
-
-    return { comptesActifs, totalSolde, creditsActifs, totalCredits, totalComptes: comptes.length, totalDossiers: credits.length };
+    return {
+      comptesActifs: client.comptes_actifs || 0,
+      totalSolde: client.total_solde || 0,
+      creditsActifs: client.credits_en_cours || 0,
+      totalCredits: client.total_credits || 0,
+      totalComptes: client.nombre_comptes || 0,
+      totalDossiers: client.nombre_credits || 0,
+    };
   };
 
   return (
@@ -188,7 +193,7 @@ export default function GlobalSearch() {
                           </div>
                           <div className="text-sm text-gray-500 mb-2">
                             ID: #{client.id_client}
-                            {client.num_port && ` • ${client.num_port}`}
+                            {client.num_tel && ` • ${client.num_tel}`}
                           </div>
 
                           {/* Stats */}
