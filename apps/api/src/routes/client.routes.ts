@@ -170,7 +170,13 @@ router.get('/', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_O
       const searchTerms = search.trim().split(/\s+/).filter(t => t.length > 0);
       const searchLower = search.toLowerCase();
 
-      // Get all matching clients with relevance scoring
+      // First get total count of matching clients
+      total = await prisma.client.count({ where: mainWhere });
+
+      // Get matching clients - no arbitrary limit, just get what we need for pagination
+      // But first fetch more to allow for relevance sorting
+      const fetchLimit = Math.min(total, 2000); // Fetch up to 2000 for relevance sorting
+
       const allMatches = await prisma.client.findMany({
         where: mainWhere,
         include: {
@@ -189,7 +195,7 @@ router.get('/', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_O
             },
           },
         },
-        take: 500, // Limit for performance
+        take: fetchLimit,
       });
 
       // Score and sort by relevance
@@ -206,9 +212,13 @@ router.get('/', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_O
           score += 1000;
         }
 
-        // Exact match on nom or prenom
+        // Check if ALL terms match (bonus for matching all terms)
+        let allTermsMatch = true;
         for (const term of searchTerms) {
           const termLower = term.toLowerCase();
+          const termMatches = nom.includes(termLower) || prenom.includes(termLower) || raisonSociale.includes(termLower);
+          if (!termMatches) allTermsMatch = false;
+
           if (nom === termLower) score += 100;
           if (prenom === termLower) score += 100;
           if (raisonSociale === termLower) score += 100;
@@ -222,6 +232,11 @@ router.get('/', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_O
           if (nom.includes(termLower)) score += 10;
           if (prenom.includes(termLower)) score += 10;
           if (raisonSociale.includes(termLower)) score += 10;
+        }
+
+        // Big bonus if all search terms are present
+        if (allTermsMatch && searchTerms.length > 1) {
+          score += 500;
         }
 
         // Bonus for active clients with accounts/credits
@@ -240,9 +255,12 @@ router.get('/', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_O
         return b.id_client - a.id_client;
       });
 
-      total = scoredClients.length;
+      // Apply pagination to sorted results
       const startIndex = (page - 1) * limit;
       clients = scoredClients.slice(startIndex, startIndex + limit);
+
+      // Update total to reflect actual matches (scoredClients length might be less than total due to fetchLimit)
+      total = scoredClients.length;
     } else {
       // No search - use standard pagination
       [clients, total] = await Promise.all([
