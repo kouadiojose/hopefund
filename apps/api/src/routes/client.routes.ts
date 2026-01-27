@@ -539,23 +539,41 @@ router.get('/:id', async (req, res, next) => {
       dossiers_credit = [];
     }
 
-    // Fetch echeances and garanties for each credit
+    // Fetch paiements (from ad_sre) and garanties for each credit
     const creditsWithDetails = await Promise.all(
       dossiers_credit.map(async (dossier: any) => {
         try {
-          const [echeances, garanties] = await Promise.all([
-            prisma.echeance.findMany({
-              where: { id_doss: dossier.id_doss },
-              orderBy: { date_ech: 'asc' },
-            }),
-            prisma.garantie.findMany({
-              where: { id_doss: dossier.id_doss },
-            }),
-          ]);
-          return { ...dossier, echeances, garanties };
+          // Récupérer les paiements depuis ad_sre (historique réel des remboursements)
+          const paiements = await prisma.$queryRawUnsafe(`
+            SELECT id_ech, num_remb, date_remb, mnt_remb_cap, mnt_remb_int, mnt_remb_pen, mnt_remb_gar, annul_remb, date_creation
+            FROM ad_sre
+            WHERE id_doss = $1
+            ORDER BY date_remb ASC, num_remb ASC
+          `, dossier.id_doss) as any[];
+
+          const garanties = await prisma.garantie.findMany({
+            where: { id_doss: dossier.id_doss },
+          });
+
+          // Convertir les paiements en format echeances pour compatibilité
+          const echeances = paiements.map((p: any, index: number) => ({
+            id_ech: p.id_ech,
+            num_ech: p.num_remb || (index + 1),
+            date_ech: p.date_remb,
+            date_paiement: p.date_remb,
+            mnt_capital: Number(p.mnt_remb_cap || 0),
+            mnt_int: Number(p.mnt_remb_int || 0),
+            mnt_paye: Number(p.mnt_remb_cap || 0) + Number(p.mnt_remb_int || 0) + Number(p.mnt_remb_pen || 0),
+            mnt_penalite: Number(p.mnt_remb_pen || 0),
+            solde_capital: 0,
+            solde_int: 0,
+            etat: p.annul_remb ? 3 : 2, // 2 = payé, 3 = annulé
+          }));
+
+          return { ...dossier, echeances, paiements, garanties };
         } catch (err) {
           logger.error(`Error fetching details for credit ${dossier.id_doss}:`, err);
-          return { ...dossier, echeances: [], garanties: [] };
+          return { ...dossier, echeances: [], paiements: [], garanties: [] };
         }
       })
     );
@@ -723,21 +741,34 @@ router.get('/:id', async (req, res, next) => {
             date_evaluation: g.date_evaluation,
           })),
 
-          // Échéancier complet
+          // Échéancier complet (historique des paiements depuis ad_sre)
           echeancier: (d.echeances || []).map((e: any) => ({
-            num_ech: e.id_ech,
+            num_ech: e.num_ech || e.id_ech,
             date_ech: e.date_ech,
             mnt_capital: toNumber(e.mnt_capital),
             mnt_interet: toNumber(e.mnt_int),
-            montant_total: toNumber(e.mnt_capital) + toNumber(e.mnt_int),
+            mnt_penalite: toNumber(e.mnt_penalite || 0),
+            montant_total: toNumber(e.mnt_capital) + toNumber(e.mnt_int) + toNumber(e.mnt_penalite || 0),
             solde_capital: toNumber(e.solde_capital),
             solde_interet: toNumber(e.solde_int),
             solde_total: toNumber(e.solde_capital) + toNumber(e.solde_int),
             date_paiement: e.date_paiement,
             mnt_paye: toNumber(e.mnt_paye),
             etat: e.etat,
-            etat_label: e.etat === 2 ? 'Payé' : (e.date_ech && new Date(e.date_ech) < today ? 'En retard' : 'À payer'),
-            en_retard: e.etat !== 2 && e.date_ech && new Date(e.date_ech) < today,
+            etat_label: e.etat === 2 ? 'Payé' : e.etat === 3 ? 'Annulé' : 'En attente',
+            en_retard: false, // Les paiements effectués ne sont pas en retard
+          })),
+
+          // Paiements détaillés (données brutes de ad_sre)
+          paiements: (d.paiements || []).map((p: any) => ({
+            num_remb: p.num_remb,
+            date_remb: p.date_remb,
+            mnt_remb_cap: toNumber(p.mnt_remb_cap),
+            mnt_remb_int: toNumber(p.mnt_remb_int),
+            mnt_remb_pen: toNumber(p.mnt_remb_pen),
+            mnt_remb_gar: toNumber(p.mnt_remb_gar),
+            total: toNumber(p.mnt_remb_cap) + toNumber(p.mnt_remb_int) + toNumber(p.mnt_remb_pen),
+            annule: p.annul_remb === 1,
           })),
         };
       }),

@@ -572,18 +572,17 @@ router.get('/:id', async (req, res, next) => {
       console.error('Error fetching client:', clientError);
     }
 
-    // Récupérer les échéances séparément
-    let echeances: any[] = [];
+    // Récupérer l'historique des paiements depuis ad_sre (table réelle des remboursements)
+    let paiements: any[] = [];
     try {
-      echeances = await prisma.echeance.findMany({
-        where: {
-          id_doss: loanId,
-          id_ag: loan.id_ag,
-        },
-        orderBy: { date_ech: 'asc' },
-      });
-    } catch (echeancesError) {
-      console.error('Error fetching echeances:', echeancesError);
+      paiements = await prisma.$queryRawUnsafe(`
+        SELECT id_ech, num_remb, date_remb, mnt_remb_cap, mnt_remb_int, mnt_remb_pen, mnt_remb_gar, annul_remb, date_creation
+        FROM ad_sre
+        WHERE id_doss = $1 AND id_ag = $2
+        ORDER BY date_remb ASC, num_remb ASC
+      `, loanId, loan.id_ag) as any[];
+    } catch (paiementsError) {
+      console.error('Error fetching paiements from ad_sre:', paiementsError);
     }
 
     // Récupérer les garanties séparément
@@ -599,24 +598,57 @@ router.get('/:id', async (req, res, next) => {
       console.error('Error fetching garanties:', garantiesError);
     }
 
-    // Calculer les totaux
-    const totalCapital = echeances.reduce((sum, e) => sum + Number(e.mnt_capital || 0), 0);
-    const totalInteret = echeances.reduce((sum, e) => sum + Number(e.mnt_int || 0), 0);
-    const totalPaye = echeances.reduce((sum, e) => sum + Number(e.mnt_paye || 0), 0);
-    const soldeCapital = echeances.reduce((sum, e) => sum + Number(e.solde_capital || 0), 0);
-    const soldeInteret = echeances.reduce((sum, e) => sum + Number(e.solde_int || 0), 0);
+    // Calculer les totaux depuis les paiements réels
+    const totalCapitalRembourse = paiements.reduce((sum, p) => sum + Number(p.mnt_remb_cap || 0), 0);
+    const totalInteretRembourse = paiements.reduce((sum, p) => sum + Number(p.mnt_remb_int || 0), 0);
+    const totalPenaliteRembourse = paiements.reduce((sum, p) => sum + Number(p.mnt_remb_pen || 0), 0);
+    const totalRembourse = totalCapitalRembourse + totalInteretRembourse + totalPenaliteRembourse;
+    const montantOctroye = Number(loan.cre_mnt_octr || 0);
+    const soldeCapital = montantOctroye - totalCapitalRembourse;
+
+    // Formater les paiements pour l'interface
+    const echeances = paiements.map((p, index) => ({
+      id_ech: p.id_ech,
+      num_ech: p.num_remb || (index + 1),
+      date_ech: p.date_remb, // Date du paiement
+      date_paiement: p.date_remb,
+      mnt_capital: Number(p.mnt_remb_cap || 0),
+      mnt_int: Number(p.mnt_remb_int || 0),
+      mnt_paye: Number(p.mnt_remb_cap || 0) + Number(p.mnt_remb_int || 0) + Number(p.mnt_remb_pen || 0),
+      mnt_penalite: Number(p.mnt_remb_pen || 0),
+      solde_capital: 0, // Sera calculé si nécessaire
+      solde_int: 0,
+      etat: p.annul_remb ? 3 : 2, // 2 = payé, 3 = annulé
+      annule: p.annul_remb === 1,
+    }));
 
     res.json({
       ...loan,
       client,
       echeances,
+      paiements: paiements.map(p => ({
+        id_ech: p.id_ech,
+        num_remb: p.num_remb,
+        date_remb: p.date_remb,
+        mnt_remb_cap: Number(p.mnt_remb_cap || 0),
+        mnt_remb_int: Number(p.mnt_remb_int || 0),
+        mnt_remb_pen: Number(p.mnt_remb_pen || 0),
+        mnt_remb_gar: Number(p.mnt_remb_gar || 0),
+        total: Number(p.mnt_remb_cap || 0) + Number(p.mnt_remb_int || 0) + Number(p.mnt_remb_pen || 0),
+        annule: p.annul_remb === 1,
+        date_creation: p.date_creation,
+      })),
       garanties,
       resume: {
-        totalCapital,
-        totalInteret,
-        totalDu: totalCapital + totalInteret,
-        totalPaye,
-        soldeRestant: soldeCapital + soldeInteret,
+        montantOctroye,
+        totalCapital: totalCapitalRembourse,
+        totalInteret: totalInteretRembourse,
+        totalPenalite: totalPenaliteRembourse,
+        totalDu: montantOctroye, // Le montant dû est le montant octroyé
+        totalPaye: totalRembourse,
+        soldeRestant: soldeCapital > 0 ? soldeCapital : 0,
+        nombrePaiements: paiements.length,
+        creditSolde: soldeCapital <= 0,
       },
     });
   } catch (error) {

@@ -133,6 +133,7 @@ interface ClientDetail {
       date_ech: string;
       mnt_capital: number;
       mnt_interet: number;
+      mnt_penalite?: number;
       montant_total: number;
       solde_capital: number;
       solde_interet: number;
@@ -142,6 +143,16 @@ interface ClientDetail {
       etat: number;
       etat_label: string;
       en_retard: boolean;
+    }>;
+    paiements?: Array<{
+      num_remb: number;
+      date_remb: string;
+      mnt_remb_cap: number;
+      mnt_remb_int: number;
+      mnt_remb_pen: number;
+      mnt_remb_gar: number;
+      total: number;
+      annule: boolean;
     }>;
   }>;
   prochaines_echeances: Array<{
@@ -769,7 +780,99 @@ export default function ClientDetailPage() {
                           <h4 className="font-medium mb-3">Échéancier et paiements</h4>
 
                           {/* Message si pas d'échéancier */}
-                          {credit.echeancier.length === 0 ? (
+                          {/* Afficher paiements si disponibles, sinon echeancier, sinon message */}
+                          {credit.paiements && credit.paiements.length > 0 ? (
+                            <div className="overflow-x-auto">
+                              <div className="mb-2 text-xs text-muted-foreground">
+                                Historique des remboursements effectués
+                              </div>
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="border-b bg-muted/50">
+                                    <th className="text-left py-2 px-2">N°</th>
+                                    <th className="text-left py-2 px-2">Date paiement</th>
+                                    <th className="text-right py-2 px-2 text-blue-700">Capital</th>
+                                    <th className="text-right py-2 px-2 text-purple-700">Intérêts</th>
+                                    <th className="text-right py-2 px-2 text-orange-700">Pénalités</th>
+                                    <th className="text-right py-2 px-2 font-bold text-green-700">Total payé</th>
+                                    <th className="text-center py-2 px-2">Statut</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {credit.paiements.map((p, idx) => (
+                                    <tr
+                                      key={idx}
+                                      className={`border-b hover:bg-muted/30 ${p.annule ? 'bg-red-50 line-through opacity-60' : 'bg-green-50/30'}`}
+                                    >
+                                      <td className="py-2 px-2 font-medium">{p.num_remb || (idx + 1)}</td>
+                                      <td className="py-2 px-2">
+                                        <div className="font-medium">{formatDate(p.date_remb)}</div>
+                                      </td>
+                                      <td className="text-right py-2 px-2 text-blue-600">
+                                        {formatCurrency(p.mnt_remb_cap)}
+                                      </td>
+                                      <td className="text-right py-2 px-2 text-purple-600">
+                                        {formatCurrency(p.mnt_remb_int)}
+                                      </td>
+                                      <td className="text-right py-2 px-2 text-orange-600">
+                                        {p.mnt_remb_pen > 0 ? formatCurrency(p.mnt_remb_pen) : '-'}
+                                      </td>
+                                      <td className="text-right py-2 px-2 font-bold text-green-600">
+                                        {formatCurrency(p.total)}
+                                      </td>
+                                      <td className="text-center py-2 px-2">
+                                        {p.annule ? (
+                                          <Badge className="text-xs bg-red-100 text-red-700">Annulé</Badge>
+                                        ) : (
+                                          <Badge className="text-xs bg-green-100 text-green-700">Payé</Badge>
+                                        )}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                  {/* Total row */}
+                                  <tr className="bg-muted font-semibold border-t-2">
+                                    <td colSpan={2} className="py-2 px-2 text-right">TOTAUX</td>
+                                    <td className="text-right py-2 px-2 text-blue-700">
+                                      {formatCurrency(credit.paiements.filter(p => !p.annule).reduce((sum, p) => sum + p.mnt_remb_cap, 0))}
+                                    </td>
+                                    <td className="text-right py-2 px-2 text-purple-700">
+                                      {formatCurrency(credit.paiements.filter(p => !p.annule).reduce((sum, p) => sum + p.mnt_remb_int, 0))}
+                                    </td>
+                                    <td className="text-right py-2 px-2 text-orange-700">
+                                      {formatCurrency(credit.paiements.filter(p => !p.annule).reduce((sum, p) => sum + p.mnt_remb_pen, 0))}
+                                    </td>
+                                    <td className="text-right py-2 px-2 text-green-700 font-bold">
+                                      {formatCurrency(credit.paiements.filter(p => !p.annule).reduce((sum, p) => sum + p.total, 0))}
+                                    </td>
+                                    <td className="text-center py-2 px-2 text-xs">
+                                      {credit.paiements.filter(p => !p.annule).length} paiement(s)
+                                    </td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                              {/* Résumé du crédit */}
+                              <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                <div className="grid grid-cols-3 gap-4 text-sm">
+                                  <div>
+                                    <span className="text-muted-foreground">Montant octroyé:</span>
+                                    <span className="font-bold ml-2">{formatCurrency(credit.montant_octroye)}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-muted-foreground">Total remboursé:</span>
+                                    <span className="font-bold ml-2 text-green-600">
+                                      {formatCurrency(credit.paiements.filter(p => !p.annule).reduce((sum, p) => sum + p.total, 0))}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="text-muted-foreground">Solde capital:</span>
+                                    <span className={`font-bold ml-2 ${credit.capital_restant > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                                      {credit.capital_restant > 0 ? formatCurrency(credit.capital_restant) : 'Soldé ✓'}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ) : credit.echeancier.length === 0 ? (
                             <div className="text-center py-6 bg-orange-50 rounded-lg border border-orange-200">
                               <AlertTriangle className="w-8 h-8 text-orange-500 mx-auto mb-2" />
                               <p className="text-orange-700 font-medium">Aucun historique de paiements disponible</p>

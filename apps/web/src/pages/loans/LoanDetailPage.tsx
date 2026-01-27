@@ -43,11 +43,26 @@ interface Echeance {
   date_ech: string;
   mnt_capital: number;
   mnt_int: number;
+  mnt_penalite?: number;
   solde_capital: number;
   solde_int: number;
   mnt_paye: number;
   date_paiement: string | null;
   etat: number | null;
+  annule?: boolean;
+}
+
+interface Paiement {
+  id_ech: number;
+  num_remb: number;
+  date_remb: string;
+  mnt_remb_cap: number;
+  mnt_remb_int: number;
+  mnt_remb_pen: number;
+  mnt_remb_gar: number;
+  total: number;
+  annule: boolean;
+  date_creation?: string;
 }
 
 // Interface pour échéance simulée
@@ -158,6 +173,7 @@ export default function LoanDetailPage() {
 
   const loan = loanData;
   const echeances: Echeance[] = loan?.echeances || [];
+  const paiements: Paiement[] = loan?.paiements || [];
   const resume = loan?.resume || {};
 
   // Initialiser les valeurs de simulation depuis le prêt
@@ -743,6 +759,127 @@ export default function LoanDetailPage() {
                     ))}
                   </TableBody>
                 </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* Historique des paiements - Section dédiée quand des paiements existent */}
+      {paiements.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.55 }}
+        >
+          <Card className="border-green-200 bg-green-50/20">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                Historique des remboursements ({paiements.length} paiements)
+              </CardTitle>
+              <p className="text-sm text-gray-500 mt-1">
+                Détail des remboursements effectués depuis la table ad_sre
+              </p>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-green-50">
+                    <TableHead className="w-12">N°</TableHead>
+                    <TableHead>Date paiement</TableHead>
+                    <TableHead className="text-right text-blue-700">Capital</TableHead>
+                    <TableHead className="text-right text-purple-700">Intérêts</TableHead>
+                    <TableHead className="text-right text-orange-700">Pénalités</TableHead>
+                    <TableHead className="text-right text-green-700 font-bold">Total payé</TableHead>
+                    <TableHead className="text-center">Statut</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paiements.map((p, idx) => (
+                    <TableRow
+                      key={idx}
+                      className={cn(
+                        'hover:bg-green-50/50',
+                        p.annule && 'bg-red-50 line-through opacity-60'
+                      )}
+                    >
+                      <TableCell className="font-medium">#{p.num_remb || (idx + 1)}</TableCell>
+                      <TableCell>
+                        <div className="font-medium">{formatDate(p.date_remb)}</div>
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-blue-600">
+                        {formatCurrency(p.mnt_remb_cap)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-purple-600">
+                        {formatCurrency(p.mnt_remb_int)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-orange-600">
+                        {p.mnt_remb_pen > 0 ? formatCurrency(p.mnt_remb_pen) : '-'}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums font-bold text-green-600">
+                        {formatCurrency(p.total)}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {p.annule ? (
+                          <Badge variant="destructive" className="gap-1">
+                            <XCircle className="h-3 w-3" />
+                            Annulé
+                          </Badge>
+                        ) : (
+                          <Badge variant="success" className="gap-1">
+                            <CheckCircle className="h-3 w-3" />
+                            Payé
+                          </Badge>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {/* Total row */}
+                  <TableRow className="bg-green-100 font-semibold border-t-2">
+                    <TableCell colSpan={2} className="text-right">TOTAUX</TableCell>
+                    <TableCell className="text-right tabular-nums text-blue-700">
+                      {formatCurrency(paiements.filter(p => !p.annule).reduce((sum, p) => sum + p.mnt_remb_cap, 0))}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums text-purple-700">
+                      {formatCurrency(paiements.filter(p => !p.annule).reduce((sum, p) => sum + p.mnt_remb_int, 0))}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums text-orange-700">
+                      {formatCurrency(paiements.filter(p => !p.annule).reduce((sum, p) => sum + p.mnt_remb_pen, 0))}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums text-green-700 font-bold">
+                      {formatCurrency(paiements.filter(p => !p.annule).reduce((sum, p) => sum + p.total, 0))}
+                    </TableCell>
+                    <TableCell className="text-center text-xs">
+                      {paiements.filter(p => !p.annule).length} paiement(s)
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+
+              {/* Résumé du crédit */}
+              <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div>
+                    <span className="text-gray-500 text-sm">Montant octroyé:</span>
+                    <span className="font-bold ml-2">{formatCurrency(montantOctroi)}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 text-sm">Total remboursé:</span>
+                    <span className="font-bold ml-2 text-green-600">
+                      {formatCurrency(paiements.filter(p => !p.annule).reduce((sum, p) => sum + p.total, 0))}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 text-sm">Solde capital:</span>
+                    <span className={cn(
+                      'font-bold ml-2',
+                      (resume.soldeRestant || 0) > 0 ? 'text-orange-600' : 'text-green-600'
+                    )}>
+                      {(resume.soldeRestant || 0) > 0 ? formatCurrency(resume.soldeRestant) : 'Soldé ✓'}
+                    </span>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
