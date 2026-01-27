@@ -216,4 +216,52 @@ router.get('/credit/:id/full', async (req, res) => {
   }
 });
 
+// Debug: Get client credits with payments
+router.get('/client/:id/credits-debug', async (req, res) => {
+  try {
+    const clientId = parseInt(req.params.id);
+
+    // Get all credits for this client
+    const credits = await prisma.$queryRawUnsafe(`
+      SELECT id_doss, id_ag, id_client, cre_mnt_octr, cre_date_debloc, cre_etat, duree_mois
+      FROM ad_dcr WHERE id_client = $1
+    `, clientId) as any[];
+
+    // For each credit, get payments from ad_sre
+    const creditsWithPayments = await Promise.all(
+      credits.map(async (credit: any) => {
+        const payments = await prisma.$queryRawUnsafe(`
+          SELECT id_ech, num_remb, date_remb, mnt_remb_cap, mnt_remb_int, mnt_remb_pen, annul_remb
+          FROM ad_sre WHERE id_doss = $1 AND id_ag = $2
+          ORDER BY date_remb
+        `, credit.id_doss, credit.id_ag) as any[];
+
+        return {
+          id_doss: credit.id_doss,
+          id_ag: credit.id_ag,
+          montant_octroye: Number(credit.cre_mnt_octr || 0),
+          date_deblocage: credit.cre_date_debloc,
+          etat: credit.cre_etat,
+          payments_count: payments.length,
+          payments: payments.map((p: any) => ({
+            date_remb: p.date_remb,
+            capital: Number(p.mnt_remb_cap || 0),
+            interet: Number(p.mnt_remb_int || 0),
+            penalite: Number(p.mnt_remb_pen || 0),
+            total: Number(p.mnt_remb_cap || 0) + Number(p.mnt_remb_int || 0) + Number(p.mnt_remb_pen || 0),
+          }))
+        };
+      })
+    );
+
+    res.json({
+      clientId,
+      totalCredits: credits.length,
+      credits: creditsWithPayments
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;

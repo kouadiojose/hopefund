@@ -505,30 +505,39 @@ router.get('/', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_O
     if (search && search.trim()) {
       const searchTerm = search.trim();
       const searchAsNumber = parseInt(searchTerm, 10);
-      const searchConditions: any[] = [];
 
-      // Recherche par numéro de dossier (exact ou partiel)
-      if (!isNaN(searchAsNumber)) {
-        searchConditions.push({ id_doss: searchAsNumber });
-      }
-
-      // Recherche par nom de client
-      searchConditions.push(
-        { client: { pp_nom: { contains: searchTerm, mode: 'insensitive' } } },
-        { client: { pp_prenom: { contains: searchTerm, mode: 'insensitive' } } },
-        { client: { pm_raison_sociale: { contains: searchTerm, mode: 'insensitive' } } },
-      );
-
-      // Si on avait déjà un OR (pour le status), on doit combiner avec AND
-      if (where.OR) {
-        const statusOR = where.OR;
-        delete where.OR;
-        where.AND = [
-          { OR: statusOR },
-          { OR: searchConditions },
-        ];
+      // Si c'est un nombre, chercher par ID de dossier en priorité
+      if (!isNaN(searchAsNumber) && searchAsNumber > 0) {
+        // Recherche exacte par ID - prioritaire
+        if (where.OR) {
+          // Si on a déjà un filtre status, combiner avec AND
+          const statusOR = where.OR;
+          delete where.OR;
+          where.AND = [
+            { OR: statusOR },
+            { id_doss: searchAsNumber },
+          ];
+        } else {
+          where.id_doss = searchAsNumber;
+        }
       } else {
-        where.OR = searchConditions;
+        // Recherche par nom de client (texte)
+        const searchConditions: any[] = [
+          { client: { pp_nom: { contains: searchTerm, mode: 'insensitive' } } },
+          { client: { pp_prenom: { contains: searchTerm, mode: 'insensitive' } } },
+          { client: { pm_raison_sociale: { contains: searchTerm, mode: 'insensitive' } } },
+        ];
+
+        if (where.OR) {
+          const statusOR = where.OR;
+          delete where.OR;
+          where.AND = [
+            { OR: statusOR },
+            { OR: searchConditions },
+          ];
+        } else {
+          where.OR = searchConditions;
+        }
       }
     }
 
