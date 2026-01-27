@@ -7,20 +7,20 @@
    CSS VARIABLES
    ==================================== */
 :root {
-    /* Primary Colors */
-    --primary-color: #0066FF;
-    --primary-dark: #0052CC;
-    --primary-light: #4D94FF;
-    --primary-gradient: linear-gradient(135deg, #0066FF 0%, #00D4AA 100%);
+    /* Primary Colors - Hopefund Burundi Steel Blue */
+    --primary-color: #4A6B8A;
+    --primary-dark: #3A5570;
+    --primary-light: #6B8CAD;
+    --primary-gradient: linear-gradient(135deg, #4A6B8A 0%, #6B8CAD 100%);
 
     /* Secondary Colors */
-    --secondary-color: #00D4AA;
-    --secondary-dark: #00B894;
-    --secondary-light: #55EFC4;
+    --secondary-color: #5A7B9A;
+    --secondary-dark: #4A6B8A;
+    --secondary-light: #8AABCB;
 
     /* Neutral Colors */
-    --dark-color: #0A1628;
-    --dark-secondary: #1A2744;
+    --dark-color: #2C3E50;
+    --dark-secondary: #34495E;
     --gray-900: #1F2937;
     --gray-800: #374151;
     --gray-700: #4B5563;
@@ -75,7 +75,7 @@
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
     --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    --shadow-primary: 0 10px 40px rgba(0, 102, 255, 0.3);
+    --shadow-primary: 0 10px 40px rgba(74, 107, 138, 0.3);
 
     /* Transitions */
     --transition-fast: 150ms ease;
@@ -1526,21 +1526,24 @@ input, textarea, select {
 .testimonials__slider {
     position: relative;
     overflow: hidden;
+    max-width: 700px;
+    margin: 0 auto;
 }
 
 .testimonials__track {
     display: flex;
     transition: transform var(--transition-slow);
+    width: 100%;
 }
 
 .testimonial__card {
     flex: 0 0 100%;
-    max-width: 600px;
-    margin: 0 auto;
+    min-width: 100%;
     padding: var(--spacing-xl);
     background: var(--gray-100);
     border-radius: var(--radius-2xl);
     text-align: center;
+    box-sizing: border-box;
 }
 
 .testimonial__rating {
