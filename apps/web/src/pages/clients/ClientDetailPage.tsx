@@ -11,8 +11,6 @@ import {
   Wallet,
   TrendingUp,
   AlertTriangle,
-  ChevronDown,
-  ChevronUp,
   Building,
   Briefcase,
   FileText,
@@ -21,6 +19,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
+  ExternalLink,
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -40,11 +39,9 @@ import {
   getCreditStatusColor,
   getClientStatusColor,
   getClientStatusLabel,
-  getEcheanceStatusColor,
   getPersonTypeLabel,
   getSexeLabel,
   getEtatCivilLabel,
-  getDaysOverdue,
 } from '@/lib/utils';
 
 interface ClientDetail {
@@ -213,7 +210,6 @@ export default function ClientDetailPage() {
   const [client, setClient] = useState<ClientDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [expandedCredits, setExpandedCredits] = useState<Set<number>>(new Set());
   const [transactionHistory, setTransactionHistory] = useState<TransactionHistoryState>({
     isOpen: false,
     accountId: null,
@@ -249,16 +245,6 @@ export default function ClientDetailPage() {
 
     fetchClient();
   }, [id]);
-
-  const toggleCreditExpand = (creditId: number) => {
-    const newExpanded = new Set(expandedCredits);
-    if (newExpanded.has(creditId)) {
-      newExpanded.delete(creditId);
-    } else {
-      newExpanded.add(creditId);
-    }
-    setExpandedCredits(newExpanded);
-  };
 
   const loadTransactionHistory = async (accountId: number, accountNumber: string, page: number = 1) => {
     setTransactionHistory(prev => ({
@@ -698,287 +684,82 @@ export default function ClientDetailPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <FileText className="w-5 h-5" /> Credits ({client.credits.length})
+                <FileText className="w-5 h-5" /> Crédits ({client.credits.length})
               </CardTitle>
             </CardHeader>
             <CardContent>
               {client.credits.length === 0 ? (
-                <p className="text-muted-foreground text-center py-4">Aucun credit</p>
+                <p className="text-muted-foreground text-center py-4">Aucun crédit</p>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {client.credits.map((credit) => (
-                    <div key={credit.id_doss} className="border rounded-lg">
-                      <div
-                        className="p-4 cursor-pointer hover:bg-muted/50"
-                        onClick={() => toggleCreditExpand(credit.id_doss)}
-                      >
-                        <div className="flex justify-between items-start mb-3">
+                    <div
+                      key={credit.id_doss}
+                      className="border rounded-lg p-4 cursor-pointer hover:bg-muted/50 hover:border-primary/50 transition-all group"
+                      onClick={() => navigate(`/loans/${credit.id_doss}`)}
+                    >
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
                           <div className="flex items-center gap-2">
-                            {expandedCredits.has(credit.id_doss) ? (
-                              <ChevronUp className="w-4 h-4" />
-                            ) : (
-                              <ChevronDown className="w-4 h-4" />
-                            )}
-                            <div>
-                              <p className="font-medium">Crédit #{credit.id_doss}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {credit.duree_mois} mois - {formatPercent(credit.taux_interet)} p.a.
-                              </p>
-                            </div>
+                            <p className="font-medium text-lg">Crédit #{credit.id_doss}</p>
+                            <ExternalLink className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                           </div>
-                          <Badge className={getCreditStatusColor(credit.etat)}>
-                            {credit.etat_label}
-                          </Badge>
+                          <p className="text-sm text-muted-foreground">
+                            {credit.duree_mois} mois - {formatPercent(credit.taux_interet)} p.a.
+                          </p>
                         </div>
-
-                        {/* Dates importantes */}
-                        <div className="flex flex-wrap gap-4 text-xs text-muted-foreground mb-3 bg-muted/30 rounded p-2">
-                          {credit.date_demande && (
-                            <span>📝 Demande: {formatDate(credit.date_demande)}</span>
-                          )}
-                          {credit.date_approbation && (
-                            <span>✅ Approuvé: {formatDate(credit.date_approbation)}</span>
-                          )}
-                          {credit.date_deblocage && (
-                            <span className="text-green-600 font-medium">💰 Débloqué: {formatDate(credit.date_deblocage)}</span>
-                          )}
-                        </div>
-
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                          <div>
-                            <p className="text-muted-foreground">Montant octroyé</p>
-                            <p className="font-bold">{formatCurrency(credit.montant_octroye)}</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">Capital restant</p>
-                            <p className={`font-medium ${credit.capital_restant === 0 ? 'text-green-600' : ''}`}>
-                              {formatCurrency(credit.capital_restant)}
-                              {credit.capital_restant === 0 && credit.montant_octroye > 0 && ' ✓'}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">Échéances</p>
-                            <p className="font-medium">
-                              {credit.echeances_payees}/{credit.echeances_payees + credit.echeances_restantes}
-                              {credit.echeancier.length === 0 && <span className="text-orange-500 text-xs ml-1">(non tracées)</span>}
-                            </p>
-                          </div>
-                          {credit.echeances_en_retard > 0 && (
-                            <div>
-                              <p className="text-muted-foreground">En retard</p>
-                              <p className="font-medium text-red-600">
-                                {credit.echeances_en_retard} ({formatCurrency(credit.montant_en_retard)})
-                              </p>
-                            </div>
-                          )}
-                        </div>
+                        <Badge className={getCreditStatusColor(credit.etat)}>
+                          {credit.etat_label}
+                        </Badge>
                       </div>
 
-                      {/* Echeancier detaille */}
-                      {expandedCredits.has(credit.id_doss) && (
-                        <div className="border-t p-4 bg-muted/30">
-                          <h4 className="font-medium mb-3">Échéancier et paiements</h4>
+                      {/* Dates importantes - compact */}
+                      <div className="flex flex-wrap gap-3 text-xs text-muted-foreground mb-3">
+                        {credit.date_deblocage && (
+                          <span className="text-green-600 font-medium">
+                            Débloqué: {formatDate(credit.date_deblocage)}
+                          </span>
+                        )}
+                      </div>
 
-                          {/* Message si pas d'échéancier */}
-                          {/* Afficher paiements si disponibles, sinon echeancier, sinon message */}
-                          {credit.paiements && credit.paiements.length > 0 ? (
-                            <div className="overflow-x-auto">
-                              <div className="mb-2 text-xs text-muted-foreground">
-                                Historique des remboursements effectués
-                              </div>
-                              <table className="w-full text-sm">
-                                <thead>
-                                  <tr className="border-b bg-muted/50">
-                                    <th className="text-left py-2 px-2">N°</th>
-                                    <th className="text-left py-2 px-2">Date paiement</th>
-                                    <th className="text-right py-2 px-2 text-blue-700">Capital</th>
-                                    <th className="text-right py-2 px-2 text-purple-700">Intérêts</th>
-                                    <th className="text-right py-2 px-2 text-orange-700">Pénalités</th>
-                                    <th className="text-right py-2 px-2 font-bold text-green-700">Total payé</th>
-                                    <th className="text-center py-2 px-2">Statut</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {credit.paiements.map((p, idx) => (
-                                    <tr
-                                      key={idx}
-                                      className={`border-b hover:bg-muted/30 ${p.annule ? 'bg-red-50 line-through opacity-60' : 'bg-green-50/30'}`}
-                                    >
-                                      <td className="py-2 px-2 font-medium">{p.num_remb || (idx + 1)}</td>
-                                      <td className="py-2 px-2">
-                                        <div className="font-medium">{formatDate(p.date_remb)}</div>
-                                      </td>
-                                      <td className="text-right py-2 px-2 text-blue-600">
-                                        {formatCurrency(p.mnt_remb_cap)}
-                                      </td>
-                                      <td className="text-right py-2 px-2 text-purple-600">
-                                        {formatCurrency(p.mnt_remb_int)}
-                                      </td>
-                                      <td className="text-right py-2 px-2 text-orange-600">
-                                        {p.mnt_remb_pen > 0 ? formatCurrency(p.mnt_remb_pen) : '-'}
-                                      </td>
-                                      <td className="text-right py-2 px-2 font-bold text-green-600">
-                                        {formatCurrency(p.total)}
-                                      </td>
-                                      <td className="text-center py-2 px-2">
-                                        {p.annule ? (
-                                          <Badge className="text-xs bg-red-100 text-red-700">Annulé</Badge>
-                                        ) : (
-                                          <Badge className="text-xs bg-green-100 text-green-700">Payé</Badge>
-                                        )}
-                                      </td>
-                                    </tr>
-                                  ))}
-                                  {/* Total row */}
-                                  <tr className="bg-muted font-semibold border-t-2">
-                                    <td colSpan={2} className="py-2 px-2 text-right">TOTAUX</td>
-                                    <td className="text-right py-2 px-2 text-blue-700">
-                                      {formatCurrency(credit.paiements.filter(p => !p.annule).reduce((sum, p) => sum + p.mnt_remb_cap, 0))}
-                                    </td>
-                                    <td className="text-right py-2 px-2 text-purple-700">
-                                      {formatCurrency(credit.paiements.filter(p => !p.annule).reduce((sum, p) => sum + p.mnt_remb_int, 0))}
-                                    </td>
-                                    <td className="text-right py-2 px-2 text-orange-700">
-                                      {formatCurrency(credit.paiements.filter(p => !p.annule).reduce((sum, p) => sum + p.mnt_remb_pen, 0))}
-                                    </td>
-                                    <td className="text-right py-2 px-2 text-green-700 font-bold">
-                                      {formatCurrency(credit.paiements.filter(p => !p.annule).reduce((sum, p) => sum + p.total, 0))}
-                                    </td>
-                                    <td className="text-center py-2 px-2 text-xs">
-                                      {credit.paiements.filter(p => !p.annule).length} paiement(s)
-                                    </td>
-                                  </tr>
-                                </tbody>
-                              </table>
-                              {/* Résumé du crédit */}
-                              <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                                <div className="grid grid-cols-3 gap-4 text-sm">
-                                  <div>
-                                    <span className="text-muted-foreground">Montant octroyé:</span>
-                                    <span className="font-bold ml-2">{formatCurrency(credit.montant_octroye)}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-muted-foreground">Total remboursé:</span>
-                                    <span className="font-bold ml-2 text-green-600">
-                                      {formatCurrency(credit.paiements.filter(p => !p.annule).reduce((sum, p) => sum + p.total, 0))}
-                                    </span>
-                                  </div>
-                                  <div>
-                                    <span className="text-muted-foreground">Solde capital:</span>
-                                    <span className={`font-bold ml-2 ${credit.capital_restant > 0 ? 'text-orange-600' : 'text-green-600'}`}>
-                                      {credit.capital_restant > 0 ? formatCurrency(credit.capital_restant) : 'Soldé ✓'}
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          ) : credit.echeancier.length === 0 ? (
-                            <div className="text-center py-6 bg-orange-50 rounded-lg border border-orange-200">
-                              <AlertTriangle className="w-8 h-8 text-orange-500 mx-auto mb-2" />
-                              <p className="text-orange-700 font-medium">Aucun historique de paiements disponible</p>
-                              <p className="text-sm text-orange-600 mt-1">
-                                Ce crédit a été géré avant la mise en place du suivi détaillé des échéances.
-                              </p>
-                              {credit.capital_restant === 0 && credit.montant_octroye > 0 && (
-                                <p className="text-sm text-green-600 mt-2 font-medium">
-                                  ✓ Le crédit a été entièrement remboursé
-                                </p>
-                              )}
-                              {credit.date_deblocage && (
-                                <p className="text-xs text-muted-foreground mt-2">
-                                  Débloqué le {formatDate(credit.date_deblocage)}
-                                </p>
-                              )}
-                            </div>
-                          ) : (
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                              <thead>
-                                <tr className="border-b bg-muted/50">
-                                  <th className="text-left py-2 px-2">N°</th>
-                                  <th className="text-left py-2 px-2">Échéance</th>
-                                  <th className="text-right py-2 px-2">Dû</th>
-                                  <th className="text-right py-2 px-2 text-green-700">Payé</th>
-                                  <th className="text-left py-2 px-2 text-green-700">Date paiement</th>
-                                  <th className="text-right py-2 px-2 text-orange-700">Reste</th>
-                                  <th className="text-center py-2 px-2">Statut</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {credit.echeancier.map((ech) => (
-                                  <tr
-                                    key={ech.num_ech}
-                                    className={`border-b hover:bg-muted/30 ${ech.en_retard ? 'bg-red-50' : ech.etat === 2 ? 'bg-green-50/50' : ''}`}
-                                  >
-                                    <td className="py-2 px-2 font-medium">{ech.num_ech}</td>
-                                    <td className="py-2 px-2">
-                                      <div>{formatDate(ech.date_ech)}</div>
-                                      {ech.en_retard && (
-                                        <span className="text-xs text-red-600">
-                                          {getDaysOverdue(ech.date_ech)} jours de retard
-                                        </span>
-                                      )}
-                                      <div className="text-xs text-muted-foreground">
-                                        Cap: {formatCurrency(ech.mnt_capital)} | Int: {formatCurrency(ech.mnt_interet)}
-                                      </div>
-                                    </td>
-                                    <td className="text-right py-2 px-2 font-medium">{formatCurrency(ech.montant_total)}</td>
-                                    <td className="text-right py-2 px-2 font-medium text-green-600">
-                                      {ech.mnt_paye > 0 ? formatCurrency(ech.mnt_paye) : '-'}
-                                    </td>
-                                    <td className="py-2 px-2 text-green-600">
-                                      {ech.date_paiement ? formatDate(ech.date_paiement) : '-'}
-                                    </td>
-                                    <td className="text-right py-2 px-2 font-medium text-orange-600">
-                                      {ech.solde_total > 0 ? formatCurrency(ech.solde_total) : '-'}
-                                    </td>
-                                    <td className="text-center py-2 px-2">
-                                      <Badge className={`text-xs ${getEcheanceStatusColor(ech.etat_label)}`}>
-                                        {ech.etat_label}
-                                      </Badge>
-                                    </td>
-                                  </tr>
-                                ))}
-                                {/* Total row */}
-                                <tr className="bg-muted font-semibold border-t-2">
-                                  <td colSpan={2} className="py-2 px-2 text-right">TOTAUX</td>
-                                  <td className="text-right py-2 px-2">
-                                    {formatCurrency(credit.echeancier.reduce((sum, e) => sum + e.montant_total, 0))}
-                                  </td>
-                                  <td className="text-right py-2 px-2 text-green-600">
-                                    {formatCurrency(credit.echeancier.reduce((sum, e) => sum + e.mnt_paye, 0))}
-                                  </td>
-                                  <td className="py-2 px-2 text-xs text-muted-foreground">
-                                    {credit.echeancier.filter(e => e.date_paiement).length} paiements
-                                  </td>
-                                  <td className="text-right py-2 px-2 text-orange-600">
-                                    {formatCurrency(credit.echeancier.reduce((sum, e) => sum + e.solde_total, 0))}
-                                  </td>
-                                  <td className="text-center py-2 px-2 text-xs">
-                                    {credit.echeances_payees}/{credit.echeancier.length}
-                                  </td>
-                                </tr>
-                              </tbody>
-                            </table>
-                          </div>
-                          )}
-
-                          {/* Garanties */}
-                          {credit.garanties && credit.garanties.length > 0 && (
-                            <div className="mt-4 pt-4 border-t">
-                              <h4 className="font-medium mb-2">Garanties</h4>
-                              <div className="space-y-2">
-                                {credit.garanties.map((gar) => (
-                                  <div key={gar.id} className="flex justify-between text-sm">
-                                    <span>{gar.description || `Garantie type ${gar.type}`}</span>
-                                    <span className="font-medium">{formatCurrency(gar.valeur)}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div>
+                          <p className="text-muted-foreground text-xs">Montant octroyé</p>
+                          <p className="font-bold">{formatCurrency(credit.montant_octroye)}</p>
                         </div>
-                      )}
+                        <div>
+                          <p className="text-muted-foreground text-xs">Capital restant</p>
+                          <p className={`font-medium ${credit.capital_restant === 0 ? 'text-green-600' : ''}`}>
+                            {formatCurrency(credit.capital_restant)}
+                            {credit.capital_restant === 0 && credit.montant_octroye > 0 && ' ✓'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">Échéances</p>
+                          <p className="font-medium">
+                            {credit.echeances_payees}/{credit.echeances_payees + credit.echeances_restantes}
+                          </p>
+                        </div>
+                        {credit.echeances_en_retard > 0 ? (
+                          <div>
+                            <p className="text-muted-foreground text-xs">En retard</p>
+                            <p className="font-medium text-red-600">
+                              {credit.echeances_en_retard} ({formatCurrency(credit.montant_en_retard)})
+                            </p>
+                          </div>
+                        ) : (
+                          <div>
+                            <p className="text-muted-foreground text-xs">Statut paiements</p>
+                            <p className="font-medium text-green-600">À jour</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Indicateur pour cliquer */}
+                      <div className="mt-3 pt-3 border-t text-xs text-primary font-medium flex items-center gap-1 opacity-70 group-hover:opacity-100">
+                        <span>Cliquer pour voir les détails et l'historique des paiements</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </div>
                     </div>
                   ))}
                 </div>
