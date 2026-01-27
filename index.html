@@ -44,28 +44,28 @@
             <div class="nav__menu" id="nav-menu">
                 <ul class="nav__list">
                     <li class="nav__item">
-                        <a href="#home" class="nav__link active">Accueil</a>
+                        <a href="#home" class="nav__link active" data-i18n="nav.home">Accueil</a>
                     </li>
                     <li class="nav__item">
-                        <a href="#mission" class="nav__link">Notre Mission</a>
+                        <a href="#mission" class="nav__link" data-i18n="nav.mission">Notre Mission</a>
                     </li>
                     <li class="nav__item">
-                        <a href="#services" class="nav__link">Services</a>
+                        <a href="#services" class="nav__link" data-i18n="nav.services">Services</a>
                     </li>
                     <li class="nav__item">
-                        <a href="#pricing" class="nav__link">Nos Offres</a>
+                        <a href="#pricing" class="nav__link" data-i18n="nav.pricing">Nos Offres</a>
                     </li>
                     <li class="nav__item">
-                        <a href="#testimonials" class="nav__link">Témoignages</a>
+                        <a href="#testimonials" class="nav__link" data-i18n="nav.testimonials">Témoignages</a>
                     </li>
                     <li class="nav__item">
-                        <a href="#contact" class="nav__link">Contact</a>
+                        <a href="#contact" class="nav__link" data-i18n="nav.contact">Contact</a>
                     </li>
                 </ul>
 
                 <div class="nav__buttons-mobile">
-                    <a href="https://app.hfb.markel-tech.com" class="btn btn--outline btn--sm" target="_blank">Connexion</a>
-                    <a href="https://app.hfb.markel-tech.com/register" class="btn btn--primary btn--sm" target="_blank">Rejoindre</a>
+                    <a href="https://app.hfb.markel-tech.com" class="btn btn--outline btn--sm" target="_blank" data-i18n="nav.login">Connexion</a>
+                    <a href="https://app.hfb.markel-tech.com/register" class="btn btn--primary btn--sm" target="_blank" data-i18n="nav.register">Rejoindre</a>
                 </div>
 
                 <div class="nav__close" id="nav-close">
@@ -73,9 +73,28 @@
                 </div>
             </div>
 
+            <!-- Language Switcher -->
+            <div class="lang-switcher">
+                <button class="lang-toggle">
+                    <span class="lang-current">🇫🇷 Français</span>
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+                <div class="lang-dropdown">
+                    <button class="lang-option active" data-lang="fr">
+                        <span>🇫🇷</span> Français
+                    </button>
+                    <button class="lang-option" data-lang="en">
+                        <span>🇬🇧</span> English
+                    </button>
+                    <button class="lang-option" data-lang="rn">
+                        <span>🇧🇮</span> Ikirundi
+                    </button>
+                </div>
+            </div>
+
             <div class="nav__buttons">
-                <a href="https://app.hfb.markel-tech.com" class="btn btn--outline btn--sm" target="_blank">Connexion</a>
-                <a href="https://app.hfb.markel-tech.com/register" class="btn btn--primary btn--sm" target="_blank">Rejoindre</a>
+                <a href="https://app.hfb.markel-tech.com" class="btn btn--outline btn--sm" target="_blank" data-i18n="nav.login">Connexion</a>
+                <a href="https://app.hfb.markel-tech.com/register" class="btn btn--primary btn--sm" target="_blank" data-i18n="nav.register">Rejoindre</a>
             </div>
 
             <div class="nav__toggle" id="nav-toggle">
@@ -98,41 +117,41 @@
                 <div class="hero__content" data-aos="fade-right">
                     <span class="hero__badge">
                         <i class="fas fa-cross"></i>
-                        Microfinance Chrétienne au Burundi — Depuis 2006
+                        <span data-i18n="hero.badge">Microfinance Chrétienne au Burundi — Depuis 2006</span>
                     </span>
                     <h1 class="hero__title">
-                        L'Espoir au service de
-                        <span class="gradient-text">votre avenir</span>
+                        <span data-i18n="hero.title">L'Espoir au service de</span>
+                        <span class="gradient-text" data-i18n="hero.titleHighlight">votre avenir</span>
                     </h1>
                     <p class="hero__description hero__slogan">
-                        <em>"The Lord is strength, my Song and my Salvation!"</em> — Psaume 118:14
+                        <em data-i18n="hero.slogan">"The Lord is strength, my Song and my Salvation!" — Psaume 118:14</em>
                     </p>
-                    <p class="hero__description">
+                    <p class="hero__description" data-i18n="hero.description">
                         Hopefund Burundi accompagne les familles burundaises avec des solutions financières solidaires,
                         fondées sur les valeurs chrétiennes d'entraide, de confiance et d'espérance.
                     </p>
                     <div class="hero__buttons">
                         <a href="https://app.hfb.markel-tech.com/register" class="btn btn--primary btn--lg" target="_blank">
                             <i class="fas fa-hands-helping"></i>
-                            Rejoindre la communauté
+                            <span data-i18n="hero.btnJoin">Rejoindre la communauté</span>
                         </a>
                         <a href="https://app.hfb.markel-tech.com" class="btn btn--ghost btn--lg" target="_blank">
                             <i class="fas fa-sign-in-alt"></i>
-                            Mon Espace Client
+                            <span data-i18n="hero.btnLogin">Mon Espace Client</span>
                         </a>
                     </div>
                     <div class="hero__stats">
                         <div class="hero__stat">
                             <span class="hero__stat-number" data-count="20">0</span>
-                            <span class="hero__stat-label">Ans d'expérience</span>
+                            <span class="hero__stat-label" data-i18n="hero.statYears">Ans d'expérience</span>
                         </div>
                         <div class="hero__stat">
                             <span class="hero__stat-number" data-count="25000">0</span>
-                            <span class="hero__stat-label">Membres actifs</span>
+                            <span class="hero__stat-label" data-i18n="hero.statMembers">Membres actifs</span>
                         </div>
                         <div class="hero__stat">
                             <span class="hero__stat-number" data-count="18">0</span>
-                            <span class="hero__stat-label">Provinces couvertes</span>
+                            <span class="hero__stat-label" data-i18n="hero.statProvinces">Provinces couvertes</span>
                         </div>
                     </div>
                 </div>
@@ -1144,6 +1163,7 @@
 
     <!-- Scripts -->
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script src="js/i18n.js"></script>
     <script src="js/main.js"></script>
 </body>
 </html>

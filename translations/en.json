@@ -1,0 +1,319 @@
+{
+  "meta": {
+    "lang": "en",
+    "name": "English",
+    "flag": "🇬🇧"
+  },
+  "nav": {
+    "home": "Home",
+    "mission": "Our Mission",
+    "services": "Services",
+    "pricing": "Plans",
+    "testimonials": "Testimonials",
+    "contact": "Contact",
+    "login": "Login",
+    "register": "Join Us"
+  },
+  "hero": {
+    "badge": "Christian Microfinance in Burundi — Since 2006",
+    "title": "Hope serving",
+    "titleHighlight": "your future",
+    "slogan": "\"The Lord is strength, my Song and my Salvation!\" — Psalm 118:14",
+    "description": "Hopefund Burundi supports Burundian families with solidarity-based financial solutions, founded on Christian values of mutual aid, trust and hope.",
+    "btnJoin": "Join the community",
+    "btnLogin": "My Account",
+    "statYears": "Years of experience",
+    "statMembers": "Active members",
+    "statProvinces": "Provinces covered",
+    "discover": "Discover"
+  },
+  "anniversary": {
+    "years": "20",
+    "label": "YEARS",
+    "period": "2006 - 2026",
+    "subtitle": "Two decades serving hope"
+  },
+  "partners": {
+    "title": "Our Partners in Burundi",
+    "churches": "Partner Churches"
+  },
+  "mission": {
+    "badge": "Our Mission",
+    "title": "Serving with",
+    "titleHighlight": "Faith and Love",
+    "description": "Since <strong>2006</strong>, Hopefund Burundi was born from a Christian vision: enabling every Burundian to access dignified financial services, respecting the values of integrity, solidarity and hope. <strong>20 years serving Burundian families.</strong>",
+    "value1Title": "Christian Values",
+    "value1Desc": "Our management is guided by honesty, transparency and love of neighbor.",
+    "value2Title": "Community Mutual Aid",
+    "value2Desc": "We promote solidarity savings groups (Ibimina) and mutual support.",
+    "value3Title": "Sustainable Development",
+    "value3Desc": "We support agricultural, artisanal and family projects for lasting impact.",
+    "value4Title": "Pastoral Support",
+    "value4Desc": "Beyond finance, we offer moral and spiritual support to our members."
+  },
+  "services": {
+    "badge": "Our Services",
+    "title": "Solidarity-based",
+    "titleHighlight": "financial solutions",
+    "description": "Services adapted to the realities of Burundian families, designed to support your projects with care",
+    "learnMore": "Learn more",
+    "popular": "Popular",
+    "savings": {
+      "title": "Tubaramire Savings",
+      "description": "Save at your own pace and build your future. \"Tubaramire\" means \"Let's prosper together\" in Kirundi.",
+      "feature1": "From 5,000 BIF/month",
+      "feature2": "Attractive rate of 6%",
+      "feature3": "Flexible withdrawal"
+    },
+    "ibimina": {
+      "title": "Solidarity Ibimina",
+      "description": "Join a community savings group. Together, you are stronger to achieve your dreams.",
+      "feature1": "Groups of 10-30 members",
+      "feature2": "Collective contributions",
+      "feature3": "Rotating credit"
+    },
+    "credit": {
+      "title": "Icyizere Credit",
+      "description": "A trust-based loan to finance your projects. \"Icyizere\" means \"Hope\" in Kirundi.",
+      "feature1": "Preferential rate of 12%",
+      "feature2": "Up to 5,000,000 BIF",
+      "feature3": "Flexible repayment"
+    },
+    "agricultural": {
+      "title": "Agricultural Credit",
+      "description": "Finance your farming activities: seeds, equipment, livestock. Burundi, land of agriculture.",
+      "feature1": "Adapted to farming cycles",
+      "feature2": "Deferred payment",
+      "feature3": "Technical advice"
+    },
+    "church": {
+      "title": "Church Account",
+      "description": "Transparent management of your religious community funds: tithes, offerings, parish projects.",
+      "feature1": "Multi-signatory",
+      "feature2": "Detailed reports",
+      "feature3": "0 management fees"
+    },
+    "mobile": {
+      "title": "Mobile Banking",
+      "description": "Manage your account from your phone. Compatible with Lumicash, Ecocash and Airtel Money.",
+      "feature1": "Instant transfers",
+      "feature2": "Bill payment",
+      "feature3": "Simple USSD code"
+    }
+  },
+  "howItWorks": {
+    "badge": "How to Join",
+    "title": "Become a member in",
+    "titleHighlight": "3 steps",
+    "description": "Joining the Hopefund Burundi family is simple and accessible to all",
+    "step1Title": "Registration",
+    "step1Desc": "Visit our nearest branch or register via our app with your Burundian ID card.",
+    "step2Title": "Membership",
+    "step2Desc": "Pay your registration fee (free for students, 5,000 BIF for individuals) and join the Hopefund Burundi community.",
+    "step3Title": "Welcome!",
+    "step3Desc": "Access all our services: savings, credit, mobile banking. May God bless your projects!",
+    "btnJoin": "Join Hopefund Burundi"
+  },
+  "pricing": {
+    "badge": "Registration Fees",
+    "title": "Join",
+    "titleHighlight": "Hopefund Burundi",
+    "description": "Affordable registration fees for everyone. Become a member and access all our solidarity financial services.",
+    "free": "Free",
+    "hope": "Icyizere",
+    "uniqueFee": "one-time fee",
+    "perMember": "per member",
+    "freeRegistration": "free registration",
+    "choose": "Choose",
+    "addMember": "Add member",
+    "student": {
+      "name": "Umwana",
+      "subtitle": "For students and pupils",
+      "feature1": "100% free registration",
+      "feature2": "Tubaramire savings account",
+      "feature3": "Mobile application",
+      "feature4": "USSD access *847#",
+      "feature5": "Financial training",
+      "feature6": "Student card required"
+    },
+    "individual": {
+      "name": "Umuryango",
+      "subtitle": "For all Burundian adults",
+      "feature1": "Tubaramire savings account",
+      "feature2": "Icyizere credit access",
+      "feature3": "Solidarity Ibimina groups",
+      "feature4": "Mobile app & USSD",
+      "feature5": "Hopefund Burundi debit card",
+      "feature6": "Priority support"
+    },
+    "family": {
+      "name": "Umuryango+",
+      "subtitle": "Additional family member",
+      "feature1": "Added to Umuryango account",
+      "feature2": "Individual savings account",
+      "feature3": "Mobile app & USSD",
+      "feature4": "Full service access",
+      "feature5": "Same household required",
+      "feature6": "Grouped family savings"
+    }
+  },
+  "testimonials": {
+    "badge": "Testimonials",
+    "title": "Stories of",
+    "titleHighlight": "hope",
+    "description": "Discover how Hopefund Burundi is transforming lives across Burundi",
+    "testimonial1": {
+      "text": "Thanks to Hopefund Burundi's agricultural credit, I was able to buy seeds and fertilizer. My harvest doubled this year! Imana ishimwe - Praise God!",
+      "name": "Niyonzima Népomucène",
+      "role": "Farmer, Ngozi"
+    },
+    "testimonial2": {
+      "text": "Our Ibimina group of 20 women was able to finance the schooling of all our children. Hopefund Burundi gave us the tools, but it's our solidarity that makes the difference.",
+      "name": "Ndayisaba Béatrice",
+      "role": "Ibimina President, Gitega"
+    },
+    "testimonial3": {
+      "text": "As a pastor, I appreciate Hopefund Burundi's transparency in managing our church finances. Their Christian values show in their service.",
+      "name": "Pastor Nshimirimana Pierre",
+      "role": "Evangelical Church, Bujumbura"
+    },
+    "testimonial4": {
+      "text": "I started with a small vegetable business. With Hopefund Burundi's support, I now have a shop and employ 3 people. Hope is possible!",
+      "name": "Hakizimana Éric",
+      "role": "Merchant, Kayanza"
+    }
+  },
+  "app": {
+    "badge": "Mobile App",
+    "title": "Hopefund Burundi in",
+    "titleHighlight": "your pocket",
+    "description": "Manage your finances wherever you are in Burundi. Our app works even with limited connectivity.",
+    "feature1": "Real-time balance check",
+    "feature2": "Transfers to Lumicash, Ecocash, Airtel Money",
+    "feature3": "Bill payment (REGIDESO, ONATEL)",
+    "feature4": "Online credit application",
+    "feature5": "Offline mode available",
+    "downloadOn": "Download on",
+    "availableOn": "Available on",
+    "noSmartphone": "No smartphone?",
+    "useUSSD": "Use our USSD code:",
+    "scanToDownload": "Scan to download"
+  },
+  "faq": {
+    "badge": "FAQ",
+    "title": "Frequently asked",
+    "titleHighlight": "questions",
+    "description": "Quickly find answers to your questions",
+    "q1": "How do I become a Hopefund Burundi member?",
+    "a1": "To become a member, visit one of our branches with your Burundian ID card and a passport photo. You will need to pay a minimum share of 10,000 BIF. You can also pre-register via our mobile app or by dialing *847#.",
+    "q2": "What documents are needed for a loan?",
+    "a2": "For a loan application, you will need: your ID card, proof of residence (residence certificate), and depending on the loan type, a business plan or proof of income. For Ibimina groups, the group's solidarity guarantee may suffice.",
+    "q3": "Is Hopefund Burundi really a Christian institution?",
+    "a3": "Yes, Hopefund Burundi was founded on Christian principles of mutual aid and solidarity. Our values of transparency, integrity and love of neighbor guide all our actions. We are open to all, regardless of faith, and we respect the diversity of our members.",
+    "q4": "How does an Ibimina group work?",
+    "a4": "An Ibimina group brings together 10 to 30 people who save together. Each member contributes regularly, and the group can benefit from rotating or collective loans. It is based on mutual trust and solidarity. Hopefund Burundi supports groups with training and regular monitoring.",
+    "q5": "Can I use Hopefund Burundi without a smartphone?",
+    "a5": "Absolutely! Our USSD service (*847#) works on all phones, even basic ones. You can check your balance, make transfers and pay bills. Our branches are also there to welcome you in person."
+  },
+  "cta": {
+    "title": "Together, let's build a better future",
+    "description": "Join the thousands of Burundians who trust Hopefund Burundi to build their future with hope.",
+    "btnCreate": "Create my account",
+    "btnLogin": "Log in",
+    "note": "100% online registration - Secure and fast",
+    "since": "Since 2006",
+    "members": "+25,000 members",
+    "provinces": "18 provinces",
+    "approved": "BRB Approved"
+  },
+  "contact": {
+    "badge": "Contact",
+    "title": "Let's talk about your",
+    "titleHighlight": "projects",
+    "description": "Our team is here to support you in your projects. Don't hesitate to contact us!",
+    "headquarters": "Headquarters",
+    "phone": "Phone",
+    "email": "Email",
+    "hours": "Hours",
+    "hoursValue": "Monday - Friday: 8am - 5pm<br>Saturday: 8am - 12pm",
+    "form": {
+      "name": "Full name",
+      "namePlaceholder": "Ex: Niyonzima Jean",
+      "email": "Email",
+      "emailPlaceholder": "your@email.com",
+      "phone": "Phone",
+      "phonePlaceholder": "+257 79 XX XX XX",
+      "province": "Province",
+      "provincePlaceholder": "Select your province",
+      "subject": "Subject",
+      "subjectPlaceholder": "Select a subject",
+      "subjects": {
+        "membership": "Become a member",
+        "credit": "Loan application",
+        "ibimina": "Create an Ibimina group",
+        "church": "Church account",
+        "support": "Technical support",
+        "other": "Other request"
+      },
+      "message": "Message",
+      "messagePlaceholder": "Describe your need or project...",
+      "submit": "Send message"
+    }
+  },
+  "footer": {
+    "description": "<strong>Founded in 2006</strong>, Hopefund Burundi is a Christian microfinance dedicated to financial inclusion in Burundi. After 20 years serving Burundian families, we continue to support our members towards a better future, founded on the values of faith, hope and love.",
+    "services": "Services",
+    "about": "About",
+    "resources": "Resources",
+    "legal": "Legal",
+    "servicesLinks": {
+      "savings": "Tubaramire Savings",
+      "ibimina": "Ibimina Groups",
+      "credit": "Icyizere Credit",
+      "agricultural": "Agricultural Credit",
+      "church": "Church Account"
+    },
+    "aboutLinks": {
+      "mission": "Our Mission",
+      "values": "Our Values",
+      "team": "Our Team",
+      "branches": "Our Branches",
+      "careers": "Careers"
+    },
+    "resourcesLinks": {
+      "help": "Help Center",
+      "faq": "FAQ",
+      "education": "Financial Education",
+      "blog": "Blog",
+      "testimonials": "Testimonials"
+    },
+    "legalLinks": {
+      "terms": "Terms & Conditions",
+      "privacy": "Privacy Policy",
+      "fees": "Fees & Rates",
+      "legal": "Legal Notice"
+    },
+    "certifications": {
+      "experience": "20 years experience (2006-2026)",
+      "approved": "BRB Approved",
+      "secure": "Secure Data",
+      "christian": "Christian Values"
+    },
+    "copyright": "© 2026 Hopefund Burundi Microfinance. All rights reserved. | Bujumbura, Burundi"
+  },
+  "modal": {
+    "title": "Access your account",
+    "subtitle": "You will be redirected to your secure space",
+    "description": "Manage your savings, loans and transactions securely on our dedicated platform.",
+    "login": "Log in",
+    "or": "or",
+    "createAccount": "Create an account",
+    "secure": "Secure SSL connection"
+  },
+  "devices": {
+    "greeting": "Hello, Béatrice",
+    "balance": "Available balance",
+    "balanceLabel": "Balance BIF",
+    "savings": "Savings"
+  }
+}

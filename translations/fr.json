@@ -1,0 +1,319 @@
+{
+  "meta": {
+    "lang": "fr",
+    "name": "Français",
+    "flag": "🇫🇷"
+  },
+  "nav": {
+    "home": "Accueil",
+    "mission": "Notre Mission",
+    "services": "Services",
+    "pricing": "Nos Offres",
+    "testimonials": "Témoignages",
+    "contact": "Contact",
+    "login": "Connexion",
+    "register": "Rejoindre"
+  },
+  "hero": {
+    "badge": "Microfinance Chrétienne au Burundi — Depuis 2006",
+    "title": "L'Espoir au service de",
+    "titleHighlight": "votre avenir",
+    "slogan": "\"The Lord is strength, my Song and my Salvation!\" — Psaume 118:14",
+    "description": "Hopefund Burundi accompagne les familles burundaises avec des solutions financières solidaires, fondées sur les valeurs chrétiennes d'entraide, de confiance et d'espérance.",
+    "btnJoin": "Rejoindre la communauté",
+    "btnLogin": "Mon Espace Client",
+    "statYears": "Ans d'expérience",
+    "statMembers": "Membres actifs",
+    "statProvinces": "Provinces couvertes",
+    "discover": "Découvrir"
+  },
+  "anniversary": {
+    "years": "20",
+    "label": "ANS",
+    "period": "2006 - 2026",
+    "subtitle": "Deux décennies au service de l'espérance"
+  },
+  "partners": {
+    "title": "Nos Partenaires au Burundi",
+    "churches": "Églises Partenaires"
+  },
+  "mission": {
+    "badge": "Notre Mission",
+    "title": "Servir avec",
+    "titleHighlight": "Foi et Amour",
+    "description": "Depuis <strong>2006</strong>, Hopefund Burundi est née d'une vision chrétienne : permettre à chaque Burundais d'accéder à des services financiers dignes, dans le respect des valeurs d'intégrité, de solidarité et d'espérance. <strong>20 ans au service des familles burundaises.</strong>",
+    "value1Title": "Valeurs Chrétiennes",
+    "value1Desc": "Notre gestion est guidée par l'honnêteté, la transparence et l'amour du prochain.",
+    "value2Title": "Entraide Communautaire",
+    "value2Desc": "Nous favorisons les groupes d'épargne solidaire (Ibimina) et le soutien mutuel.",
+    "value3Title": "Développement Durable",
+    "value3Desc": "Nous accompagnons les projets agricoles, artisanaux et familiaux pour un impact durable.",
+    "value4Title": "Accompagnement Pastoral",
+    "value4Desc": "Au-delà du financier, nous offrons un soutien moral et spirituel à nos membres."
+  },
+  "services": {
+    "badge": "Nos Services",
+    "title": "Des solutions financières",
+    "titleHighlight": "solidaires",
+    "description": "Des services adaptés aux réalités des familles burundaises, conçus pour accompagner vos projets avec bienveillance",
+    "learnMore": "En savoir plus",
+    "popular": "Populaire",
+    "savings": {
+      "title": "Épargne Tubaramire",
+      "description": "Épargnez à votre rythme et construisez votre avenir. \"Tubaramire\" signifie \"Prospérons ensemble\" en Kirundi.",
+      "feature1": "Dès 5,000 BIF/mois",
+      "feature2": "Taux attractif de 6%",
+      "feature3": "Retrait flexible"
+    },
+    "ibimina": {
+      "title": "Ibimina Solidaire",
+      "description": "Rejoignez un groupe d'épargne communautaire. Ensemble, vous êtes plus forts pour réaliser vos rêves.",
+      "feature1": "Groupes de 10-30 membres",
+      "feature2": "Cotisations collectives",
+      "feature3": "Crédit rotatif"
+    },
+    "credit": {
+      "title": "Crédit Icyizere",
+      "description": "Un crédit basé sur la confiance pour financer vos projets. \"Icyizere\" signifie \"Espérance\" en Kirundi.",
+      "feature1": "Taux préférentiel de 12%",
+      "feature2": "Jusqu'à 5,000,000 BIF",
+      "feature3": "Remboursement flexible"
+    },
+    "agricultural": {
+      "title": "Crédit Agricole",
+      "description": "Financez vos activités agricoles : semences, équipements, bétail. Le Burundi, terre d'agriculture.",
+      "feature1": "Adapté aux cycles agricoles",
+      "feature2": "Différé de paiement",
+      "feature3": "Conseil technique"
+    },
+    "church": {
+      "title": "Compte Église",
+      "description": "Gestion transparente des fonds de votre communauté religieuse : dîmes, offrandes, projets paroissiaux.",
+      "feature1": "Multi-signataires",
+      "feature2": "Rapports détaillés",
+      "feature3": "0 frais de gestion"
+    },
+    "mobile": {
+      "title": "Mobile Banking",
+      "description": "Gérez votre compte depuis votre téléphone. Compatible Lumicash, Ecocash et Airtel Money.",
+      "feature1": "Transferts instantanés",
+      "feature2": "Paiement factures",
+      "feature3": "Code USSD simple"
+    }
+  },
+  "howItWorks": {
+    "badge": "Comment Rejoindre",
+    "title": "Devenez membre en",
+    "titleHighlight": "3 étapes",
+    "description": "Rejoindre la famille Hopefund Burundi est simple et accessible à tous",
+    "step1Title": "Inscription",
+    "step1Desc": "Rendez-vous dans notre agence la plus proche ou inscrivez-vous via notre application avec votre CNI burundaise.",
+    "step2Title": "Adhésion",
+    "step2Desc": "Payez vos frais d'inscription (gratuit pour étudiants, 5,000 BIF pour individus) et rejoignez la communauté Hopefund Burundi.",
+    "step3Title": "Bienvenue!",
+    "step3Desc": "Accédez à tous nos services : épargne, crédit, mobile banking. Que Dieu bénisse vos projets!",
+    "btnJoin": "Rejoindre Hopefund Burundi"
+  },
+  "pricing": {
+    "badge": "Frais d'Inscription",
+    "title": "Rejoindre",
+    "titleHighlight": "Hopefund Burundi",
+    "description": "Des frais d'inscription accessibles à tous. Devenez membre et accédez à tous nos services financiers solidaires.",
+    "free": "Gratuit",
+    "hope": "Icyizere",
+    "uniqueFee": "frais unique",
+    "perMember": "par membre",
+    "freeRegistration": "inscription gratuite",
+    "choose": "Choisir",
+    "addMember": "Ajouter membre",
+    "student": {
+      "name": "Umwana",
+      "subtitle": "Pour les étudiants et élèves",
+      "feature1": "Inscription 100% gratuite",
+      "feature2": "Compte épargne Tubaramire",
+      "feature3": "Application mobile",
+      "feature4": "Accès USSD *847#",
+      "feature5": "Formation financière",
+      "feature6": "Carte étudiant requise"
+    },
+    "individual": {
+      "name": "Umuryango",
+      "subtitle": "Pour tout adulte burundais",
+      "feature1": "Compte épargne Tubaramire",
+      "feature2": "Accès au crédit Icyizere",
+      "feature3": "Groupes Ibimina solidaires",
+      "feature4": "Application mobile & USSD",
+      "feature5": "Carte de débit Hopefund Burundi",
+      "feature6": "Support prioritaire"
+    },
+    "family": {
+      "name": "Umuryango+",
+      "subtitle": "Membre supplémentaire de la famille",
+      "feature1": "Ajout à un compte Umuryango",
+      "feature2": "Compte épargne individuel",
+      "feature3": "Application mobile & USSD",
+      "feature4": "Accès aux services complets",
+      "feature5": "Même foyer requis",
+      "feature6": "Épargne familiale groupée"
+    }
+  },
+  "testimonials": {
+    "badge": "Témoignages",
+    "title": "Histoires d'",
+    "titleHighlight": "espérance",
+    "description": "Découvrez comment Hopefund Burundi transforme des vies à travers tout le Burundi",
+    "testimonial1": {
+      "text": "Grâce au crédit agricole de Hopefund Burundi, j'ai pu acheter des semences et du fertilisant. Ma récolte a doublé cette année! Imana ishimwe - Dieu soit loué!",
+      "name": "Niyonzima Népomucène",
+      "role": "Agriculteur, Ngozi"
+    },
+    "testimonial2": {
+      "text": "Notre groupe Ibimina de 20 femmes a pu financer la scolarité de tous nos enfants. Hopefund Burundi nous a donné les outils, mais c'est notre solidarité qui fait la différence.",
+      "name": "Ndayisaba Béatrice",
+      "role": "Présidente Ibimina, Gitega"
+    },
+    "testimonial3": {
+      "text": "En tant que pasteur, j'apprécie la transparence de Hopefund Burundi pour gérer les finances de notre église. Leurs valeurs chrétiennes se voient dans leur service.",
+      "name": "Pasteur Nshimirimana Pierre",
+      "role": "Église Évangélique, Bujumbura"
+    },
+    "testimonial4": {
+      "text": "J'ai commencé avec un petit commerce de légumes. Avec le soutien de Hopefund Burundi, j'ai maintenant une boutique et j'emploie 3 personnes. L'espoir est permis!",
+      "name": "Hakizimana Éric",
+      "role": "Commerçant, Kayanza"
+    }
+  },
+  "app": {
+    "badge": "Application Mobile",
+    "title": "Hopefund Burundi dans",
+    "titleHighlight": "votre poche",
+    "description": "Gérez vos finances où que vous soyez au Burundi. Notre application fonctionne même avec une connexion limitée.",
+    "feature1": "Consultation du solde en temps réel",
+    "feature2": "Transferts vers Lumicash, Ecocash, Airtel Money",
+    "feature3": "Paiement de factures (REGIDESO, ONATEL)",
+    "feature4": "Demande de crédit en ligne",
+    "feature5": "Mode hors-ligne disponible",
+    "downloadOn": "Télécharger sur",
+    "availableOn": "Disponible sur",
+    "noSmartphone": "Pas de smartphone?",
+    "useUSSD": "Utilisez notre code USSD:",
+    "scanToDownload": "Scannez pour télécharger"
+  },
+  "faq": {
+    "badge": "FAQ",
+    "title": "Questions",
+    "titleHighlight": "fréquentes",
+    "description": "Trouvez rapidement les réponses à vos questions",
+    "q1": "Comment devenir membre de Hopefund Burundi?",
+    "a1": "Pour devenir membre, rendez-vous dans l'une de nos agences avec votre CNI burundaise et une photo d'identité. Vous devrez verser une part sociale minimum de 10,000 BIF. Vous pouvez aussi vous pré-inscrire via notre application mobile ou en composant le *847#.",
+    "q2": "Quels documents sont nécessaires pour un crédit?",
+    "a2": "Pour une demande de crédit, vous aurez besoin de: votre CNI, un justificatif de domicile (attestation de résidence), et selon le type de crédit, un business plan ou une preuve de revenus. Pour les groupes Ibimina, la garantie solidaire du groupe peut suffire.",
+    "q3": "Hopefund Burundi est-elle vraiment une institution chrétienne?",
+    "a3": "Oui, Hopefund Burundi a été fondée sur des principes chrétiens d'entraide et de solidarité. Nos valeurs de transparence, d'intégrité et d'amour du prochain guident toutes nos actions. Nous sommes ouverts à tous, quelle que soit leur confession, et nous respectons la diversité de nos membres.",
+    "q4": "Comment fonctionne un groupe Ibimina?",
+    "a4": "Un groupe Ibimina réunit 10 à 30 personnes qui épargnent ensemble. Chaque membre cotise régulièrement, et le groupe peut bénéficier de crédits rotatifs ou collectifs. C'est basé sur la confiance mutuelle et la solidarité. Hopefund Burundi accompagne les groupes avec des formations et un suivi régulier.",
+    "q5": "Puis-je utiliser Hopefund Burundi si je n'ai pas de smartphone?",
+    "a5": "Absolument! Notre service USSD (*847#) fonctionne sur tous les téléphones, même les plus simples. Vous pouvez consulter votre solde, faire des transferts et payer vos factures. Nos agences sont également là pour vous accueillir en personne."
+  },
+  "cta": {
+    "title": "Ensemble, bâtissons un avenir meilleur",
+    "description": "Rejoignez les milliers de Burundais qui font confiance à Hopefund Burundi pour construire leur avenir avec espérance.",
+    "btnCreate": "Créer mon compte",
+    "btnLogin": "Me connecter",
+    "note": "Inscription 100% en ligne - Sécurisée et rapide",
+    "since": "Depuis 2006",
+    "members": "+25,000 membres",
+    "provinces": "18 provinces",
+    "approved": "Agréé BRB"
+  },
+  "contact": {
+    "badge": "Contact",
+    "title": "Parlons de vos",
+    "titleHighlight": "projets",
+    "description": "Notre équipe est à votre écoute pour vous accompagner dans vos projets. N'hésitez pas à nous contacter!",
+    "headquarters": "Siège Social",
+    "phone": "Téléphone",
+    "email": "Email",
+    "hours": "Horaires",
+    "hoursValue": "Lundi - Vendredi: 8h - 17h<br>Samedi: 8h - 12h",
+    "form": {
+      "name": "Nom complet",
+      "namePlaceholder": "Ex: Niyonzima Jean",
+      "email": "Email",
+      "emailPlaceholder": "votre@email.com",
+      "phone": "Téléphone",
+      "phonePlaceholder": "+257 79 XX XX XX",
+      "province": "Province",
+      "provincePlaceholder": "Sélectionnez votre province",
+      "subject": "Sujet",
+      "subjectPlaceholder": "Sélectionnez un sujet",
+      "subjects": {
+        "membership": "Devenir membre",
+        "credit": "Demande de crédit",
+        "ibimina": "Créer un groupe Ibimina",
+        "church": "Compte pour église",
+        "support": "Support technique",
+        "other": "Autre demande"
+      },
+      "message": "Message",
+      "messagePlaceholder": "Décrivez votre besoin ou votre projet...",
+      "submit": "Envoyer le message"
+    }
+  },
+  "footer": {
+    "description": "<strong>Fondée en 2006</strong>, Hopefund Burundi est une microfinance chrétienne dédiée à l'inclusion financière au Burundi. Après 20 ans au service des familles burundaises, nous continuons d'accompagner nos membres vers un avenir meilleur, fondés sur les valeurs de foi, d'espérance et d'amour.",
+    "services": "Services",
+    "about": "À Propos",
+    "resources": "Ressources",
+    "legal": "Légal",
+    "servicesLinks": {
+      "savings": "Épargne Tubaramire",
+      "ibimina": "Groupes Ibimina",
+      "credit": "Crédit Icyizere",
+      "agricultural": "Crédit Agricole",
+      "church": "Compte Église"
+    },
+    "aboutLinks": {
+      "mission": "Notre Mission",
+      "values": "Nos Valeurs",
+      "team": "Notre Équipe",
+      "branches": "Nos Agences",
+      "careers": "Carrières"
+    },
+    "resourcesLinks": {
+      "help": "Centre d'aide",
+      "faq": "FAQ",
+      "education": "Éducation financière",
+      "blog": "Blog",
+      "testimonials": "Témoignages"
+    },
+    "legalLinks": {
+      "terms": "Conditions générales",
+      "privacy": "Politique de confidentialité",
+      "fees": "Tarifs et frais",
+      "legal": "Mentions légales"
+    },
+    "certifications": {
+      "experience": "20 ans d'expérience (2006-2026)",
+      "approved": "Agréé BRB",
+      "secure": "Données sécurisées",
+      "christian": "Valeurs Chrétiennes"
+    },
+    "copyright": "© 2026 Hopefund Burundi Microfinance. Tous droits réservés. | Bujumbura, Burundi"
+  },
+  "modal": {
+    "title": "Accéder à votre compte",
+    "subtitle": "Vous allez être redirigé vers votre espace sécurisé",
+    "description": "Gérez votre épargne, vos crédits et vos transactions en toute sécurité sur notre plateforme dédiée.",
+    "login": "Se connecter",
+    "or": "ou",
+    "createAccount": "Créer un compte",
+    "secure": "Connexion sécurisée SSL"
+  },
+  "devices": {
+    "greeting": "Muraho, Béatrice",
+    "balance": "Solde disponible",
+    "balanceLabel": "Solde BIF",
+    "savings": "Épargne"
+  }
+}

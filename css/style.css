@@ -410,6 +410,116 @@ input, textarea, select {
     cursor: pointer;
 }
 
+/* Language Switcher */
+.lang-switcher {
+    position: relative;
+    margin-right: var(--spacing-md);
+}
+
+.lang-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    padding: 0.5rem 0.75rem;
+    background: transparent;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--dark-color);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.lang-toggle:hover {
+    background: var(--gray-100);
+    border-color: var(--primary-color);
+}
+
+.lang-toggle i {
+    font-size: 0.75rem;
+    transition: transform var(--transition-fast);
+}
+
+.lang-dropdown.active + .lang-toggle i,
+.lang-dropdown.active ~ .lang-toggle i {
+    transform: rotate(180deg);
+}
+
+.lang-current {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.lang-dropdown {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    right: 0;
+    min-width: 150px;
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all var(--transition-fast);
+    z-index: 1000;
+    overflow: hidden;
+}
+
+.lang-dropdown.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.lang-option {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: transparent;
+    border: none;
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--dark-color);
+    cursor: pointer;
+    transition: background var(--transition-fast);
+    text-align: left;
+}
+
+.lang-option:hover {
+    background: var(--gray-100);
+}
+
+.lang-option.active {
+    background: rgba(14, 165, 233, 0.1);
+    color: var(--primary-color);
+}
+
+.lang-option span {
+    font-size: 1.25rem;
+}
+
+@media (max-width: 968px) {
+    .lang-switcher {
+        position: absolute;
+        top: var(--spacing-md);
+        right: calc(var(--spacing-md) + 50px);
+    }
+
+    .lang-toggle {
+        padding: 0.4rem 0.6rem;
+    }
+
+    .lang-current {
+        font-size: var(--font-size-xs);
+    }
+}
+
 /* Mobile Navigation */
 @media (max-width: 968px) {
     .nav__menu {

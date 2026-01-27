@@ -1,0 +1,319 @@
+{
+  "meta": {
+    "lang": "rn",
+    "name": "Ikirundi",
+    "flag": "🇧🇮"
+  },
+  "nav": {
+    "home": "Ahabanza",
+    "mission": "Intumbero yacu",
+    "services": "Serivisi",
+    "pricing": "Amahera",
+    "testimonials": "Ivyigisho",
+    "contact": "Tuvugishe",
+    "login": "Kwinjira",
+    "register": "Kwiyandikisha"
+  },
+  "hero": {
+    "badge": "Microfinance Gikristu mu Burundi — Kuva 2006",
+    "title": "Icyizere mu murimo wo",
+    "titleHighlight": "kubaka kazoza kawe",
+    "slogan": "\"Uhoraho ni we mbaraga zanje, n'Igitatu canje, n'Agakiza kanje!\" — Zaburi 118:14",
+    "description": "Hopefund Burundi ifasha imiryango y'Abarundi n'ibisubizo vy'amafaranga bishingiye ku buntu, bishingiye ku ngingo zo kwifashanya, ukwizera n'icyizere.",
+    "btnJoin": "Iba umwe muri twe",
+    "btnLogin": "Konte yanje",
+    "statYears": "Imyaka y'uburambe",
+    "statMembers": "Abanyamuryango bakora",
+    "statProvinces": "Intara zifise amasoko",
+    "discover": "Menya vyinshi"
+  },
+  "anniversary": {
+    "years": "20",
+    "label": "IMYAKA",
+    "period": "2006 - 2026",
+    "subtitle": "Imyaka mirongo ibiri mu murimo w'icyizere"
+  },
+  "partners": {
+    "title": "Abakorana nacu mu Burundi",
+    "churches": "Amashengero akorana natwe"
+  },
+  "mission": {
+    "badge": "Intumbero yacu",
+    "title": "Gukorera mu",
+    "titleHighlight": "Kwizera n'Urukundo",
+    "description": "Kuva <strong>2006</strong>, Hopefund Burundi yavutse mu ciyumviro Gikristu: gutanga uburyo bwo kugira amafaranga afite agaciro ku Murundi wese, mu kwubahiriza ingingo z'ubutungane, ubumwe n'icyizere. <strong>Imyaka 20 mu murimo w'imiryango y'Abarundi.</strong>",
+    "value1Title": "Ingingo Gikristu",
+    "value1Desc": "Imiyoborere yacu iyoborwa n'ubutungane, ukuri n'urukundo rw'abandi.",
+    "value2Title": "Kwifashanya mu muryango",
+    "value2Desc": "Dushigikira amatsinda y'ubuzima (Ibimina) n'ubufasha bushingiye ku kwifashanya.",
+    "value3Title": "Iterambere rirambye",
+    "value3Desc": "Dufasha imishinga y'uburimyi, ubucuruzi n'imiryango kugira ingaruka zirambye.",
+    "value4Title": "Ubufasha bw'Ijambo",
+    "value4Desc": "Inyuma y'amafaranga, dutanga ubufasha bw'umutima n'impwemu ku banyamuryango bacu."
+  },
+  "services": {
+    "badge": "Serivisi zacu",
+    "title": "Ibisubizo vy'amafaranga",
+    "titleHighlight": "bishingiye ku buntu",
+    "description": "Serivisi zihuje n'ubuzima bw'imiryango y'Abarundi, zateguwe kugufasha mu mishinga yawe n'urukundo",
+    "learnMore": "Menya vyinshi",
+    "popular": "Zikunzwe",
+    "savings": {
+      "title": "Ubwizigame Tubaramire",
+      "description": "Bika ku buryo bwawe kandi wubake kazoza kawe. \"Tubaramire\" bivuga \"Duterimbere hamwe\" mu Kirundi.",
+      "feature1": "Kuva 5,000 BIF/ukwezi",
+      "feature2": "Inyungu nziza ya 6%",
+      "feature3": "Gufata uko ushaka"
+    },
+    "ibimina": {
+      "title": "Ibimina vy'Ubumwe",
+      "description": "Injira mu matsinda y'ubwizigame bw'umuryango. Hamwe, muri nkomeye mu kuzuza amahirwe yanyu.",
+      "feature1": "Amatsinda y'abantu 10-30",
+      "feature2": "Intererano hamwe",
+      "feature3": "Ideni rizunguruka"
+    },
+    "credit": {
+      "title": "Ideni Icyizere",
+      "description": "Ideni rishingiye ku kwizera kugira uterimbere imishinga yawe. \"Icyizere\" bivuga \"Amahirwe\" mu Kirundi.",
+      "feature1": "Inyungu nziza ya 12%",
+      "feature2": "Kugeza 5,000,000 BIF",
+      "feature3": "Kwishura uko ushaka"
+    },
+    "agricultural": {
+      "title": "Ideni ry'Uburimyi",
+      "description": "Terimbere ibikorwa vyawe vy'uburimyi: imbuto, ibikoresho, amatungo. Uburundi, igihugu c'uburimyi.",
+      "feature1": "Bihuje n'ibihe vy'uburimyi",
+      "feature2": "Gutinda kwishura",
+      "feature3": "Ubujyanama bw'ubuhinzi"
+    },
+    "church": {
+      "title": "Konte y'Ishengero",
+      "description": "Kuyobora ku mucyo amafaranga y'ishengero ryanyu: icumi, amaturo, imishinga y'ishengero.",
+      "feature1": "Abantu benshi basinyira",
+      "feature2": "Raporo zisobanutse",
+      "feature3": "0 amafaranga yo kuyobora"
+    },
+    "mobile": {
+      "title": "Mobile Banking",
+      "description": "Yobora konte yawe kuva kuri telefone yawe. Ihuje na Lumicash, Ecocash na Airtel Money.",
+      "feature1": "Kohereza vuba",
+      "feature2": "Kwishura facture",
+      "feature3": "USSD yoroshe"
+    }
+  },
+  "howItWorks": {
+    "badge": "Uko winjira",
+    "title": "Uba umunyamuryango mu",
+    "titleHighlight": "ntambwe 3",
+    "description": "Kwinjira mu muryango wa Hopefund Burundi ni kworoshye kandi biratungana bose",
+    "step1Title": "Kwiyandikisha",
+    "step1Desc": "Ja mu isoko ryacu riri hafi cyangwa wiyandikishe kuri application yacu ukoresheje indangamuntu y'u Burundi.",
+    "step2Title": "Kuba umunyamuryango",
+    "step2Desc": "Ishura amafaranga yo kwiyandikisha (ubuntu ku banyeshuri, 5,000 BIF ku bantu ku giti cabo) winjire mu muryango wa Hopefund Burundi.",
+    "step3Title": "Murakaza neza!",
+    "step3Desc": "Ushobora gukoresha serivisi zose: ubwizigame, ideni, mobile banking. Imana ihezagire imishinga yawe!",
+    "btnJoin": "Injira muri Hopefund Burundi"
+  },
+  "pricing": {
+    "badge": "Amafaranga yo kwiyandikisha",
+    "title": "Injira muri",
+    "titleHighlight": "Hopefund Burundi",
+    "description": "Amafaranga yo kwiyandikisha atungana bose. Uba umunyamuryango ukoresha serivisi zacu zose z'amafaranga.",
+    "free": "Ubuntu",
+    "hope": "Icyizere",
+    "uniqueFee": "amafaranga rimwe",
+    "perMember": "ku munyamuryango",
+    "freeRegistration": "kwiyandikisha ku buntu",
+    "choose": "Hitamo",
+    "addMember": "Ongeraho umunyamuryango",
+    "student": {
+      "name": "Umwana",
+      "subtitle": "Ku banyeshuri n'abana",
+      "feature1": "Kwiyandikisha 100% ku buntu",
+      "feature2": "Konte y'ubwizigame Tubaramire",
+      "feature3": "Application mobile",
+      "feature4": "Gukoresha USSD *847#",
+      "feature5": "Amahugurwa y'amafaranga",
+      "feature6": "Ikarita y'umunyeshuri isabwa"
+    },
+    "individual": {
+      "name": "Umuryango",
+      "subtitle": "Ku Murundi wese ukuze",
+      "feature1": "Konte y'ubwizigame Tubaramire",
+      "feature2": "Gukoresha ideni Icyizere",
+      "feature3": "Amatsinda y'Ibimina",
+      "feature4": "Application mobile & USSD",
+      "feature5": "Ikarita ya Hopefund Burundi",
+      "feature6": "Ubufasha bwihariye"
+    },
+    "family": {
+      "name": "Umuryango+",
+      "subtitle": "Umunyamuryango w'inyongera mu rugo",
+      "feature1": "Kongerwa kuri konte Umuryango",
+      "feature2": "Konte y'ubwizigame yihariye",
+      "feature3": "Application mobile & USSD",
+      "feature4": "Gukoresha serivisi zose",
+      "feature5": "Inzu imwe isabwa",
+      "feature6": "Ubwizigame bw'umuryango hamwe"
+    }
+  },
+  "testimonials": {
+    "badge": "Ivyigisho",
+    "title": "Inkuru z'",
+    "titleHighlight": "icyizere",
+    "description": "Menya uko Hopefund Burundi ihindura ubuzima mu Burundi hose",
+    "testimonial1": {
+      "text": "Kubera ideni ry'uburimyi rya Hopefund Burundi, nashobowe kugura imbuto n'ifumbire. Isarura ryanje ryagabanyijwe kabiri uyu mwaka! Imana ishimwe!",
+      "name": "Niyonzima Népomucène",
+      "role": "Umurimyi, Ngozi"
+    },
+    "testimonial2": {
+      "text": "Itsinda ryacu ry'Ibimina ry'abagore 20 ryashoboye kwishura ishuri ry'abana bacu bose. Hopefund Burundi yaduhaye ibikoresho, ariko ubumwe bwacu nibwo butanga itandukaniro.",
+      "name": "Ndayisaba Béatrice",
+      "role": "Umukuru w'Ibimina, Gitega"
+    },
+    "testimonial3": {
+      "text": "Nk'umusaserdoti, ndashima ukuri kwa Hopefund Burundi mu kuyobora amafaranga y'ishengero ryacu. Ingingo zabo Gikristu ziboneka mu murimo wabo.",
+      "name": "Padiri Nshimirimana Pierre",
+      "role": "Ishengero ry'Ivanjili, Bujumbura"
+    },
+    "testimonial4": {
+      "text": "Natanguriye ku bucuruzi buto bw'imboga. N'ubufasha bwa Hopefund Burundi, ubu mfise iduka kandi nkorera abantu 3. Icyizere kirashoboka!",
+      "name": "Hakizimana Éric",
+      "role": "Umucuruzi, Kayanza"
+    }
+  },
+  "app": {
+    "badge": "Application Mobile",
+    "title": "Hopefund Burundi mu",
+    "titleHighlight": "mufuko wawe",
+    "description": "Yobora amafaranga yawe aho uri hose mu Burundi. Application yacu ikora naho internet iri nke.",
+    "feature1": "Kureba amafaranga ubu nyene",
+    "feature2": "Kohereza kuri Lumicash, Ecocash, Airtel Money",
+    "feature3": "Kwishura facture (REGIDESO, ONATEL)",
+    "feature4": "Gusaba ideni kuri internet",
+    "feature5": "Gukora nta internet",
+    "downloadOn": "Kuramo kuri",
+    "availableOn": "Biri kuri",
+    "noSmartphone": "Nta smartphone ufise?",
+    "useUSSD": "Koresha code yacu ya USSD:",
+    "scanToDownload": "Scan kugira ukure"
+  },
+  "faq": {
+    "badge": "FAQ",
+    "title": "Ibibazo",
+    "titleHighlight": "bikunze kubazwa",
+    "description": "Shaka ibisubizo ku bibazo byawe vuba",
+    "q1": "Ninjira nte mu muryango wa Hopefund Burundi?",
+    "a1": "Kugira ube umunyamuryango, ja mu masoko yacu hamwe n'indangamuntu y'u Burundi n'ifoto. Uzishura igice c'amafaranga gito cya 10,000 BIF. Ushobora no kwiyandikisha mbere kuri application yacu cyangwa ukoresha *847#.",
+    "q2": "Ni inyandiko izihe zisabwa ku ideni?",
+    "a2": "Ku gusaba ideni, uzokenera: indangamuntu yawe, icyemezo c'aho uba, kandi hakurikijwe ubwoko bw'ideni, umushinga cyangwa icyemezo cy'amafaranga winjiza. Ku matsinda y'Ibimina, garantie y'itsinda ishobora guhagije.",
+    "q3": "Hopefund Burundi ni ishirahamwe Gikristu koko?",
+    "a3": "Yego, Hopefund Burundi yashinzwe ku ngingo Gikristu zo kwifashanya n'ubumwe. Ingingo zacu z'ukuri, ubutungane n'urukundo rw'abandi ziyobora ibikorwa byacu byose. Twemerera bose, uko bazera kwose, kandi twubaha itandukaniro ry'abanyamuryango bacu.",
+    "q4": "Itsinda ry'Ibimina rikora rite?",
+    "a4": "Itsinda ry'Ibimina rihuza abantu 10-30 babika hamwe. Buri munyamuryango atanga intererano ku buryo busanzwe, kandi itsinda rishobora kubona ideni rizunguruka cyangwa ideni hamwe. Bishingiye ku kwizerana n'ubumwe. Hopefund Burundi ifasha amatsinda n'amahugurwa n'isuzuma ry'ubuziraherezo.",
+    "q5": "Nshobora gukoresha Hopefund Burundi nta smartphone mfise?",
+    "a5": "Cane! Serivisi yacu ya USSD (*847#) ikora kuri telefone zose, n'iz'ishaje. Ushobora kureba amafaranga yawe, kohereza no kwishura facture. Amasoko yacu na yo ariho kugira akakwakire."
+  },
+  "cta": {
+    "title": "Hamwe, dusangire kazoza keza",
+    "description": "Injira mu bantu ibihumbi b'Abarundi bizera Hopefund Burundi mu kubaka kazoza kabo n'icyizere.",
+    "btnCreate": "Fungura konte yanje",
+    "btnLogin": "Kwinjira",
+    "note": "Kwiyandikisha 100% kuri internet - Kizirika kandi cyihuta",
+    "since": "Kuva 2006",
+    "members": "+25,000 abanyamuryango",
+    "provinces": "Intara 18",
+    "approved": "BRB yaremeje"
+  },
+  "contact": {
+    "badge": "Tuvugishe",
+    "title": "Tuganire ku",
+    "titleHighlight": "mishinga yawe",
+    "description": "Itsinda ryacu ririho kugufasha mu mishinga yawe. Ntutinye kutuvugisha!",
+    "headquarters": "Ibiro bikuru",
+    "phone": "Telefone",
+    "email": "Email",
+    "hours": "Amasaha",
+    "hoursValue": "Kuwambere - Kuwatanu: 8h - 17h<br>Kuwagatandatu: 8h - 12h",
+    "form": {
+      "name": "Izina ryuzuye",
+      "namePlaceholder": "Urugero: Niyonzima Jean",
+      "email": "Email",
+      "emailPlaceholder": "yawe@email.com",
+      "phone": "Telefone",
+      "phonePlaceholder": "+257 79 XX XX XX",
+      "province": "Intara",
+      "provincePlaceholder": "Hitamo intara yawe",
+      "subject": "Intumbero",
+      "subjectPlaceholder": "Hitamo intumbero",
+      "subjects": {
+        "membership": "Kuba umunyamuryango",
+        "credit": "Gusaba ideni",
+        "ibimina": "Gutangira itsinda ry'Ibimina",
+        "church": "Konte y'ishengero",
+        "support": "Ubufasha bwa technique",
+        "other": "Ikindi gusaba"
+      },
+      "message": "Ubutumwa",
+      "messagePlaceholder": "Sobanura icyo ukeneye cyangwa umushinga wawe...",
+      "submit": "Kohereza ubutumwa"
+    }
+  },
+  "footer": {
+    "description": "<strong>Yashinzwe mu 2006</strong>, Hopefund Burundi ni microfinance Gikristu yiyemeje guteza imbere amafaranga mu Burundi. Nyuma y'imyaka 20 mu murimo w'imiryango y'Abarundi, tubandanya gufasha abanyamuryango bacu ku kazoza keza, dushingiye ku ngingo z'ukwizera, icyizere n'urukundo.",
+    "services": "Serivisi",
+    "about": "Ku bwacu",
+    "resources": "Ubufasha",
+    "legal": "Amategeko",
+    "servicesLinks": {
+      "savings": "Ubwizigame Tubaramire",
+      "ibimina": "Amatsinda y'Ibimina",
+      "credit": "Ideni Icyizere",
+      "agricultural": "Ideni ry'Uburimyi",
+      "church": "Konte y'Ishengero"
+    },
+    "aboutLinks": {
+      "mission": "Intumbero yacu",
+      "values": "Ingingo zacu",
+      "team": "Itsinda ryacu",
+      "branches": "Amasoko yacu",
+      "careers": "Akazi"
+    },
+    "resourcesLinks": {
+      "help": "Ubufasha",
+      "faq": "FAQ",
+      "education": "Amahugurwa y'amafaranga",
+      "blog": "Blog",
+      "testimonials": "Ivyigisho"
+    },
+    "legalLinks": {
+      "terms": "Amategeko rusange",
+      "privacy": "Amategeko y'ibanga",
+      "fees": "Amahera n'inyungu",
+      "legal": "Amategeko"
+    },
+    "certifications": {
+      "experience": "Imyaka 20 y'uburambe (2006-2026)",
+      "approved": "BRB yaremeje",
+      "secure": "Amakuru arazigama",
+      "christian": "Ingingo Gikristu"
+    },
+    "copyright": "© 2026 Hopefund Burundi Microfinance. Uburenganzira bwose bwawe. | Bujumbura, Burundi"
+  },
+  "modal": {
+    "title": "Kwinjira muri konte yawe",
+    "subtitle": "Uzajya ku kibanza cyawe kizirika",
+    "description": "Yobora ubwizigame bwawe, amadeni yawe n'ibikorwa byawe ku buryo buzirika ku kibuga cacu.",
+    "login": "Kwinjira",
+    "or": "cyangwa",
+    "createAccount": "Fungura konte",
+    "secure": "Kwihuza kuzirika SSL"
+  },
+  "devices": {
+    "greeting": "Muraho, Béatrice",
+    "balance": "Amafaranga aboneka",
+    "balanceLabel": "Amafaranga BIF",
+    "savings": "Ubwizigame"
+  }
+}
