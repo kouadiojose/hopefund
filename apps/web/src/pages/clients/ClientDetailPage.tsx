@@ -109,6 +109,7 @@ interface ClientDetail {
     date_demande: string | null;
     montant_demande: number;
     montant_octroye: number;
+    date_approbation: string | null;
     date_deblocage: string | null;
     duree_mois: number;
     taux_interet: number;
@@ -708,7 +709,7 @@ export default function ClientDetailPage() {
                               <ChevronDown className="w-4 h-4" />
                             )}
                             <div>
-                              <p className="font-medium">Credit #{credit.id_doss}</p>
+                              <p className="font-medium">Crédit #{credit.id_doss}</p>
                               <p className="text-sm text-muted-foreground">
                                 {credit.duree_mois} mois - {formatPercent(credit.taux_interet)} p.a.
                               </p>
@@ -718,19 +719,37 @@ export default function ClientDetailPage() {
                             {credit.etat_label}
                           </Badge>
                         </div>
+
+                        {/* Dates importantes */}
+                        <div className="flex flex-wrap gap-4 text-xs text-muted-foreground mb-3 bg-muted/30 rounded p-2">
+                          {credit.date_demande && (
+                            <span>📝 Demande: {formatDate(credit.date_demande)}</span>
+                          )}
+                          {credit.date_approbation && (
+                            <span>✅ Approuvé: {formatDate(credit.date_approbation)}</span>
+                          )}
+                          {credit.date_deblocage && (
+                            <span className="text-green-600 font-medium">💰 Débloqué: {formatDate(credit.date_deblocage)}</span>
+                          )}
+                        </div>
+
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                           <div>
-                            <p className="text-muted-foreground">Montant octroye</p>
+                            <p className="text-muted-foreground">Montant octroyé</p>
                             <p className="font-bold">{formatCurrency(credit.montant_octroye)}</p>
                           </div>
                           <div>
                             <p className="text-muted-foreground">Capital restant</p>
-                            <p className="font-medium">{formatCurrency(credit.capital_restant)}</p>
+                            <p className={`font-medium ${credit.capital_restant === 0 ? 'text-green-600' : ''}`}>
+                              {formatCurrency(credit.capital_restant)}
+                              {credit.capital_restant === 0 && credit.montant_octroye > 0 && ' ✓'}
+                            </p>
                           </div>
                           <div>
-                            <p className="text-muted-foreground">Echeances</p>
+                            <p className="text-muted-foreground">Échéances</p>
                             <p className="font-medium">
                               {credit.echeances_payees}/{credit.echeances_payees + credit.echeances_restantes}
+                              {credit.echeancier.length === 0 && <span className="text-orange-500 text-xs ml-1">(non tracées)</span>}
                             </p>
                           </div>
                           {credit.echeances_en_retard > 0 && (
@@ -747,7 +766,28 @@ export default function ClientDetailPage() {
                       {/* Echeancier detaille */}
                       {expandedCredits.has(credit.id_doss) && (
                         <div className="border-t p-4 bg-muted/30">
-                          <h4 className="font-medium mb-3">Echeancier</h4>
+                          <h4 className="font-medium mb-3">Échéancier et paiements</h4>
+
+                          {/* Message si pas d'échéancier */}
+                          {credit.echeancier.length === 0 ? (
+                            <div className="text-center py-6 bg-orange-50 rounded-lg border border-orange-200">
+                              <AlertTriangle className="w-8 h-8 text-orange-500 mx-auto mb-2" />
+                              <p className="text-orange-700 font-medium">Aucun historique de paiements disponible</p>
+                              <p className="text-sm text-orange-600 mt-1">
+                                Ce crédit a été géré avant la mise en place du suivi détaillé des échéances.
+                              </p>
+                              {credit.capital_restant === 0 && credit.montant_octroye > 0 && (
+                                <p className="text-sm text-green-600 mt-2 font-medium">
+                                  ✓ Le crédit a été entièrement remboursé
+                                </p>
+                              )}
+                              {credit.date_deblocage && (
+                                <p className="text-xs text-muted-foreground mt-2">
+                                  Débloqué le {formatDate(credit.date_deblocage)}
+                                </p>
+                              )}
+                            </div>
+                          ) : (
                           <div className="overflow-x-auto">
                             <table className="w-full text-sm">
                               <thead>
@@ -818,6 +858,7 @@ export default function ClientDetailPage() {
                               </tbody>
                             </table>
                           </div>
+                          )}
 
                           {/* Garanties */}
                           {credit.garanties && credit.garanties.length > 0 && (
