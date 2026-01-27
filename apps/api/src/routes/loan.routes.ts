@@ -480,6 +480,7 @@ router.get('/', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_O
     );
     const status = req.query.status as string;
     const clientId = req.query.clientId ? parseInt(req.query.clientId as string) : undefined;
+    const search = req.query.search as string;
 
     const where: any = {};
 
@@ -498,6 +499,37 @@ router.get('/', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_O
 
     if (clientId) {
       where.id_client = clientId;
+    }
+
+    // Recherche par ID de dossier ou nom de client
+    if (search && search.trim()) {
+      const searchTerm = search.trim();
+      const searchAsNumber = parseInt(searchTerm, 10);
+      const searchConditions: any[] = [];
+
+      // Recherche par numéro de dossier (exact ou partiel)
+      if (!isNaN(searchAsNumber)) {
+        searchConditions.push({ id_doss: searchAsNumber });
+      }
+
+      // Recherche par nom de client
+      searchConditions.push(
+        { client: { pp_nom: { contains: searchTerm, mode: 'insensitive' } } },
+        { client: { pp_prenom: { contains: searchTerm, mode: 'insensitive' } } },
+        { client: { pm_raison_sociale: { contains: searchTerm, mode: 'insensitive' } } },
+      );
+
+      // Si on avait déjà un OR (pour le status), on doit combiner avec AND
+      if (where.OR) {
+        const statusOR = where.OR;
+        delete where.OR;
+        where.AND = [
+          { OR: statusOR },
+          { OR: searchConditions },
+        ];
+      } else {
+        where.OR = searchConditions;
+      }
     }
 
     const [loans, total] = await Promise.all([
