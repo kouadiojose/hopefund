@@ -2555,3 +2555,126 @@ input, textarea, select {
         flex-wrap: wrap;
     }
 }
+
+/* ====================================
+   BURUNDI / CHRISTIAN SPECIFIC STYLES
+   ==================================== */
+
+/* Footer verse */
+.footer__verse {
+    font-size: var(--font-size-sm);
+    color: var(--gray-500);
+    margin-top: var(--spacing-md);
+    padding: var(--spacing-md);
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-lg);
+    border-left: 3px solid var(--secondary-color);
+}
+
+/* App USSD info */
+.app__ussd {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-lg);
+    padding: var(--spacing-md);
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-lg);
+    color: var(--gray-300);
+    font-size: var(--font-size-sm);
+}
+
+.app__ussd i {
+    color: var(--secondary-color);
+    font-size: var(--font-size-lg);
+}
+
+.app__ussd strong {
+    color: var(--white);
+}
+
+/* Hero description for bible verse */
+.hero__description em {
+    display: block;
+    padding: var(--spacing-md);
+    background: rgba(0, 102, 255, 0.1);
+    border-radius: var(--radius-lg);
+    border-left: 3px solid var(--primary-color);
+    margin-bottom: var(--spacing-md);
+    font-style: italic;
+    color: var(--gray-600);
+}
+
+/* CTA bible verse */
+.cta__description em {
+    display: block;
+    padding: var(--spacing-md);
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--spacing-md);
+    font-style: italic;
+}
+
+/* Kirundi names styling - make them stand out */
+.service__title,
+.pricing__name {
+    font-family: var(--font-family);
+}
+
+/* Church icon styling */
+.phone__transaction-icon .fa-church {
+    color: var(--primary-light);
+}
+
+/* Cross and dove icons for Christian identity */
+.nav__logo .fa-dove,
+.footer__logo .fa-dove,
+.modal__header .fa-dove,
+.app__screen-content .fa-dove {
+    color: var(--secondary-color);
+}
+
+/* Badge with cross */
+.hero__badge .fa-cross {
+    color: var(--primary-color);
+}
+
+/* Floating card with praying hands */
+.hero__floating-card .fa-praying-hands {
+    color: var(--secondary-color);
+}
+
+/* Feature icons for Christian values */
+.feature__icon .fa-cross,
+.feature__icon .fa-hands-helping,
+.feature__icon .fa-heart,
+.feature__icon .fa-seedling {
+    color: var(--white);
+}
+
+/* Service card icons */
+.service__icon .fa-church {
+    color: var(--primary-color);
+}
+
+.service__card--featured .service__icon .fa-users {
+    color: var(--white);
+}
+
+/* Responsive adjustments for Burundi-specific elements */
+@media (max-width: 768px) {
+    .app__ussd {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .hero__description em {
+        font-size: var(--font-size-sm);
+    }
+
+    .footer__verse {
+        text-align: center;
+        border-left: none;
+        border-top: 3px solid var(--secondary-color);
+    }
+}
