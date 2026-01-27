@@ -1,0 +1,20 @@
+spec:
+  name: hopefund-homepage
+  region: fra
+
+  static_sites:
+    - name: hopefund-frontend
+      github:
+        repo: kouadiojose/hopefund
+        branch: claude/hopefund-homepage-NXHHx
+        deploy_on_push: true
+      source_dir: /
+      index_document: index.html
+      error_document: index.html
+      domains:
+        - domain: home.hfb.markel-tech.com
+          type: PRIMARY
+      routes:
+        - path: /
+      build_command: ""
+      environment_slug: html
