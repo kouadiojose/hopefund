@@ -138,110 +138,69 @@
                 </div>
 
                 <div class="hero__image" data-aos="fade-left">
-                    <!-- MacBook Pro -->
-                    <div class="hero__macbook" data-aos="fade-up" data-aos-delay="200">
-                        <div class="macbook__screen">
-                            <div class="macbook__display">
-                                <div class="macbook__toolbar">
-                                    <span class="macbook__dot macbook__dot--red"></span>
-                                    <span class="macbook__dot macbook__dot--yellow"></span>
-                                    <span class="macbook__dot macbook__dot--green"></span>
-                                </div>
-                                <div class="macbook__content">
-                                    <div class="macbook__header">
+                    <!-- Device Mockups Container -->
+                    <div class="hero__devices">
+                        <!-- MacBook Pro with Screenshot -->
+                        <div class="device device--macbook" data-aos="fade-up" data-aos-delay="100">
+                            <div class="device__frame">
+                                <img src="https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800&q=80" alt="Hopefund Burundi Dashboard" class="device__screen-img">
+                                <div class="device__screen-overlay">
+                                    <div class="screen__header">
                                         <i class="fas fa-ship"></i>
                                         <span>Hopefund Burundi</span>
                                     </div>
-                                    <div class="macbook__dashboard">
-                                        <div class="macbook__card">
-                                            <span class="macbook__card-value">2.4M</span>
-                                            <span class="macbook__card-label">Solde BIF</span>
+                                    <div class="screen__stats">
+                                        <div class="screen__stat">
+                                            <span class="screen__stat-value">2,450,000</span>
+                                            <span class="screen__stat-label">Solde BIF</span>
                                         </div>
-                                        <div class="macbook__card">
-                                            <span class="macbook__card-value">+12%</span>
-                                            <span class="macbook__card-label">Épargne</span>
-                                        </div>
-                                        <div class="macbook__card">
-                                            <span class="macbook__card-value">0</span>
-                                            <span class="macbook__card-label">Crédit</span>
+                                        <div class="screen__stat screen__stat--green">
+                                            <span class="screen__stat-value">+12.5%</span>
+                                            <span class="screen__stat-label">Épargne</span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="macbook__base"></div>
-                        <div class="macbook__bottom"></div>
-                    </div>
 
-                    <!-- iPhone 17 Pro -->
-                    <div class="hero__phone">
-                        <div class="phone__screen">
-                            <div class="phone__header">
-                                <span class="phone__time">14:30</span>
-                                <div class="phone__icons">
-                                    <i class="fas fa-signal"></i>
-                                    <i class="fas fa-wifi"></i>
-                                    <i class="fas fa-battery-full"></i>
-                                </div>
-                            </div>
-                            <div class="phone__content">
-                                <div class="phone__greeting">Muraho, Béatrice</div>
-                                <div class="phone__balance-card">
-                                    <span class="phone__balance-label">Solde disponible</span>
-                                    <span class="phone__balance-amount">2,450,000 BIF</span>
-                                    <div class="phone__card-number">Compte Épargne Tubaramire</div>
-                                </div>
-                                <div class="phone__quick-actions">
-                                    <div class="phone__action">
-                                        <i class="fas fa-paper-plane"></i>
-                                        <span>Envoyer</span>
-                                    </div>
-                                    <div class="phone__action">
-                                        <i class="fas fa-piggy-bank"></i>
-                                        <span>Épargner</span>
-                                    </div>
-                                    <div class="phone__action">
-                                        <i class="fas fa-hand-holding-heart"></i>
-                                        <span>Cotiser</span>
-                                    </div>
-                                    <div class="phone__action">
-                                        <i class="fas fa-ellipsis-h"></i>
-                                        <span>Plus</span>
-                                    </div>
-                                </div>
-                                <div class="phone__transactions">
-                                    <div class="phone__transaction">
-                                        <div class="phone__transaction-icon received">
-                                            <i class="fas fa-arrow-down"></i>
+                        <!-- iPhone with App Screenshot -->
+                        <div class="device device--iphone" data-aos="fade-up" data-aos-delay="300">
+                            <div class="device__frame">
+                                <div class="device__notch"></div>
+                                <div class="device__screen-overlay device__screen-overlay--phone">
+                                    <div class="phone__app-header">
+                                        <span class="phone__time">14:30</span>
+                                        <div class="phone__status">
+                                            <i class="fas fa-signal"></i>
+                                            <i class="fas fa-wifi"></i>
+                                            <i class="fas fa-battery-full"></i>
                                         </div>
-                                        <div class="phone__transaction-info">
-                                            <span class="phone__transaction-name">Groupe Umwizero</span>
-                                            <span class="phone__transaction-date">Aujourd'hui</span>
-                                        </div>
-                                        <span class="phone__transaction-amount positive">+150,000 BIF</span>
                                     </div>
-                                    <div class="phone__transaction">
-                                        <div class="phone__transaction-icon sent">
-                                            <i class="fas fa-church"></i>
+                                    <div class="phone__app-content">
+                                        <div class="phone__greeting">Muraho, Béatrice 👋</div>
+                                        <div class="phone__balance-box">
+                                            <span class="phone__balance-title">Solde disponible</span>
+                                            <span class="phone__balance-value">2,450,000 <small>BIF</small></span>
                                         </div>
-                                        <div class="phone__transaction-info">
-                                            <span class="phone__transaction-name">Dîme Église</span>
-                                            <span class="phone__transaction-date">Dimanche</span>
+                                        <div class="phone__actions-grid">
+                                            <div class="phone__action-btn"><i class="fas fa-paper-plane"></i></div>
+                                            <div class="phone__action-btn"><i class="fas fa-piggy-bank"></i></div>
+                                            <div class="phone__action-btn"><i class="fas fa-hand-holding-heart"></i></div>
+                                            <div class="phone__action-btn"><i class="fas fa-qrcode"></i></div>
                                         </div>
-                                        <span class="phone__transaction-amount negative">-25,000 BIF</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="hero__floating-card hero__floating-card--1" data-aos="fade-up" data-aos-delay="300">
-                        <i class="fas fa-praying-hands"></i>
-                        <span>Fondé sur la Foi</span>
+                    <div class="hero__floating-card hero__floating-card--1" data-aos="fade-up" data-aos-delay="400">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Paiement réussi!</span>
                     </div>
-                    <div class="hero__floating-card hero__floating-card--2" data-aos="fade-up" data-aos-delay="500">
-                        <i class="fas fa-users"></i>
-                        <span>Solidarité Communautaire</span>
+                    <div class="hero__floating-card hero__floating-card--2" data-aos="fade-up" data-aos-delay="600">
+                        <i class="fas fa-shield-alt"></i>
+                        <span>100% Sécurisé</span>
                     </div>
                 </div>
             </div>
