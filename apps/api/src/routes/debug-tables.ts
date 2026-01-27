@@ -103,14 +103,14 @@ router.get('/credit/:id/echeances', async (req, res) => {
   }
 });
 
-// Get payment history from ad_his table
+// Get payment history from ad_sre table (contains actual payment records)
 router.get('/credit/:id/payments', async (req, res) => {
   try {
     const creditId = parseInt(req.params.id);
 
-    // Get payment history from ad_his
+    // Get payment history from ad_sre (this table contains the payment records)
     const payments = await prisma.$queryRawUnsafe(`
-      SELECT * FROM ad_his WHERE id_doss = $1 ORDER BY date_remb DESC
+      SELECT * FROM ad_sre WHERE id_doss = $1 ORDER BY date_remb DESC
     `, creditId) as any[];
 
     // Get credit details
@@ -135,11 +135,16 @@ router.get('/credit/:id/payments', async (req, res) => {
         totals,
         totalRembourse: totals.capital + totals.interet + totals.penalite + totals.garantie,
         data: payments.map((p: any) => ({
-          ...p,
+          id_ech: p.id_ech,
+          num_remb: p.num_remb,
+          date_remb: p.date_remb,
           mnt_remb_cap: Number(p.mnt_remb_cap || 0),
           mnt_remb_int: Number(p.mnt_remb_int || 0),
           mnt_remb_pen: Number(p.mnt_remb_pen || 0),
           mnt_remb_gar: Number(p.mnt_remb_gar || 0),
+          total: Number(p.mnt_remb_cap || 0) + Number(p.mnt_remb_int || 0) + Number(p.mnt_remb_pen || 0),
+          annul_remb: p.annul_remb,
+          date_creation: p.date_creation,
         }))
       }
     });
@@ -162,14 +167,9 @@ router.get('/credit/:id/full', async (req, res) => {
       return res.json({ error: 'Credit not found' });
     }
 
-    // Get echeances from ad_sre
-    const echeances = await prisma.$queryRawUnsafe(`
-      SELECT * FROM ad_sre WHERE id_doss = $1 ORDER BY id_ech
-    `, creditId) as any[];
-
-    // Get payment history from ad_his
+    // Get payment history from ad_sre
     const payments = await prisma.$queryRawUnsafe(`
-      SELECT * FROM ad_his WHERE id_doss = $1 ORDER BY date_remb
+      SELECT * FROM ad_sre WHERE id_doss = $1 ORDER BY date_remb
     `, creditId) as any[];
 
     // Get client info
@@ -177,18 +177,38 @@ router.get('/credit/:id/full', async (req, res) => {
       SELECT id_client, pp_nom, pp_prenom, pm_raison_sociale FROM ad_cli WHERE id_client = $1
     `, credit[0].id_client) as any[];
 
+    // Calculate summary
+    const totalCapital = payments.reduce((s: number, p: any) => s + Number(p.mnt_remb_cap || 0), 0);
+    const totalInteret = payments.reduce((s: number, p: any) => s + Number(p.mnt_remb_int || 0), 0);
+    const totalPenalite = payments.reduce((s: number, p: any) => s + Number(p.mnt_remb_pen || 0), 0);
+
     res.json({
       credit: credit[0],
       client: client[0] || null,
-      echeances: { count: echeances.length, data: echeances },
-      payments: { count: payments.length, data: payments },
+      payments: {
+        count: payments.length,
+        data: payments.map((p: any) => ({
+          id_ech: p.id_ech,
+          num_remb: p.num_remb,
+          date_remb: p.date_remb,
+          mnt_remb_cap: Number(p.mnt_remb_cap || 0),
+          mnt_remb_int: Number(p.mnt_remb_int || 0),
+          mnt_remb_pen: Number(p.mnt_remb_pen || 0),
+          mnt_remb_gar: Number(p.mnt_remb_gar || 0),
+          annul_remb: p.annul_remb,
+        }))
+      },
       summary: {
         montantOctroye: Number(credit[0].cre_mnt_octr || 0),
         dateDeblocage: credit[0].cre_date_debloc,
+        dateApprobation: credit[0].cre_date_approb,
+        etat: credit[0].cre_etat,
         totalPaiements: payments.length,
-        totalCapitalRembourse: payments.reduce((s: number, p: any) => s + Number(p.mnt_remb_cap || 0), 0),
-        totalInteretRembourse: payments.reduce((s: number, p: any) => s + Number(p.mnt_remb_int || 0), 0),
-        totalPenaliteRembourse: payments.reduce((s: number, p: any) => s + Number(p.mnt_remb_pen || 0), 0),
+        totalCapitalRembourse: totalCapital,
+        totalInteretRembourse: totalInteret,
+        totalPenaliteRembourse: totalPenalite,
+        totalRembourse: totalCapital + totalInteret + totalPenalite,
+        soldeRestant: Number(credit[0].cre_mnt_octr || 0) - totalCapital,
       }
     });
   } catch (error: any) {
