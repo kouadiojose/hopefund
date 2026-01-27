@@ -80,53 +80,116 @@ router.get('/loan-tables', async (req, res) => {
 router.get('/credit/:id/echeances', async (req, res) => {
   try {
     const creditId = parseInt(req.params.id);
-    const echeances = await prisma.$queryRaw`
-      SELECT * FROM ad_sre WHERE id_doss = ${creditId} ORDER BY date_ech
+
+    // First get the columns of ad_sre
+    const columns = await prisma.$queryRaw`
+      SELECT column_name FROM information_schema.columns WHERE table_name = 'ad_sre'
     ` as any[];
-    res.json({ creditId, count: echeances.length, echeances });
+
+    // Get echeances
+    const echeances = await prisma.$queryRawUnsafe(
+      `SELECT * FROM ad_sre WHERE id_doss = $1 ORDER BY id_ech`,
+      creditId
+    ) as any[];
+
+    res.json({
+      creditId,
+      columns: columns.map((c: any) => c.column_name),
+      count: echeances.length,
+      echeances
+    });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// Check all movements/transactions related to a credit account
-router.get('/credit/:id/movements', async (req, res) => {
+// Get payment history from ad_his table
+router.get('/credit/:id/payments', async (req, res) => {
   try {
     const creditId = parseInt(req.params.id);
-    
-    // First get the credit details
-    const credit = await prisma.$queryRaw`
-      SELECT * FROM ad_dcr WHERE id_doss = ${creditId}
-    ` as any[];
-    
+
+    // Get payment history from ad_his
+    const payments = await prisma.$queryRawUnsafe(`
+      SELECT * FROM ad_his WHERE id_doss = $1 ORDER BY date_remb DESC
+    `, creditId) as any[];
+
+    // Get credit details
+    const credit = await prisma.$queryRawUnsafe(`
+      SELECT id_doss, id_client, cre_mnt_octr, cre_date_debloc, cre_date_approb, cre_etat, duree_mois
+      FROM ad_dcr WHERE id_doss = $1
+    `, creditId) as any[];
+
+    // Calculate totals
+    const totals = payments.reduce((acc: any, p: any) => ({
+      capital: acc.capital + Number(p.mnt_remb_cap || 0),
+      interet: acc.interet + Number(p.mnt_remb_int || 0),
+      penalite: acc.penalite + Number(p.mnt_remb_pen || 0),
+      garantie: acc.garantie + Number(p.mnt_remb_gar || 0),
+    }), { capital: 0, interet: 0, penalite: 0, garantie: 0 });
+
+    res.json({
+      creditId,
+      credit: credit[0] || null,
+      payments: {
+        count: payments.length,
+        totals,
+        totalRembourse: totals.capital + totals.interet + totals.penalite + totals.garantie,
+        data: payments.map((p: any) => ({
+          ...p,
+          mnt_remb_cap: Number(p.mnt_remb_cap || 0),
+          mnt_remb_int: Number(p.mnt_remb_int || 0),
+          mnt_remb_pen: Number(p.mnt_remb_pen || 0),
+          mnt_remb_gar: Number(p.mnt_remb_gar || 0),
+        }))
+      }
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get full credit details with payment history
+router.get('/credit/:id/full', async (req, res) => {
+  try {
+    const creditId = parseInt(req.params.id);
+
+    // Get credit details
+    const credit = await prisma.$queryRawUnsafe(`
+      SELECT * FROM ad_dcr WHERE id_doss = $1
+    `, creditId) as any[];
+
     if (credit.length === 0) {
       return res.json({ error: 'Credit not found' });
     }
-    
-    // Get the account linked to this credit
-    const accountId = credit[0].cre_id_cpte;
-    
-    // Get all movements for this account
-    const movements = await prisma.$queryRaw`
-      SELECT * FROM ad_mouvement 
-      WHERE cpte_interne_cli = ${accountId}
-      ORDER BY date_valeur DESC
-      LIMIT 50
-    ` as any[];
-    
-    // Also try to find ecritures
-    const ecritures = await prisma.$queryRaw`
-      SELECT * FROM ad_ecriture
-      WHERE id_doss = ${creditId}
-      ORDER BY date_ecriture DESC
-      LIMIT 50
-    ` as any[];
-    
-    res.json({ 
-      credit: credit[0], 
-      accountId,
-      movements: { count: movements.length, data: movements },
-      ecritures: { count: ecritures.length, data: ecritures }
+
+    // Get echeances from ad_sre
+    const echeances = await prisma.$queryRawUnsafe(`
+      SELECT * FROM ad_sre WHERE id_doss = $1 ORDER BY id_ech
+    `, creditId) as any[];
+
+    // Get payment history from ad_his
+    const payments = await prisma.$queryRawUnsafe(`
+      SELECT * FROM ad_his WHERE id_doss = $1 ORDER BY date_remb
+    `, creditId) as any[];
+
+    // Get client info
+    const client = await prisma.$queryRawUnsafe(`
+      SELECT id_client, pp_nom, pp_prenom, pm_raison_sociale FROM ad_cli WHERE id_client = $1
+    `, credit[0].id_client) as any[];
+
+    res.json({
+      credit: credit[0],
+      client: client[0] || null,
+      echeances: { count: echeances.length, data: echeances },
+      payments: { count: payments.length, data: payments },
+      summary: {
+        montantOctroye: Number(credit[0].cre_mnt_octr || 0),
+        dateDeblocage: credit[0].cre_date_debloc,
+        totalPaiements: payments.length,
+        totalCapitalRembourse: payments.reduce((s: number, p: any) => s + Number(p.mnt_remb_cap || 0), 0),
+        totalInteretRembourse: payments.reduce((s: number, p: any) => s + Number(p.mnt_remb_int || 0), 0),
+        totalPenaliteRembourse: payments.reduce((s: number, p: any) => s + Number(p.mnt_remb_pen || 0), 0),
+      }
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
