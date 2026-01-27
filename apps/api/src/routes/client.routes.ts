@@ -544,12 +544,17 @@ router.get('/:id', async (req, res, next) => {
       dossiers_credit.map(async (dossier: any) => {
         try {
           // Récupérer les paiements depuis ad_sre (historique réel des remboursements)
+          const creditId = Number(dossier.id_doss);
+          const agenceId = Number(dossier.id_ag || 1);
+          logger.info(`Fetching payments for credit ${creditId} (agence ${agenceId})`);
           const paiements = await prisma.$queryRawUnsafe(`
             SELECT id_ech, num_remb, date_remb, mnt_remb_cap, mnt_remb_int, mnt_remb_pen, mnt_remb_gar, annul_remb, date_creation
             FROM ad_sre
-            WHERE id_doss = $1
+            WHERE id_doss = $1 AND id_ag = $2
             ORDER BY date_remb ASC, num_remb ASC
-          `, dossier.id_doss) as any[];
+          `, creditId, agenceId) as any[];
+
+          logger.info(`Found ${paiements.length} payments for credit ${dossier.id_doss}`, paiements.length > 0 ? { sample: paiements[0] } : {});
 
           const garanties = await prisma.garantie.findMany({
             where: { id_doss: dossier.id_doss },
