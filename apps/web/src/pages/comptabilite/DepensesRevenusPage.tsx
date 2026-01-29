@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   TrendingUp,
   TrendingDown,
@@ -26,6 +27,7 @@ import {
   TabsTrigger,
 } from '@/components/ui/tabs';
 import { formatCurrency, formatDate } from '@/lib/utils';
+import { comptabiliteApi } from '@/lib/api';
 
 interface DepenseRevenu {
   id: number;
@@ -63,26 +65,42 @@ const categoriesRevenus = [
 export default function DepensesRevenusPage() {
   const [activeTab, setActiveTab] = useState('depenses');
   const [categorie, setCategorie] = useState('all');
+  const [dateDebut, setDateDebut] = useState('');
+  const [dateFin, setDateFin] = useState('');
 
-  // Sample data
-  const depenses: DepenseRevenu[] = [
-    { id: 1, date: '2024-01-15', reference: 'DEP-001', libelle: 'Achat fournitures bureau siège', categorie: 'Fournitures de bureau', montant: 250000, type: 'depense', statut: 'valide' },
-    { id: 2, date: '2024-01-15', reference: 'DEP-002', libelle: 'Carburant véhicule direction', categorie: 'Carburant', montant: 150000, type: 'depense', statut: 'valide' },
-    { id: 3, date: '2024-01-16', reference: 'DEP-003', libelle: 'Réparation imprimante Makamba', categorie: 'Entretien et réparations', montant: 85000, type: 'depense', statut: 'valide' },
-    { id: 4, date: '2024-01-17', reference: 'DEP-004', libelle: 'Loyer janvier agence Kamenge', categorie: 'Loyer', montant: 500000, type: 'depense', statut: 'en_attente' },
-    { id: 5, date: '2024-01-31', reference: 'DEP-005', libelle: 'Salaires janvier 2024', categorie: 'Salaires', montant: 15000000, type: 'depense', statut: 'valide' },
-  ];
+  const { data: depensesRevenusData, isLoading } = useQuery({
+    queryKey: ['depenses-revenus', dateDebut, dateFin],
+    queryFn: () => comptabiliteApi.getDepensesRevenus({
+      dateDebut: dateDebut || undefined,
+      dateFin: dateFin || undefined,
+    }),
+  });
 
-  const revenus: DepenseRevenu[] = [
-    { id: 1, date: '2024-01-15', reference: 'REV-001', libelle: 'Intérêts crédits janvier', categorie: 'Intérêts sur crédits', montant: 5500000, type: 'revenu', statut: 'valide' },
-    { id: 2, date: '2024-01-15', reference: 'REV-002', libelle: 'Frais dossier crédit NIYONZIMA', categorie: 'Frais de dossier', montant: 150000, type: 'revenu', statut: 'valide' },
-    { id: 3, date: '2024-01-16', reference: 'REV-003', libelle: 'Commissions virements', categorie: 'Commissions', montant: 85000, type: 'revenu', statut: 'valide' },
-    { id: 4, date: '2024-01-17', reference: 'REV-004', libelle: 'Frais tenue compte Q1', categorie: 'Frais de tenue de compte', montant: 2500000, type: 'revenu', statut: 'valide' },
-  ];
+  const depenses: DepenseRevenu[] = (depensesRevenusData?.depenses || []).map((d: any, index: number) => ({
+    id: index + 1,
+    date: new Date().toISOString().split('T')[0],
+    reference: `DEP-${String(index + 1).padStart(3, '0')}`,
+    libelle: d.libelle,
+    categorie: d.compte,
+    montant: d.montant,
+    type: 'depense' as const,
+    statut: 'valide' as const,
+  }));
 
-  const totalDepenses = depenses.reduce((sum, d) => sum + d.montant, 0);
-  const totalRevenus = revenus.reduce((sum, r) => sum + r.montant, 0);
-  const resultat = totalRevenus - totalDepenses;
+  const revenus: DepenseRevenu[] = (depensesRevenusData?.revenus || []).map((r: any, index: number) => ({
+    id: index + 1,
+    date: new Date().toISOString().split('T')[0],
+    reference: `REV-${String(index + 1).padStart(3, '0')}`,
+    libelle: r.libelle,
+    categorie: r.compte,
+    montant: r.montant,
+    type: 'revenu' as const,
+    statut: 'valide' as const,
+  }));
+
+  const totalDepenses = depensesRevenusData?.totalDepenses || 0;
+  const totalRevenus = depensesRevenusData?.totalRevenus || 0;
+  const resultat = depensesRevenusData?.resultat || (totalRevenus - totalDepenses);
 
   const filteredDepenses = categorie === 'all' ? depenses : depenses.filter((d) => d.categorie === categorie);
   const filteredRevenus = categorie === 'all' ? revenus : revenus.filter((r) => r.categorie === categorie);
@@ -167,11 +185,19 @@ export default function DepensesRevenusPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <Label>Date début</Label>
-              <Input type="date" />
+              <Input
+                type="date"
+                value={dateDebut}
+                onChange={(e) => setDateDebut(e.target.value)}
+              />
             </div>
             <div>
               <Label>Date fin</Label>
-              <Input type="date" />
+              <Input
+                type="date"
+                value={dateFin}
+                onChange={(e) => setDateFin(e.target.value)}
+              />
             </div>
             <div>
               <Label>Catégorie</Label>

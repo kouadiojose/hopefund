@@ -118,6 +118,12 @@ export default function PlanComptablePage() {
   const [search, setSearch] = useState('');
   const [expandedClasses, setExpandedClasses] = useState<number[]>([1, 2]);
 
+  // Fetch plan comptable from API (or use static data as fallback)
+  const { data: planComptableApi } = useQuery({
+    queryKey: ['plan-comptable'],
+    queryFn: comptabiliteApi.getPlanComptable,
+  });
+
   const toggleClass = (classe: number) => {
     setExpandedClasses((prev) =>
       prev.includes(classe) ? prev.filter((c) => c !== classe) : [...prev, classe]

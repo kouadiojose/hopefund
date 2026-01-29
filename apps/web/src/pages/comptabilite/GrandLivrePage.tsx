@@ -45,37 +45,21 @@ export default function GrandLivrePage() {
   const [compte, setCompte] = useState('');
   const [search, setSearch] = useState('');
 
-  // Sample data
-  const sampleData: CompteGrandLivre[] = [
-    {
-      numero_compte: '1.0.1.1.1',
-      libelle_compte: 'COFFRE FORT SIEGE',
-      solde_initial: 45000000,
-      ecritures: [
-        { date: '2024-01-02', piece: 'CF-001', libelle: 'Approvisionnement caisse Claudine', debit: 2000000, credit: 0, solde: 47000000 },
-        { date: '2024-01-03', piece: 'CF-002', libelle: 'Versement banque BRB', debit: 0, credit: 5000000, solde: 42000000 },
-        { date: '2024-01-05', piece: 'CF-003', libelle: 'Approvisionnement caisse Egide', debit: 3000000, credit: 0, solde: 45000000 },
-        { date: '2024-01-08', piece: 'CF-004', libelle: 'Reversement caisse Natacha', debit: 4000000, credit: 0, solde: 49000000 },
-      ],
-      solde_final: 49000000,
-    },
-    {
-      numero_compte: '2.2.1.1',
-      libelle_compte: 'Dépôts à vue des individus',
-      solde_initial: 2100000000,
-      ecritures: [
-        { date: '2024-01-02', piece: 'DEP-001', libelle: 'Dépôt client NIYONZIMA Jean', debit: 0, credit: 500000, solde: 2100500000 },
-        { date: '2024-01-03', piece: 'RET-001', libelle: 'Retrait client BIZIMANA Aline', debit: 200000, credit: 0, solde: 2100300000 },
-        { date: '2024-01-05', piece: 'DEP-002', libelle: 'Dépôt client NDAYISABA Claude', debit: 0, credit: 1000000, solde: 2101300000 },
-      ],
-      solde_final: 2101300000,
-    },
-  ];
+  const { data: grandLivreData, isLoading } = useQuery({
+    queryKey: ['grand-livre', dateDebut, dateFin, compte],
+    queryFn: () => comptabiliteApi.getGrandLivre({
+      dateDebut: dateDebut || undefined,
+      dateFin: dateFin || undefined,
+      compte: compte || undefined,
+    }),
+  });
 
-  const filteredData = sampleData.filter(
-    (compte) =>
-      compte.numero_compte.includes(search) ||
-      compte.libelle_compte.toLowerCase().includes(search.toLowerCase())
+  const comptes: CompteGrandLivre[] = grandLivreData?.data || [];
+
+  const filteredData = comptes.filter(
+    (c) =>
+      c.numero_compte.includes(search) ||
+      c.libelle_compte.toLowerCase().includes(search.toLowerCase())
   );
 
   return (

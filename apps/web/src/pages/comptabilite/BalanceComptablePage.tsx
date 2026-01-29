@@ -39,75 +39,14 @@ export default function BalanceComptablePage() {
 
   const { data: balance, isLoading } = useQuery({
     queryKey: ['balance-comptable', dateDebut, dateFin, agence],
-    queryFn: () => comptabiliteApi.getBalance({ dateDebut, dateFin, agence }),
-    enabled: !!dateDebut && !!dateFin,
+    queryFn: () => comptabiliteApi.getBalance({
+      dateDebut: dateDebut || undefined,
+      dateFin: dateFin || undefined,
+      agence: agence !== 'all' ? agence : undefined,
+    }),
   });
 
-  // Sample data for demonstration
-  const sampleBalance: LigneBalance[] = [
-    {
-      numero_compte: '1.0.1.1.1',
-      libelle: 'COFFRE FORT SIEGE',
-      solde_debut_debit: 45000000,
-      solde_debut_credit: 0,
-      mouvement_debit: 15000000,
-      mouvement_credit: 11000000,
-      solde_fin_debit: 49000000,
-      solde_fin_credit: 0,
-    },
-    {
-      numero_compte: '1.0.1.2.1',
-      libelle: 'COFFRE FORT MAKAMBA',
-      solde_debut_debit: 42000000,
-      solde_debut_credit: 0,
-      mouvement_debit: 12000000,
-      mouvement_credit: 5000000,
-      solde_fin_debit: 48991355,
-      solde_fin_credit: 0,
-    },
-    {
-      numero_compte: '1.1.1.1.1',
-      libelle: 'B.R.B N° 1150/007',
-      solde_debut_debit: 320000000,
-      solde_debut_credit: 0,
-      mouvement_debit: 25000000,
-      mouvement_credit: 19230445,
-      solde_fin_debit: 325769555,
-      solde_fin_credit: 0,
-    },
-    {
-      numero_compte: '2.1.1.1.6',
-      libelle: 'Crédits CT Autres',
-      solde_debut_debit: 250000000,
-      solde_debut_credit: 0,
-      mouvement_debit: 50000000,
-      mouvement_credit: 36993652,
-      solde_fin_debit: 263006348,
-      solde_fin_credit: 0,
-    },
-    {
-      numero_compte: '2.2.1.1',
-      libelle: 'Dépôts à vue des individus',
-      solde_debut_debit: 0,
-      solde_debut_credit: 2100000000,
-      mouvement_debit: 150000000,
-      mouvement_credit: 229817193,
-      solde_fin_debit: 0,
-      solde_fin_credit: 2179817193,
-    },
-    {
-      numero_compte: '5.5.1.1',
-      libelle: 'Capital libéré',
-      solde_debut_debit: 0,
-      solde_debut_credit: 559300000,
-      mouvement_debit: 0,
-      mouvement_credit: 0,
-      solde_fin_debit: 0,
-      solde_fin_credit: 559300000,
-    },
-  ];
-
-  const displayData = balance?.data || sampleBalance;
+  const displayData: LigneBalance[] = balance?.data || [];
 
   const totaux = displayData.reduce(
     (acc, ligne) => ({

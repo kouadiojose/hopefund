@@ -248,53 +248,63 @@ export const auditApi = {
 export const comptabiliteApi = {
   // Coffres forts (Vaults)
   getCoffresForts: async () => {
-    const response = await api.get('/admin/agencies');
-    // Transform agencies data to include coffre_fort (using sample data for now)
-    const coffresForts = [
-      { id_ag: 1, libel_ag: 'Bujumbura Siège', ville_ag: 'Bujumbura', coffre_fort: 99000000 },
-      { id_ag: 2, libel_ag: 'Makamba', ville_ag: 'Makamba', coffre_fort: 48991355 },
-      { id_ag: 3, libel_ag: 'Jabe', ville_ag: 'Bujumbura', coffre_fort: 22869860 },
-      { id_ag: 4, libel_ag: 'Kamenge', ville_ag: 'Bujumbura', coffre_fort: 67793853 },
-      { id_ag: 5, libel_ag: 'Nyanza Lac', ville_ag: 'Nyanza Lac', coffre_fort: 17722850 },
-    ];
-    return coffresForts;
+    const response = await api.get('/comptabilite/coffres');
+    // Transform API response to expected format
+    const data = response.data;
+    return data.coffres?.map((c: any) => ({
+      id_ag: c.id_ag,
+      libel_ag: c.libelle,
+      ville_ag: c.libelle,
+      coffre_fort: c.solde_coffre,
+    })) || [];
   },
-  createTransfert: (data: any) => api.post('/comptabilite/transferts', data),
+  createTransfert: (data: any) => api.post('/comptabilite/virements', data),
 
   // Virements
-  getVirements: (params?: { page?: number; limit?: number; statut?: string }) =>
-    api.get('/comptabilite/virements', { params }),
+  getVirements: async (params?: { page?: number; limit?: number; statut?: string }) => {
+    const response = await api.get('/comptabilite/virements', { params });
+    return response.data;
+  },
   createVirement: (data: any) => api.post('/comptabilite/virements', data),
   validerVirement: (id: number) => api.post(`/comptabilite/virements/${id}/valider`),
   rejeterVirement: (id: number, motif: string) => api.post(`/comptabilite/virements/${id}/rejeter`, { motif }),
 
   // Plan comptable
-  getPlanComptable: () => api.get('/comptabilite/plan'),
+  getPlanComptable: async () => {
+    const response = await api.get('/comptabilite/plan');
+    return response.data;
+  },
   getCompte: (numero: string) => api.get(`/comptabilite/plan/${numero}`),
   createCompte: (data: any) => api.post('/comptabilite/plan', data),
   updateCompte: (numero: string, data: any) => api.put(`/comptabilite/plan/${numero}`, data),
   deleteCompte: (numero: string) => api.delete(`/comptabilite/plan/${numero}`),
 
   // Balance comptable
-  getBalance: (params?: { dateDebut?: string; dateFin?: string; agence?: string }) =>
-    api.get('/comptabilite/balance', { params }),
+  getBalance: async (params?: { dateDebut?: string; dateFin?: string; agence?: string }) => {
+    const response = await api.get('/comptabilite/balance', { params });
+    return response.data;
+  },
 
   // Grand livre
-  getGrandLivre: (params?: { dateDebut?: string; dateFin?: string; compte?: string }) =>
-    api.get('/comptabilite/grand-livre', { params }),
+  getGrandLivre: async (params?: { dateDebut?: string; dateFin?: string; compte?: string; agence?: string }) => {
+    const response = await api.get('/comptabilite/grand-livre', { params });
+    return response.data;
+  },
 
   // Journal comptable
-  getJournal: (params?: { dateDebut?: string; dateFin?: string; journal?: string }) =>
-    api.get('/comptabilite/journal', { params }),
+  getJournal: async (params?: { dateDebut?: string; dateFin?: string; journal?: string; agence?: string }) => {
+    const response = await api.get('/comptabilite/journal', { params });
+    return response.data;
+  },
   createEcriture: (data: any) => api.post('/comptabilite/journal', data),
 
   // Dépenses / Revenus
-  getDepenses: (params?: { page?: number; limit?: number; categorie?: string }) =>
-    api.get('/comptabilite/depenses', { params }),
-  getRevenus: (params?: { page?: number; limit?: number; categorie?: string }) =>
-    api.get('/comptabilite/revenus', { params }),
-  createDepense: (data: any) => api.post('/comptabilite/depenses', data),
-  createRevenu: (data: any) => api.post('/comptabilite/revenus', data),
+  getDepensesRevenus: async (params?: { dateDebut?: string; dateFin?: string; agence?: string; type?: string }) => {
+    const response = await api.get('/comptabilite/depenses-revenus', { params });
+    return response.data;
+  },
+  createDepense: (data: any) => api.post('/comptabilite/depense', data),
+  createRevenu: (data: any) => api.post('/comptabilite/revenu', data),
 };
 
 // Caisse (Cash Management)

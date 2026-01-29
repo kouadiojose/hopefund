@@ -57,69 +57,16 @@ export default function JournalComptablePage() {
   const [dateFin, setDateFin] = useState('');
   const [journal, setJournal] = useState('all');
 
-  // Sample data
-  const sampleData: EcritureJournal[] = [
-    {
-      id: 1,
-      date: '2024-01-15',
-      numero_piece: 'CA-2024-0001',
-      libelle: 'Approvisionnement caisse guichetier Claudine',
-      journal: 'CA',
-      lignes: [
-        { numero_compte: '1.0.1.1.12', libelle_compte: 'Caisse Claudine', debit: 2000000, credit: 0 },
-        { numero_compte: '1.0.1.1.1', libelle_compte: 'COFFRE FORT SIEGE', debit: 0, credit: 2000000 },
-      ],
-      total_debit: 2000000,
-      total_credit: 2000000,
-      statut: 'valide',
-    },
-    {
-      id: 2,
-      date: '2024-01-15',
-      numero_piece: 'CR-2024-0012',
-      libelle: 'Déblocage crédit NIYONZIMA Jean - Dossier 45678',
-      journal: 'CR',
-      lignes: [
-        { numero_compte: '2.1.1.1.6', libelle_compte: 'Crédits CT Autres', debit: 5000000, credit: 0 },
-        { numero_compte: '2.2.1.1', libelle_compte: 'Dépôts à vue des individus', debit: 0, credit: 5000000 },
-      ],
-      total_debit: 5000000,
-      total_credit: 5000000,
-      statut: 'valide',
-    },
-    {
-      id: 3,
-      date: '2024-01-16',
-      numero_piece: 'BQ-2024-0005',
-      libelle: 'Virement vers compte BGF',
-      journal: 'BQ',
-      lignes: [
-        { numero_compte: '1.1.1.3.2.3', libelle_compte: 'BGF 800/001/50/12005/2/62', debit: 10000000, credit: 0 },
-        { numero_compte: '1.0.1.1.1', libelle_compte: 'COFFRE FORT SIEGE', debit: 0, credit: 10000000 },
-      ],
-      total_debit: 10000000,
-      total_credit: 10000000,
-      statut: 'valide',
-    },
-    {
-      id: 4,
-      date: '2024-01-17',
-      numero_piece: 'OD-2024-0003',
-      libelle: 'Régularisation écart de caisse',
-      journal: 'OD',
-      lignes: [
-        { numero_compte: '3.4.5', libelle_compte: 'Manquant de caisse à justifier', debit: 50000, credit: 0 },
-        { numero_compte: '1.0.1.1.12', libelle_compte: 'Caisse Claudine', debit: 0, credit: 50000 },
-      ],
-      total_debit: 50000,
-      total_credit: 50000,
-      statut: 'brouillon',
-    },
-  ];
+  const { data: journalData, isLoading } = useQuery({
+    queryKey: ['journal-comptable', dateDebut, dateFin, journal],
+    queryFn: () => comptabiliteApi.getJournal({
+      dateDebut: dateDebut || undefined,
+      dateFin: dateFin || undefined,
+      journal: journal !== 'all' ? journal : undefined,
+    }),
+  });
 
-  const filteredData = journal === 'all'
-    ? sampleData
-    : sampleData.filter((e) => e.journal === journal);
+  const filteredData: EcritureJournal[] = journalData?.data || [];
 
   const getStatusBadge = (statut: string) => {
     switch (statut) {
