@@ -31,6 +31,16 @@ import DataManagementPage from '@/pages/admin/DataManagementPage';
 // Caisse Pages
 import CaissePage from '@/pages/caisse/CaissePage';
 
+// Comptabilité Pages
+import CoffresFortsPage from '@/pages/comptabilite/CoffresFortsPage';
+import VirementsPage from '@/pages/comptabilite/VirementsPage';
+import PlanComptablePage from '@/pages/comptabilite/PlanComptablePage';
+import BalanceComptablePage from '@/pages/comptabilite/BalanceComptablePage';
+import GrandLivrePage from '@/pages/comptabilite/GrandLivrePage';
+import JournalComptablePage from '@/pages/comptabilite/JournalComptablePage';
+import EcrituresManuelsPage from '@/pages/comptabilite/EcrituresManuelsPage';
+import DepensesRevenusPage from '@/pages/comptabilite/DepensesRevenusPage';
+
 // Protected Route Component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore();
@@ -78,6 +88,16 @@ function App() {
         <Route path="/admin/roles" element={<RolesPage />} />
         <Route path="/admin/audit" element={<AuditLogsPage />} />
         <Route path="/admin/data" element={<DataManagementPage />} />
+
+        {/* Comptabilité Routes */}
+        <Route path="/comptabilite/coffres" element={<CoffresFortsPage />} />
+        <Route path="/comptabilite/virements" element={<VirementsPage />} />
+        <Route path="/comptabilite/plan" element={<PlanComptablePage />} />
+        <Route path="/comptabilite/balance" element={<BalanceComptablePage />} />
+        <Route path="/comptabilite/grand-livre" element={<GrandLivrePage />} />
+        <Route path="/comptabilite/journal" element={<JournalComptablePage />} />
+        <Route path="/comptabilite/ecritures" element={<EcrituresManuelsPage />} />
+        <Route path="/comptabilite/depenses-revenus" element={<DepensesRevenusPage />} />
       </Route>
 
       {/* 404 */}

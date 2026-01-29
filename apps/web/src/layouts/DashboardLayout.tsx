@@ -22,6 +22,14 @@ import {
   AlertTriangle,
   PieChart,
   Database,
+  Calculator,
+  BookOpen,
+  Receipt,
+  Send,
+  Vault,
+  TrendingUp,
+  TrendingDown,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth';
@@ -51,6 +59,17 @@ const adminNavigation = [
   { name: 'Rôles & Permissions', href: '/admin/roles', icon: Lock },
   { name: 'Journal d\'audit', href: '/admin/audit', icon: Activity },
   { name: 'Gestion données', href: '/admin/data', icon: Database },
+];
+
+const comptabiliteNavigation: NavItem[] = [
+  { name: 'Coffres forts', href: '/comptabilite/coffres', icon: Vault },
+  { name: 'Virements', href: '/comptabilite/virements', icon: Send },
+  { name: 'Plan comptable', href: '/comptabilite/plan', icon: FileSpreadsheet },
+  { name: 'Balance Comptable', href: '/comptabilite/balance', icon: Calculator },
+  { name: 'Grand Livre', href: '/comptabilite/grand-livre', icon: BookOpen },
+  { name: 'Journal Comptable', href: '/comptabilite/journal', icon: Receipt },
+  { name: 'Ecritures manuelles', href: '/comptabilite/ecritures', icon: FileText },
+  { name: 'Dépenses / Revenus', href: '/comptabilite/depenses-revenus', icon: TrendingUp },
 ];
 
 const bottomNavigation = [
@@ -135,6 +154,21 @@ export default function DashboardLayout() {
               .map((item) => (
                 <NavItemComponent key={item.name} item={item} />
               ))}
+
+            {/* Comptabilité Section */}
+            {user && ['SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'ACCOUNTANT'].includes(user.role) && (
+              <>
+                <div className="pt-4 mt-4 border-t">
+                  <p className="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                    <Calculator className="h-3 w-3" />
+                    Comptabilité
+                  </p>
+                  {comptabiliteNavigation.map((item) => (
+                    <NavItemComponent key={item.name} item={item} />
+                  ))}
+                </div>
+              </>
+            )}
 
             {/* Admin Section */}
             {user && ['SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER'].includes(user.role) && (

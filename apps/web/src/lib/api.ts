@@ -244,6 +244,59 @@ export const auditApi = {
   invalidateUserSessions: (userId: number) => api.delete(`/audit/sessions/user/${userId}`),
 };
 
+// Comptabilité (Accounting)
+export const comptabiliteApi = {
+  // Coffres forts (Vaults)
+  getCoffresForts: async () => {
+    const response = await api.get('/admin/agencies');
+    // Transform agencies data to include coffre_fort (using sample data for now)
+    const coffresForts = [
+      { id_ag: 1, libel_ag: 'Bujumbura Siège', ville_ag: 'Bujumbura', coffre_fort: 99000000 },
+      { id_ag: 2, libel_ag: 'Makamba', ville_ag: 'Makamba', coffre_fort: 48991355 },
+      { id_ag: 3, libel_ag: 'Jabe', ville_ag: 'Bujumbura', coffre_fort: 22869860 },
+      { id_ag: 4, libel_ag: 'Kamenge', ville_ag: 'Bujumbura', coffre_fort: 67793853 },
+      { id_ag: 5, libel_ag: 'Nyanza Lac', ville_ag: 'Nyanza Lac', coffre_fort: 17722850 },
+    ];
+    return coffresForts;
+  },
+  createTransfert: (data: any) => api.post('/comptabilite/transferts', data),
+
+  // Virements
+  getVirements: (params?: { page?: number; limit?: number; statut?: string }) =>
+    api.get('/comptabilite/virements', { params }),
+  createVirement: (data: any) => api.post('/comptabilite/virements', data),
+  validerVirement: (id: number) => api.post(`/comptabilite/virements/${id}/valider`),
+  rejeterVirement: (id: number, motif: string) => api.post(`/comptabilite/virements/${id}/rejeter`, { motif }),
+
+  // Plan comptable
+  getPlanComptable: () => api.get('/comptabilite/plan'),
+  getCompte: (numero: string) => api.get(`/comptabilite/plan/${numero}`),
+  createCompte: (data: any) => api.post('/comptabilite/plan', data),
+  updateCompte: (numero: string, data: any) => api.put(`/comptabilite/plan/${numero}`, data),
+  deleteCompte: (numero: string) => api.delete(`/comptabilite/plan/${numero}`),
+
+  // Balance comptable
+  getBalance: (params?: { dateDebut?: string; dateFin?: string; agence?: string }) =>
+    api.get('/comptabilite/balance', { params }),
+
+  // Grand livre
+  getGrandLivre: (params?: { dateDebut?: string; dateFin?: string; compte?: string }) =>
+    api.get('/comptabilite/grand-livre', { params }),
+
+  // Journal comptable
+  getJournal: (params?: { dateDebut?: string; dateFin?: string; journal?: string }) =>
+    api.get('/comptabilite/journal', { params }),
+  createEcriture: (data: any) => api.post('/comptabilite/journal', data),
+
+  // Dépenses / Revenus
+  getDepenses: (params?: { page?: number; limit?: number; categorie?: string }) =>
+    api.get('/comptabilite/depenses', { params }),
+  getRevenus: (params?: { page?: number; limit?: number; categorie?: string }) =>
+    api.get('/comptabilite/revenus', { params }),
+  createDepense: (data: any) => api.post('/comptabilite/depenses', data),
+  createRevenu: (data: any) => api.post('/comptabilite/revenus', data),
+};
+
 // Caisse (Cash Management)
 export const caisseApi = {
   // Session
