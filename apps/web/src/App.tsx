@@ -40,6 +40,8 @@ import GrandLivrePage from '@/pages/comptabilite/GrandLivrePage';
 import JournalComptablePage from '@/pages/comptabilite/JournalComptablePage';
 import EcrituresManuelsPage from '@/pages/comptabilite/EcrituresManuelsPage';
 import DepensesRevenusPage from '@/pages/comptabilite/DepensesRevenusPage';
+import DashboardComptablePage from '@/pages/comptabilite/DashboardComptablePage';
+import HistoriqueComptablePage from '@/pages/comptabilite/HistoriqueComptablePage';
 
 // Protected Route Component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -90,6 +92,9 @@ function App() {
         <Route path="/admin/data" element={<DataManagementPage />} />
 
         {/* Comptabilité Routes */}
+        <Route path="/comptabilite" element={<DashboardComptablePage />} />
+        <Route path="/comptabilite/dashboard" element={<DashboardComptablePage />} />
+        <Route path="/comptabilite/historique" element={<HistoriqueComptablePage />} />
         <Route path="/comptabilite/coffres" element={<CoffresFortsPage />} />
         <Route path="/comptabilite/virements" element={<VirementsPage />} />
         <Route path="/comptabilite/plan" element={<PlanComptablePage />} />

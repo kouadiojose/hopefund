@@ -30,6 +30,7 @@ import {
   TrendingUp,
   TrendingDown,
   FileSpreadsheet,
+  History,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth';
@@ -62,6 +63,8 @@ const adminNavigation = [
 ];
 
 const comptabiliteNavigation: NavItem[] = [
+  { name: 'Tableau de bord', href: '/comptabilite/dashboard', icon: BarChart3 },
+  { name: 'Historique', href: '/comptabilite/historique', icon: History },
   { name: 'Coffres forts', href: '/comptabilite/coffres', icon: Vault },
   { name: 'Virements', href: '/comptabilite/virements', icon: Send },
   { name: 'Plan comptable', href: '/comptabilite/plan', icon: FileSpreadsheet },

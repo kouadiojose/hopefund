@@ -974,4 +974,372 @@ router.post('/revenu', authorize('SUPER_ADMIN', 'DIRECTOR', 'ACCOUNTANT'), async
   }
 });
 
+// ==================== TABLEAU DE BORD COMPTABLE ====================
+
+// GET /api/comptabilite/dashboard - Tableau de bord comptable complet
+router.get('/dashboard', authorize('SUPER_ADMIN', 'DIRECTOR', 'ACCOUNTANT'), async (req, res, next) => {
+  try {
+    // 1. Résumé global des mouvements
+    const resumeGlobal = await prisma.$queryRaw<any[]>`
+      SELECT
+        COUNT(*)::int as total_lignes,
+        COUNT(DISTINCT id_ecriture)::int as nb_ecritures,
+        COUNT(DISTINCT compte)::int as nb_comptes,
+        COUNT(DISTINCT id_ag)::int as nb_agences,
+        MIN(date_valeur) as premiere_date,
+        MAX(date_valeur) as derniere_date,
+        SUM(CASE WHEN sens = 'd' THEN montant ELSE 0 END)::numeric as total_debit,
+        SUM(CASE WHEN sens = 'c' THEN montant ELSE 0 END)::numeric as total_credit
+      FROM ad_mouvement
+      WHERE compte IS NOT NULL
+    `;
+
+    // 2. Mouvements par classe comptable
+    const parClasse = await prisma.$queryRaw<any[]>`
+      SELECT
+        SUBSTRING(compte FROM 1 FOR 1) as classe,
+        COUNT(*)::int as nb_mouvements,
+        SUM(CASE WHEN sens = 'd' THEN montant ELSE 0 END)::numeric as total_debit,
+        SUM(CASE WHEN sens = 'c' THEN montant ELSE 0 END)::numeric as total_credit
+      FROM ad_mouvement
+      WHERE compte IS NOT NULL
+      GROUP BY SUBSTRING(compte FROM 1 FOR 1)
+      ORDER BY classe
+    `;
+
+    // 3. Mouvements par agence
+    const parAgence = await prisma.$queryRaw<any[]>`
+      SELECT
+        m.id_ag,
+        a.libel_ag as nom_agence,
+        COUNT(*)::int as nb_mouvements,
+        COUNT(DISTINCT m.id_ecriture)::int as nb_ecritures,
+        SUM(CASE WHEN m.sens = 'd' THEN m.montant ELSE 0 END)::numeric as total_debit,
+        SUM(CASE WHEN m.sens = 'c' THEN m.montant ELSE 0 END)::numeric as total_credit
+      FROM ad_mouvement m
+      LEFT JOIN ad_agc a ON m.id_ag = a.id_ag
+      WHERE m.compte IS NOT NULL
+      GROUP BY m.id_ag, a.libel_ag
+      ORDER BY m.id_ag
+    `;
+
+    // 4. Top 10 des comptes les plus mouvementés
+    const topComptes = await prisma.$queryRaw<any[]>`
+      SELECT
+        compte,
+        COUNT(*)::int as nb_mouvements,
+        SUM(CASE WHEN sens = 'd' THEN montant ELSE 0 END)::numeric as total_debit,
+        SUM(CASE WHEN sens = 'c' THEN montant ELSE 0 END)::numeric as total_credit
+      FROM ad_mouvement
+      WHERE compte IS NOT NULL
+      GROUP BY compte
+      ORDER BY nb_mouvements DESC
+      LIMIT 10
+    `;
+
+    // 5. Évolution mensuelle (12 derniers mois)
+    const evolutionMensuelle = await prisma.$queryRaw<any[]>`
+      SELECT
+        TO_CHAR(date_valeur, 'YYYY-MM') as mois,
+        COUNT(*)::int as nb_mouvements,
+        COUNT(DISTINCT id_ecriture)::int as nb_ecritures,
+        SUM(CASE WHEN sens = 'd' THEN montant ELSE 0 END)::numeric as total_debit,
+        SUM(CASE WHEN sens = 'c' THEN montant ELSE 0 END)::numeric as total_credit
+      FROM ad_mouvement
+      WHERE compte IS NOT NULL AND date_valeur IS NOT NULL
+      GROUP BY TO_CHAR(date_valeur, 'YYYY-MM')
+      ORDER BY mois DESC
+      LIMIT 12
+    `;
+
+    // 6. 20 dernières écritures
+    const dernieresEcritures = await prisma.$queryRaw<any[]>`
+      SELECT DISTINCT ON (id_ecriture, id_ag)
+        id_ecriture,
+        id_ag,
+        date_valeur,
+        (SELECT string_agg(DISTINCT compte, ', ' ORDER BY compte)
+         FROM ad_mouvement m2
+         WHERE m2.id_ecriture = m.id_ecriture AND m2.id_ag = m.id_ag) as comptes,
+        (SELECT SUM(CASE WHEN sens = 'd' THEN montant ELSE 0 END)::numeric
+         FROM ad_mouvement m2
+         WHERE m2.id_ecriture = m.id_ecriture AND m2.id_ag = m.id_ag) as montant
+      FROM ad_mouvement m
+      WHERE compte IS NOT NULL AND id_ecriture IS NOT NULL
+      ORDER BY id_ecriture DESC, id_ag, date_valeur DESC
+      LIMIT 20
+    `;
+
+    // Libellés des classes
+    const classesLibelles: Record<string, string> = {
+      '1': 'Trésorerie et opérations interbancaires',
+      '2': 'Opérations avec la clientèle',
+      '3': 'Opérations diverses',
+      '4': 'Actifs immobilisés',
+      '5': 'Fonds propres',
+      '6': 'Charges',
+      '7': 'Produits',
+    };
+
+    // Libellés des comptes
+    const comptesLibelles: Record<string, string> = {
+      '1.0.1.1': 'Coffre Fort Siège',
+      '1.0.1.2': 'Coffre Fort Makamba',
+      '1.0.1.3': 'Coffre Fort Jabe',
+      '1.0.1.4': 'Coffre Fort Kamenge',
+      '1.0.1.5': 'Coffre Fort Nyanza Lac',
+      '1.1.1.1': 'BRB Compte courant',
+      '2.1.1.1': 'Crédits CT Agriculture',
+      '2.1.1.2': 'Crédits CT Commerce',
+      '2.1.1.6': 'Crédits CT Autres',
+      '2.2.1.1': 'Dépôts à vue individus',
+      '2.2.1.2': 'Dépôts à vue groupements',
+      '7.1.1': 'Intérêts sur crédits',
+      '7.1.2.1': 'Frais de dossier',
+    };
+
+    res.json({
+      resume: {
+        ...resumeGlobal[0],
+        total_debit: parseFloat(resumeGlobal[0]?.total_debit || '0'),
+        total_credit: parseFloat(resumeGlobal[0]?.total_credit || '0'),
+      },
+      parClasse: parClasse.map(c => ({
+        ...c,
+        libelle: classesLibelles[c.classe] || `Classe ${c.classe}`,
+        total_debit: parseFloat(c.total_debit || '0'),
+        total_credit: parseFloat(c.total_credit || '0'),
+      })),
+      parAgence: parAgence.map(a => ({
+        ...a,
+        total_debit: parseFloat(a.total_debit || '0'),
+        total_credit: parseFloat(a.total_credit || '0'),
+      })),
+      topComptes: topComptes.map(c => ({
+        ...c,
+        libelle: comptesLibelles[c.compte] || c.compte,
+        total_debit: parseFloat(c.total_debit || '0'),
+        total_credit: parseFloat(c.total_credit || '0'),
+      })),
+      evolutionMensuelle: evolutionMensuelle.map(e => ({
+        ...e,
+        total_debit: parseFloat(e.total_debit || '0'),
+        total_credit: parseFloat(e.total_credit || '0'),
+      })).reverse(),
+      dernieresEcritures: dernieresEcritures.map(e => ({
+        ...e,
+        montant: parseFloat(e.montant || '0'),
+      })),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /api/comptabilite/historique - Historique complet des écritures
+router.get('/historique', authorize('SUPER_ADMIN', 'DIRECTOR', 'ACCOUNTANT'), async (req, res, next) => {
+  try {
+    const { page = 1, limit = 50, dateDebut, dateFin, agence, compte, search } = req.query;
+    const offset = (Number(page) - 1) * Number(limit);
+
+    // Construire les conditions
+    const conditions: string[] = ['compte IS NOT NULL'];
+    const params: any[] = [];
+    let paramIndex = 1;
+
+    if (agence && agence !== 'all') {
+      conditions.push(`id_ag = $${paramIndex}`);
+      params.push(parseInt(agence as string));
+      paramIndex++;
+    }
+    if (dateDebut) {
+      conditions.push(`date_valeur >= $${paramIndex}`);
+      params.push(new Date(dateDebut as string));
+      paramIndex++;
+    }
+    if (dateFin) {
+      conditions.push(`date_valeur <= $${paramIndex}`);
+      params.push(new Date(dateFin as string));
+      paramIndex++;
+    }
+    if (compte) {
+      conditions.push(`compte LIKE $${paramIndex}`);
+      params.push(`${compte}%`);
+      paramIndex++;
+    }
+
+    // Compter le total
+    const countQuery = `
+      SELECT COUNT(DISTINCT id_ecriture)::int as total
+      FROM ad_mouvement
+      WHERE ${conditions.join(' AND ')} AND id_ecriture IS NOT NULL
+    `;
+    const countResult = await prisma.$queryRawUnsafe<any[]>(countQuery, ...params);
+    const total = countResult[0]?.total || 0;
+
+    // Récupérer les écritures paginées
+    const ecrituresQuery = `
+      SELECT DISTINCT id_ecriture, id_ag, MIN(date_valeur) as date_valeur
+      FROM ad_mouvement
+      WHERE ${conditions.join(' AND ')} AND id_ecriture IS NOT NULL
+      GROUP BY id_ecriture, id_ag
+      ORDER BY date_valeur DESC, id_ecriture DESC
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+    `;
+    const ecrituresParams = [...params, Number(limit), offset];
+    const ecrituresIds = await prisma.$queryRawUnsafe<any[]>(ecrituresQuery, ...ecrituresParams);
+
+    // Pour chaque écriture, récupérer les détails
+    const ecritures = await Promise.all(ecrituresIds.map(async (e) => {
+      const lignesQuery = `
+        SELECT id_mouvement, compte, sens, montant::numeric, devise, cpte_interne_cli
+        FROM ad_mouvement
+        WHERE id_ecriture = $1 AND id_ag = $2
+        ORDER BY sens DESC, compte
+      `;
+      const lignes = await prisma.$queryRawUnsafe<any[]>(lignesQuery, e.id_ecriture, e.id_ag);
+
+      const comptesLibelles: Record<string, string> = {
+        '1.0.1.1': 'Coffre Fort Siège',
+        '1.0.1.2': 'Coffre Fort Makamba',
+        '1.0.2': 'Caisse Guichetier',
+        '2.1.1.6': 'Crédits CT Autres',
+        '2.2.1.1': 'Dépôts à vue individus',
+        '7.1.1': 'Intérêts sur crédits',
+        '3.4.5': 'Manquant de caisse',
+        '3.4.6': 'Excédent de caisse',
+      };
+
+      let totalDebit = 0;
+      let totalCredit = 0;
+      const lignesFormatees = lignes.map(l => {
+        const montant = parseFloat(l.montant || '0');
+        if (l.sens === 'd') totalDebit += montant;
+        else totalCredit += montant;
+
+        return {
+          id: l.id_mouvement,
+          compte: l.compte,
+          libelle: comptesLibelles[l.compte] || l.compte,
+          debit: l.sens === 'd' ? montant : 0,
+          credit: l.sens === 'c' ? montant : 0,
+          cpte_client: l.cpte_interne_cli,
+        };
+      });
+
+      // Déterminer le type d'opération
+      const firstCompte = lignes[0]?.compte || '';
+      let typeOperation = 'Opération diverse';
+      if (firstCompte.startsWith('1.0.1') || firstCompte.startsWith('1.0.2')) {
+        typeOperation = 'Opération de caisse';
+      } else if (firstCompte.startsWith('2.1')) {
+        typeOperation = 'Opération crédit';
+      } else if (firstCompte.startsWith('2.2')) {
+        typeOperation = 'Opération épargne';
+      } else if (firstCompte.startsWith('1.1')) {
+        typeOperation = 'Opération bancaire';
+      }
+
+      return {
+        id_ecriture: e.id_ecriture,
+        id_ag: e.id_ag,
+        date: e.date_valeur,
+        type: typeOperation,
+        lignes: lignesFormatees,
+        total_debit: totalDebit,
+        total_credit: totalCredit,
+        equilibree: Math.abs(totalDebit - totalCredit) < 0.01,
+      };
+    }));
+
+    // Récupérer les noms des agences
+    const agenceIds = [...new Set(ecritures.map(e => e.id_ag))];
+    const agences = await prisma.agence.findMany({
+      where: { id_ag: { in: agenceIds } },
+    });
+    const agenceMap = new Map(agences.map(a => [a.id_ag, a.libel_ag]));
+
+    const ecrituresAvecAgence = ecritures.map(e => ({
+      ...e,
+      agence: agenceMap.get(e.id_ag) || `Agence ${e.id_ag}`,
+    }));
+
+    res.json({
+      data: ecrituresAvecAgence,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        totalPages: Math.ceil(total / Number(limit)),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /api/comptabilite/statistiques - Statistiques comptables
+router.get('/statistiques', authorize('SUPER_ADMIN', 'DIRECTOR', 'ACCOUNTANT'), async (req, res, next) => {
+  try {
+    const { periode = '12' } = req.query; // Nombre de mois
+
+    // Soldes actuels par classe
+    const soldesParClasse = await prisma.$queryRaw<any[]>`
+      SELECT
+        SUBSTRING(compte FROM 1 FOR 1) as classe,
+        SUM(CASE WHEN sens = 'd' THEN montant ELSE -montant END)::numeric as solde
+      FROM ad_mouvement
+      WHERE compte IS NOT NULL
+      GROUP BY SUBSTRING(compte FROM 1 FOR 1)
+      ORDER BY classe
+    `;
+
+    // Total actif/passif
+    const totaux = await prisma.$queryRaw<any[]>`
+      SELECT
+        SUM(CASE WHEN SUBSTRING(compte FROM 1 FOR 1) IN ('1', '2', '3', '4') AND sens = 'd' THEN montant
+                 WHEN SUBSTRING(compte FROM 1 FOR 1) IN ('1', '2', '3', '4') AND sens = 'c' THEN -montant
+                 ELSE 0 END)::numeric as total_actif,
+        SUM(CASE WHEN SUBSTRING(compte FROM 1 FOR 1) IN ('2', '5') AND sens = 'c' THEN montant
+                 WHEN SUBSTRING(compte FROM 1 FOR 1) IN ('2', '5') AND sens = 'd' THEN -montant
+                 ELSE 0 END)::numeric as total_passif,
+        SUM(CASE WHEN SUBSTRING(compte FROM 1 FOR 1) = '6' AND sens = 'd' THEN montant
+                 WHEN SUBSTRING(compte FROM 1 FOR 1) = '6' AND sens = 'c' THEN -montant
+                 ELSE 0 END)::numeric as total_charges,
+        SUM(CASE WHEN SUBSTRING(compte FROM 1 FOR 1) = '7' AND sens = 'c' THEN montant
+                 WHEN SUBSTRING(compte FROM 1 FOR 1) = '7' AND sens = 'd' THEN -montant
+                 ELSE 0 END)::numeric as total_produits
+      FROM ad_mouvement
+      WHERE compte IS NOT NULL
+    `;
+
+    const classesLibelles: Record<string, string> = {
+      '1': 'Trésorerie',
+      '2': 'Clientèle',
+      '3': 'Divers',
+      '4': 'Immobilisations',
+      '5': 'Fonds propres',
+      '6': 'Charges',
+      '7': 'Produits',
+    };
+
+    res.json({
+      soldesParClasse: soldesParClasse.map(s => ({
+        classe: s.classe,
+        libelle: classesLibelles[s.classe] || `Classe ${s.classe}`,
+        solde: parseFloat(s.solde || '0'),
+      })),
+      totaux: {
+        actif: parseFloat(totaux[0]?.total_actif || '0'),
+        passif: parseFloat(totaux[0]?.total_passif || '0'),
+        charges: parseFloat(totaux[0]?.total_charges || '0'),
+        produits: parseFloat(totaux[0]?.total_produits || '0'),
+        resultat: parseFloat(totaux[0]?.total_produits || '0') - parseFloat(totaux[0]?.total_charges || '0'),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

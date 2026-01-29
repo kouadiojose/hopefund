@@ -305,6 +305,24 @@ export const comptabiliteApi = {
   },
   createDepense: (data: any) => api.post('/comptabilite/depense', data),
   createRevenu: (data: any) => api.post('/comptabilite/revenu', data),
+
+  // Tableau de bord comptable
+  getDashboard: async () => {
+    const response = await api.get('/comptabilite/dashboard');
+    return response.data;
+  },
+
+  // Historique des écritures
+  getHistorique: async (params?: { page?: number; limit?: number; dateDebut?: string; dateFin?: string; agence?: string; compte?: string }) => {
+    const response = await api.get('/comptabilite/historique', { params });
+    return response.data;
+  },
+
+  // Statistiques comptables
+  getStatistiques: async () => {
+    const response = await api.get('/comptabilite/statistiques');
+    return response.data;
+  },
 };
 
 // Caisse (Cash Management)
