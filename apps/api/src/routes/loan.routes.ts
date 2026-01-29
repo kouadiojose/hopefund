@@ -4,12 +4,12 @@ import { prisma } from '../lib/prisma';
 import { authenticate, authorize } from '../middleware/auth';
 import { AppError } from '../middleware/error-handler';
 import { config } from '../config';
+import { logger } from '../utils/logger';
+import { ecritureDeblocageCredit } from '../services/comptabilite.service';
 
 const router = Router();
 
 router.use(authenticate);
-
-import { logger } from '../utils/logger';
 
 // Helper function to generate payment schedule
 function generatePaymentSchedule(
@@ -1046,19 +1046,6 @@ router.put('/:id/disburse', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER
         },
       });
 
-      // Créer le mouvement
-      await tx.mouvement.create({
-        data: {
-          id_ag: account.id_ag,
-          cpte_interne_cli: accountId,
-          date_valeur: disbursementDate,
-          sens: 'c',
-          montant: amount,
-          devise: 'BIF',
-          compte: '2.1.1.1',  // Compte comptable
-        },
-      });
-
       // Mettre à jour le dossier
       await tx.dossierCredit.update({
         where: { id_doss: loanId },
@@ -1094,18 +1081,40 @@ router.put('/:id/disburse', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER
       }
     });
 
+    // Générer les écritures comptables pour le déblocage
+    let ecrituresIds: number[] = [];
+    try {
+      const fraisDossier = Number(loan.mnt_frais_doss || 0);
+      const assurance = Number(loan.mnt_assurance || 0);
+      const objetCredit = Number(loan.obj_dem || 6); // 6 = Autres par défaut
+
+      ecrituresIds = await ecritureDeblocageCredit(
+        loan.id_ag,
+        loanId,
+        accountId,
+        Number(loan.cre_mnt_octr || 0),
+        objetCredit,
+        fraisDossier,
+        assurance
+      );
+    } catch (err) {
+      logger.warn(`Échec création écritures comptables pour déblocage crédit ${loanId}: ${err}`);
+    }
+
     await prisma.auditLog.create({
       data: {
         user_id: req.user!.userId,
         action: 'DISBURSE',
         entity: 'DossierCredit',
         entity_id: loanId.toString(),
-        new_values: { accountId, amount: loan.cre_mnt_octr },
+        new_values: { accountId, amount: loan.cre_mnt_octr, ecrituresIds },
         ip_address: req.ip || null,
       },
     });
 
-    res.json({ message: 'Loan disbursed successfully' });
+    logger.info(`Loan ${loanId} disbursed to account ${accountId}, écritures: ${ecrituresIds.join(', ')}`);
+
+    res.json({ message: 'Loan disbursed successfully', ecrituresIds });
   } catch (error) {
     next(error);
   }

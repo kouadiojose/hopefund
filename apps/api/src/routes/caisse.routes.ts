@@ -5,6 +5,12 @@ import { authenticate, authorize } from '../middleware/auth';
 import { AppError } from '../middleware/error-handler';
 import { logger } from '../utils/logger';
 import { Decimal } from '@prisma/client/runtime/library';
+import {
+  ecritureApprovisionnementCaisse,
+  ecritureReversementCaisse,
+  ecritureManquantCaisse,
+  ecritureExcedentCaisse,
+} from '../services/comptabilite.service';
 
 const router = Router();
 
@@ -402,7 +408,23 @@ router.post('/session/fermer', async (req, res, next) => {
       return { session: updatedSession, decompte: decompteRecord };
     });
 
-    logger.info(`Caisse fermée: User ${userId}, Agence ${agenceId}, Montant: ${totaux.totalGeneral}, Écart: ${ecart}`);
+    // Générer une écriture comptable si écart détecté
+    let ecritureId: number | null = null;
+    if (Math.abs(ecart) > 0) {
+      try {
+        if (ecart < 0) {
+          // Manquant de caisse
+          ecritureId = await ecritureManquantCaisse(agenceId, Math.abs(ecart), userId);
+        } else {
+          // Excédent de caisse
+          ecritureId = await ecritureExcedentCaisse(agenceId, ecart, userId);
+        }
+      } catch (err) {
+        logger.warn(`Échec création écriture comptable pour écart de caisse: ${err}`);
+      }
+    }
+
+    logger.info(`Caisse fermée: User ${userId}, Agence ${agenceId}, Montant: ${totaux.totalGeneral}, Écart: ${ecart}, Écriture: ${ecritureId}`);
 
     res.json({
       message: 'Caisse fermée avec succès',
@@ -411,6 +433,7 @@ router.post('/session/fermer', async (req, res, next) => {
       totaux,
       soldeTheorique,
       ecart,
+      ecritureId,
     });
   } catch (error) {
     next(error);
@@ -749,9 +772,32 @@ router.post('/mouvements/:id/valider', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRA
       }
     });
 
-    logger.info(`Mouvement validé: ${mouvementId} par User ${userId}`);
+    // Générer l'écriture comptable
+    let ecritureId: number | null = null;
+    try {
+      const montant = parseFloat(mouvement.montant.toString());
+      const guichetierId = mouvement.demande_par;
 
-    res.json({ message: 'Mouvement validé avec succès' });
+      if (mouvement.type_mouvement === TYPE_MOUVEMENT.APPROVISIONNEMENT) {
+        ecritureId = await ecritureApprovisionnementCaisse(
+          mouvement.id_ag,
+          montant,
+          guichetierId
+        );
+      } else if (mouvement.type_mouvement === TYPE_MOUVEMENT.REVERSEMENT) {
+        ecritureId = await ecritureReversementCaisse(
+          mouvement.id_ag,
+          montant,
+          guichetierId
+        );
+      }
+    } catch (err) {
+      logger.warn(`Échec création écriture comptable pour mouvement ${mouvementId}: ${err}`);
+    }
+
+    logger.info(`Mouvement validé: ${mouvementId} par User ${userId} (écriture: ${ecritureId})`);
+
+    res.json({ message: 'Mouvement validé avec succès', ecritureId });
   } catch (error) {
     next(error);
   }

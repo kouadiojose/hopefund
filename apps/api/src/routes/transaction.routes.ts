@@ -4,6 +4,7 @@ import { prisma } from '../lib/prisma';
 import { authenticate, authorize } from '../middleware/auth';
 import { AppError } from '../middleware/error-handler';
 import { logger } from '../utils/logger';
+import { ecritureDepot, ecritureRetrait, ecritureVirementInterne } from '../services/comptabilite.service';
 
 const router = Router();
 
@@ -88,21 +89,21 @@ router.post('/deposit', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', '
         },
       });
 
-      // Créer le mouvement
-      const movement = await tx.mouvement.create({
-        data: {
-          id_ag: account.id_ag,
-          cpte_interne_cli: account.id_cpte,
-          date_valeur: new Date(),
-          sens: 'c',  // crédit (minuscule comme dans la base)
-          montant: amount,
-          devise: 'BIF',
-          compte: '2.1.1.1',  // Compte comptable épargne
-        },
-      });
-
-      return { account: updatedAccount, movement };
+      return { account: updatedAccount };
     });
+
+    // Générer l'écriture comptable (dépôt: débit caisse, crédit dépôt client)
+    let ecritureId: number | null = null;
+    try {
+      ecritureId = await ecritureDepot(
+        result.account.id_ag,
+        result.account.id_cpte,
+        amount,
+        description || `Dépôt - ${result.account.num_complet_cpte}`
+      );
+    } catch (err) {
+      logger.warn(`Échec création écriture comptable pour dépôt: ${err}`);
+    }
 
     // Audit log
     await prisma.auditLog.create({
@@ -111,16 +112,16 @@ router.post('/deposit', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', '
         action: 'DEPOSIT',
         entity: 'Compte',
         entity_id: result.account.id_cpte.toString(),
-        new_values: { amount, description, accountNumber },
+        new_values: { amount, description, accountNumber, ecritureId },
         ip_address: req.ip || null,
       },
     });
 
-    logger.info(`Deposit of ${amount} to account ${result.account.num_complet_cpte} by user ${req.user!.userId}`);
+    logger.info(`Deposit of ${amount} to account ${result.account.num_complet_cpte} by user ${req.user!.userId} (écriture: ${ecritureId})`);
 
     res.status(201).json({
       message: 'Dépôt effectué avec succès',
-      movement: result.movement,
+      ecritureId,
       newBalance: result.account.solde,
       accountNumber: result.account.num_complet_cpte,
     });
@@ -166,20 +167,21 @@ router.post('/withdraw', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 
         },
       });
 
-      const movement = await tx.mouvement.create({
-        data: {
-          id_ag: account.id_ag,
-          cpte_interne_cli: account.id_cpte,
-          date_valeur: new Date(),
-          sens: 'd',  // débit (minuscule comme dans la base)
-          montant: amount,
-          devise: 'BIF',
-          compte: '2.1.1.1',  // Compte comptable épargne
-        },
-      });
-
-      return { account: updatedAccount, movement };
+      return { account: updatedAccount };
     });
+
+    // Générer l'écriture comptable (retrait: débit dépôt client, crédit caisse)
+    let ecritureId: number | null = null;
+    try {
+      ecritureId = await ecritureRetrait(
+        result.account.id_ag,
+        result.account.id_cpte,
+        amount,
+        description || `Retrait - ${result.account.num_complet_cpte}`
+      );
+    } catch (err) {
+      logger.warn(`Échec création écriture comptable pour retrait: ${err}`);
+    }
 
     await prisma.auditLog.create({
       data: {
@@ -187,16 +189,16 @@ router.post('/withdraw', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 
         action: 'WITHDRAW',
         entity: 'Compte',
         entity_id: result.account.id_cpte.toString(),
-        new_values: { amount, description, accountNumber },
+        new_values: { amount, description, accountNumber, ecritureId },
         ip_address: req.ip || null,
       },
     });
 
-    logger.info(`Withdrawal of ${amount} from account ${result.account.num_complet_cpte} by user ${req.user!.userId}`);
+    logger.info(`Withdrawal of ${amount} from account ${result.account.num_complet_cpte} by user ${req.user!.userId} (écriture: ${ecritureId})`);
 
     res.status(201).json({
       message: 'Retrait effectué avec succès',
-      movement: result.movement,
+      ecritureId,
       newBalance: result.account.solde,
       accountNumber: result.account.num_complet_cpte,
     });
@@ -266,33 +268,22 @@ router.post('/transfer', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 
         data: { solde: toNewBalance, date_modif: new Date() },
       });
 
-      // Créer les mouvements
-      const debitMovement = await tx.mouvement.create({
-        data: {
-          id_ag: fromAccount.id_ag,
-          cpte_interne_cli: fromAccount.id_cpte,
-          date_valeur: new Date(),
-          sens: 'd',
-          montant: amount,
-          devise: 'BIF',
-          compte: '2.1.1.1',
-        },
-      });
-
-      const creditMovement = await tx.mouvement.create({
-        data: {
-          id_ag: toAccount.id_ag,
-          cpte_interne_cli: toAccount.id_cpte,
-          date_valeur: new Date(),
-          sens: 'c',
-          montant: amount,
-          devise: 'BIF',
-          compte: '2.1.1.1',
-        },
-      });
-
-      return { debitMovement, creditMovement, fromAccount, toAccount };
+      return { fromAccount, toAccount };
     });
+
+    // Générer l'écriture comptable (virement interne)
+    let ecritureId: number | null = null;
+    try {
+      ecritureId = await ecritureVirementInterne(
+        result.fromAccount.id_ag,
+        result.fromAccount.id_cpte,
+        result.toAccount.id_cpte,
+        amount,
+        description || `Virement ${result.fromAccount.num_complet_cpte} -> ${result.toAccount.num_complet_cpte}`
+      );
+    } catch (err) {
+      logger.warn(`Échec création écriture comptable pour virement: ${err}`);
+    }
 
     await prisma.auditLog.create({
       data: {
@@ -300,17 +291,16 @@ router.post('/transfer', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 
         action: 'TRANSFER',
         entity: 'Compte',
         entity_id: `${result.fromAccount.num_complet_cpte}->${result.toAccount.num_complet_cpte}`,
-        new_values: { amount, description, fromAccountNumber, toAccountNumber },
+        new_values: { amount, description, fromAccountNumber, toAccountNumber, ecritureId },
         ip_address: req.ip || null,
       },
     });
 
-    logger.info(`Transfer of ${amount} from ${result.fromAccount.num_complet_cpte} to ${result.toAccount.num_complet_cpte} by user ${req.user!.userId}`);
+    logger.info(`Transfer of ${amount} from ${result.fromAccount.num_complet_cpte} to ${result.toAccount.num_complet_cpte} by user ${req.user!.userId} (écriture: ${ecritureId})`);
 
     res.status(201).json({
       message: 'Virement effectué avec succès',
-      debitMovement: result.debitMovement,
-      creditMovement: result.creditMovement,
+      ecritureId,
       fromAccountNumber: result.fromAccount.num_complet_cpte,
       toAccountNumber: result.toAccount.num_complet_cpte,
     });
