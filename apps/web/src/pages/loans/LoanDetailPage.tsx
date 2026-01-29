@@ -656,7 +656,7 @@ export default function LoanDetailPage() {
                 <div className="mb-6 p-4 bg-white rounded-lg border">
                   <div className="grid gap-4 sm:grid-cols-3">
                     <div>
-                      <Label htmlFor="simMontant">Montant (FBu)</Label>
+                      <Label htmlFor="simMontant">Montant (BIF)</Label>
                       <Input
                         id="simMontant"
                         type="number"

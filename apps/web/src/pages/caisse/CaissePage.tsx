@@ -41,22 +41,22 @@ import { useToast } from '@/hooks/use-toast';
 
 // Valeurs des billets et pièces (Franc Burundais - BIF)
 const BILLETS_BIF = [
-  { key: 'billets_10000', value: 10000, label: '10 000 FBu' },
-  { key: 'billets_5000', value: 5000, label: '5 000 FBu' },
-  { key: 'billets_2000', value: 2000, label: '2 000 FBu' },
-  { key: 'billets_1000', value: 1000, label: '1 000 FBu' },
-  { key: 'billets_500', value: 500, label: '500 FBu' },
-  { key: 'billets_100', value: 100, label: '100 FBu' },
-  { key: 'billets_50', value: 50, label: '50 FBu' },
-  { key: 'billets_20', value: 20, label: '20 FBu' },
-  { key: 'billets_10', value: 10, label: '10 FBu' },
+  { key: 'billets_10000', value: 10000, label: '10 000 BIF' },
+  { key: 'billets_5000', value: 5000, label: '5 000 BIF' },
+  { key: 'billets_2000', value: 2000, label: '2 000 BIF' },
+  { key: 'billets_1000', value: 1000, label: '1 000 BIF' },
+  { key: 'billets_500', value: 500, label: '500 BIF' },
+  { key: 'billets_100', value: 100, label: '100 BIF' },
+  { key: 'billets_50', value: 50, label: '50 BIF' },
+  { key: 'billets_20', value: 20, label: '20 BIF' },
+  { key: 'billets_10', value: 10, label: '10 BIF' },
 ];
 
 const PIECES_BIF = [
-  { key: 'pieces_50', value: 50, label: '50 FBu' },
-  { key: 'pieces_10', value: 10, label: '10 FBu' },
-  { key: 'pieces_5', value: 5, label: '5 FBu' },
-  { key: 'pieces_1', value: 1, label: '1 FBu' },
+  { key: 'pieces_50', value: 50, label: '50 BIF' },
+  { key: 'pieces_10', value: 10, label: '10 BIF' },
+  { key: 'pieces_5', value: 5, label: '5 BIF' },
+  { key: 'pieces_1', value: 1, label: '1 BIF' },
 ];
 
 const BILLETS_USD = [
@@ -93,7 +93,7 @@ function DecompteForm({
       <div>
         <div className="flex items-center gap-2 mb-3">
           <Banknote className="h-5 w-5 text-green-600" />
-          <h4 className="font-medium">Billets FBu</h4>
+          <h4 className="font-medium">Billets BIF</h4>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {BILLETS_BIF.map((item) => (
@@ -124,7 +124,7 @@ function DecompteForm({
       <div>
         <div className="flex items-center gap-2 mb-3">
           <Coins className="h-5 w-5 text-amber-600" />
-          <h4 className="font-medium">Pièces FBu</h4>
+          <h4 className="font-medium">Pièces BIF</h4>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {PIECES_BIF.map((item) => (
@@ -175,7 +175,7 @@ function DecompteForm({
       {/* Totaux */}
       <div className="bg-gray-50 rounded-lg p-4 space-y-2">
         <div className="flex justify-between items-center">
-          <span className="font-medium">Total FBu</span>
+          <span className="font-medium">Total BIF</span>
           <span className="text-xl font-bold text-green-600">{formatCurrency(totalBIF)}</span>
         </div>
         <div className="flex justify-between items-center">
