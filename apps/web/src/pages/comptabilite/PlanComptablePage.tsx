@@ -13,18 +13,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { formatCurrency } from '@/lib/utils';
 import { comptabiliteApi } from '@/lib/api';
-
-interface CompteComptable {
-  numero: string;
-  libelle: string;
-  classe: number;
-  type: 'actif' | 'passif' | 'charge' | 'produit';
-  sens: 'debiteur' | 'crediteur';
-  solde?: number;
-  children?: CompteComptable[];
-}
 
 // Plan comptable structure based on Hopefund's chart of accounts
 const planComptableStructure = [
@@ -119,7 +108,7 @@ export default function PlanComptablePage() {
   const [expandedClasses, setExpandedClasses] = useState<number[]>([1, 2]);
 
   // Fetch plan comptable from API (or use static data as fallback)
-  const { data: planComptableApi } = useQuery({
+  useQuery({
     queryKey: ['plan-comptable'],
     queryFn: comptabiliteApi.getPlanComptable,
   });

@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 import {
   Calculator,
   Download,
-  Calendar,
   Filter,
   Printer,
 } from 'lucide-react';
@@ -37,7 +36,7 @@ export default function BalanceComptablePage() {
   const [dateFin, setDateFin] = useState('');
   const [agence, setAgence] = useState('all');
 
-  const { data: balance, isLoading } = useQuery({
+  const { data: balance } = useQuery({
     queryKey: ['balance-comptable', dateDebut, dateFin, agence],
     queryFn: () => comptabiliteApi.getBalance({
       dateDebut: dateDebut || undefined,

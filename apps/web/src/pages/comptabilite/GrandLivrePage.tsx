@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 import {
   BookOpen,
   Download,
-  Calendar,
   Filter,
   Printer,
   Search,
@@ -12,13 +11,6 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { comptabiliteApi } from '@/lib/api';
 
@@ -45,7 +37,7 @@ export default function GrandLivrePage() {
   const [compte, setCompte] = useState('');
   const [search, setSearch] = useState('');
 
-  const { data: grandLivreData, isLoading } = useQuery({
+  const { data: grandLivreData } = useQuery({
     queryKey: ['grand-livre', dateDebut, dateFin, compte],
     queryFn: () => comptabiliteApi.getGrandLivre({
       dateDebut: dateDebut || undefined,

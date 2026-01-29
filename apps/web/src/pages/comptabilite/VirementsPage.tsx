@@ -1,8 +1,6 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import {
   Send,
-  Download,
   Filter,
   Plus,
   Check,
@@ -10,7 +8,7 @@ import {
   Clock,
   Printer,
 } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,8 +27,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { comptabiliteApi } from '@/lib/api';
-import { toast } from 'sonner';
 
 interface Virement {
   id: number;
@@ -260,7 +256,7 @@ export default function VirementsPage() {
                 Annuler
               </Button>
               <Button onClick={() => {
-                toast.success('Virement créé avec succès');
+                alert('Virement créé avec succès');
                 setNewVirementOpen(false);
               }}>
                 Créer le virement

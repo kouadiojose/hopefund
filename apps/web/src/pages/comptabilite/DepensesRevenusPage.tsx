@@ -8,7 +8,7 @@ import {
   Plus,
   Printer,
 } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -68,7 +68,7 @@ export default function DepensesRevenusPage() {
   const [dateDebut, setDateDebut] = useState('');
   const [dateFin, setDateFin] = useState('');
 
-  const { data: depensesRevenusData, isLoading } = useQuery({
+  const { data: depensesRevenusData } = useQuery({
     queryKey: ['depenses-revenus', dateDebut, dateFin],
     queryFn: () => comptabiliteApi.getDepensesRevenus({
       dateDebut: dateDebut || undefined,

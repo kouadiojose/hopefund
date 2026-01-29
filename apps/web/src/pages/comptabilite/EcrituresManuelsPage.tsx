@@ -18,7 +18,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { formatCurrency } from '@/lib/utils';
-import { toast } from 'sonner';
 
 interface LigneEcriture {
   id: number;
@@ -87,14 +86,14 @@ export default function EcrituresManuelsPage() {
 
   const handleSave = () => {
     if (!libelle) {
-      toast.error('Veuillez saisir un libellé');
+      alert('Veuillez saisir un libellé');
       return;
     }
     if (!isEquilibre) {
-      toast.error('L\'écriture n\'est pas équilibrée');
+      alert('L\'écriture n\'est pas équilibrée');
       return;
     }
-    toast.success('Écriture enregistrée avec succès');
+    alert('Écriture enregistrée avec succès');
     // Reset form
     setLibelle('');
     setLignes([

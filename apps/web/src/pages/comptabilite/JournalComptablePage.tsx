@@ -3,13 +3,12 @@ import { useQuery } from '@tanstack/react-query';
 import {
   Receipt,
   Download,
-  Calendar,
   Filter,
   Printer,
   Plus,
   Eye,
 } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -57,7 +56,7 @@ export default function JournalComptablePage() {
   const [dateFin, setDateFin] = useState('');
   const [journal, setJournal] = useState('all');
 
-  const { data: journalData, isLoading } = useQuery({
+  const { data: journalData } = useQuery({
     queryKey: ['journal-comptable', dateDebut, dateFin, journal],
     queryFn: () => comptabiliteApi.getJournal({
       dateDebut: dateDebut || undefined,

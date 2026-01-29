@@ -1,15 +1,11 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  Vault,
   Search,
   ArrowRight,
-  Building2,
   Edit,
-  Plus,
-  X,
 } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -28,7 +24,6 @@ import {
 } from '@/components/ui/dialog';
 import { formatCurrency } from '@/lib/utils';
 import { comptabiliteApi } from '@/lib/api';
-import { toast } from 'sonner';
 
 interface Agence {
   id_ag: number;
@@ -63,11 +58,11 @@ export default function CoffresFortsPage() {
     mutationFn: comptabiliteApi.createTransfert,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['coffres-forts'] });
-      toast.success('Transfert effectué avec succès');
+      alert('Transfert effectué avec succès');
       setTransferModalOpen(false);
     },
     onError: (error: any) => {
-      toast.error(error.message || 'Erreur lors du transfert');
+      alert(error.message || 'Erreur lors du transfert');
     },
   });
 
@@ -261,7 +256,7 @@ export default function CoffresFortsPage() {
                   Annuler
                 </Button>
                 <Button onClick={() => {
-                  toast.success('Coffre fort mis à jour');
+                  alert('Coffre fort mis à jour');
                   setEditModalOpen(false);
                 }}>
                   Enregistrer
