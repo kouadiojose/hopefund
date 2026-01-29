@@ -13,28 +13,28 @@ router.use(authenticate);
 
 // ==================== CONSTANTES ====================
 
-// Valeurs des billets CDF
-const BILLETS_CDF = {
-  billets_20000: 20000,
+// Valeurs des billets BIF (Franc Burundais)
+const BILLETS_BIF = {
   billets_10000: 10000,
   billets_5000: 5000,
+  billets_2000: 2000,
   billets_1000: 1000,
   billets_500: 500,
-  billets_200: 200,
   billets_100: 100,
   billets_50: 50,
+  billets_20: 20,
+  billets_10: 10,
 };
 
-// Valeurs des pièces CDF
-const PIECES_CDF = {
+// Valeurs des pièces BIF
+const PIECES_BIF = {
   pieces_50: 50,
-  pieces_25: 25,
   pieces_10: 10,
   pieces_5: 5,
   pieces_1: 1,
 };
 
-// Valeurs des billets USD
+// Valeurs des billets USD (pour les opérations en devises)
 const BILLETS_USD = {
   billets_100_usd: 100,
   billets_50_usd: 50,
@@ -79,21 +79,18 @@ function calculerTotalDecompte(decompte: any): { totalBillets: number; totalPiec
   let totalBillets = 0;
   let totalPieces = 0;
 
-  // Billets CDF
-  for (const [key, valeur] of Object.entries(BILLETS_CDF)) {
+  // Billets BIF
+  for (const [key, valeur] of Object.entries(BILLETS_BIF)) {
     totalBillets += (decompte[key] || 0) * valeur;
   }
 
-  // Pièces CDF
-  for (const [key, valeur] of Object.entries(PIECES_CDF)) {
+  // Pièces BIF
+  for (const [key, valeur] of Object.entries(PIECES_BIF)) {
     totalPieces += (decompte[key] || 0) * valeur;
   }
 
-  // Billets USD (convertir en CDF si nécessaire - pour l'instant on garde en USD)
-  // On les ajoute au total billets
-  for (const [key, valeur] of Object.entries(BILLETS_USD)) {
-    totalBillets += (decompte[key] || 0) * valeur;
-  }
+  // Billets USD (pour les opérations en devises - pas ajoutés au total BIF)
+  // Les devises sont gérées séparément
 
   return {
     totalBillets,
@@ -104,23 +101,23 @@ function calculerTotalDecompte(decompte: any): { totalBillets: number; totalPiec
 
 // Schéma de validation pour le décompte
 const decompteSchema = z.object({
-  devise: z.string().default('CDF'),
-  // Billets CDF
-  billets_20000: z.number().int().min(0).default(0),
+  devise: z.string().default('BIF'),
+  // Billets BIF (Franc Burundais)
   billets_10000: z.number().int().min(0).default(0),
   billets_5000: z.number().int().min(0).default(0),
+  billets_2000: z.number().int().min(0).default(0),
   billets_1000: z.number().int().min(0).default(0),
   billets_500: z.number().int().min(0).default(0),
-  billets_200: z.number().int().min(0).default(0),
   billets_100: z.number().int().min(0).default(0),
   billets_50: z.number().int().min(0).default(0),
-  // Pièces CDF
+  billets_20: z.number().int().min(0).default(0),
+  billets_10: z.number().int().min(0).default(0),
+  // Pièces BIF
   pieces_50: z.number().int().min(0).default(0),
-  pieces_25: z.number().int().min(0).default(0),
   pieces_10: z.number().int().min(0).default(0),
   pieces_5: z.number().int().min(0).default(0),
   pieces_1: z.number().int().min(0).default(0),
-  // Billets USD
+  // Billets USD (pour opérations en devises)
   billets_100_usd: z.number().int().min(0).default(0),
   billets_50_usd: z.number().int().min(0).default(0),
   billets_20_usd: z.number().int().min(0).default(0),
@@ -397,7 +394,7 @@ router.post('/session/fermer', async (req, res, next) => {
           montant_fermeture: totaux.totalGeneral,
           decompte_fermeture_id: decompteRecord.id,
           ecart: ecart,
-          commentaire_ecart: Math.abs(ecart) > 0 ? `Écart de ${ecart} CDF` : null,
+          commentaire_ecart: Math.abs(ecart) > 0 ? `Écart de ${ecart} BIF` : null,
           etat: ETAT_SESSION.FERMEE,
         },
       });
@@ -434,7 +431,7 @@ router.post('/approvisionnement', async (req, res, next) => {
 
     const schema = z.object({
       montant: z.number().positive(),
-      devise: z.string().default('CDF'),
+      devise: z.string().default('BIF'),
       decompte: decompteSchema.optional(),
       commentaire: z.string().optional(),
     });
@@ -540,7 +537,7 @@ router.post('/reversement', async (req, res, next) => {
 
     const schema = z.object({
       montant: z.number().positive(),
-      devise: z.string().default('CDF'),
+      devise: z.string().default('BIF'),
       decompte: decompteSchema,
       commentaire: z.string().optional(),
     });
@@ -974,7 +971,7 @@ router.get('/principale', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER')
       caissePrincipale = await prisma.caissePrincipale.create({
         data: {
           id_ag: agenceId,
-          seuil_max_caissier_cdf: 5000000, // 5 millions CDF par défaut
+          seuil_max_caissier_cdf: 5000000, // 5 millions BIF par défaut
           seuil_max_caissier_usd: 2000, // 2000 USD par défaut
         },
       });
