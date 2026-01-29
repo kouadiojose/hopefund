@@ -1,0 +1,996 @@
+VOTRE PLATEFORME
+
+HOPEFUND
+DIGITAL
+BANKING
+
+LA CHAINE
+DES
+INTERVENANTS
+
+01
+
+Super Admin
+
+02
+
+Caissier Principal
+
+03
+
+Guichetier
+
+04
+
+Analyste Crédit
+
+05
+
+Chef du service Crédit
+
+06
+
+Receptionniste
+
+07
+
+Direction
+
+08
+
+Chef service des opérations
+
+09
+
+Comptabilité
+
+01
+
+Se
+Connecter
+Chaque intervenant a des
+accès pour se connecter à
+son espace.
+Ces accès sont uniques et
+confidentiels.
+
+02
+
+LE COMPTE
+SUPER ADMIN
+
+Le SUPER ADMIN est un rôle clé dans
+une application. Il s'agit d'un utilisateur
+qui dispose de tous les droits et
+privilèges
+pour
+l'ensemble
+des
+opérations effectuées par les différents
+acteurs afin de prendre les décisions.
+
+03
+
+LES FONCTIONNALITES DU COMPTE ADMIN
+
+Se déconnecter
+
+Tableau de bord
+
+Paramètres
+
+04
+
+TABLEAU DE BORD
+Il offre une visibilité sur toutes les transactions et les différentes actions sur la plateforme.
+Cette option comprend 4 parties :
+
+1
+
+· L’information du caissier principal
+Il vous donne les informations sur l’Admin et sur l’heure de connexion…
+
+2
+
+·L’information globale sur les soldes et les
+informations clées du système
+Cette partie nous montre les informations sur
+:
+Le compte principal - Les régulations
+- Les soldes clients - Les opérations clients
+
+05
+
+TABLEAU DE BORD
+
+3
+
+·Le Graphique
+Cette partie aura pour rôle de résumer le
+volume des transactions effectuées sur une
+période donnée dans un graphique pour une
+meilleure compréhension et une rapide prise
+de décisions.
+
+4
+
+·La liste des transactions
+Cette liste comprendra les informations sur
+toutes les opérations effectuées ainsi que les
+différents détails avec l’option de filtrer toutes
+les transactions effectuées.
+
+06
+
+Paramètres
+Il offre l’option de créer des services, de recharger des comptes ainsi que
+d’attribuer des rôles et les autorisations à chaque agent ou service.
+Il comprend trois (03) menus : Utilisateurs - Rôles - Autorisations
+
+·Utilisateurs
+C’est dans cet onglet qu’on a les informations de tous les
+membres du service qui interagiront sur la plateforme
+Hopefund Digital Banking ainsi que la possibilité d’en
+ajouter, de modifier ou de supprimer.
+
+07
+
+Paramètres
+· Rôles
+C’est l’onglet qui permet de créer les rôles
+des personnes qui interviendront sur la
+plateforme Hopefund Digital Banking avec
+la possibilité de créer ou de supprimer les
+rôles existant et de rechercher quelque
+chose de précis.
+Par exemple : Caissier, comptable,
+réceptionniste…
+· Autorisation
+Cette option permet de définir les permissions
+attribuées à chaque rôle de l’entreprise en fonction des
+qualifications.
+NB : Les parties cochées correspondent aux
+permissions attribuées au rôle sélectionnée.
+
+08
+
+Déconnexion
+Ce bouton permet à l’utilisateur de fermer sa session et
+de protéger les données de son espace sur la
+plateforme Hopefund Digital Banking
+
+09
+
+Le compte
+CAISSIER PRINCIPAL
+10
+
+HOPEFUND DIGITAL BANKING
+
+Fonctionnalités
+
+Caissier Principal
+Le
+caissier
+principal
+est
+généralement responsable de
+superviser les opérations de
+caisses.
+
+01
+
+Le tableau de bord
+
+02
+
+Opération de caisse
+
+03
+
+Historique
+
+04
+
+Paramètres
+
+05
+
+Se déconnecter
+
+11
+
+Tableau de bord
+Il offre une visibilité sur toutes les transactions de la période.
+Cette option comprend 4 parties :
+
+1
+2
+
+L’information du caissier principal
+Il vous donne les informations sur le caissier principal connecté.
+
+·L’information globale sur les opérations du caissier principal
+Cette partie nous montre les informations sur : -Le solde principal - Le solde ouverture - Les
+versements - les retraits
+
+12
+
+Tableau de bord
+
+3
+
+L'affichage Graphique
+Cette partie aura pour rôle de résumer les
+informations globales sur un graphique pour
+une meilleure compréhension et une rapide
+prise de décisions.
+
+·La liste des caisses
+
+4
+
+Cette liste comprendra les informations sur toutes les caisses liées au caissier principal, les
+opérations effectuées ainsi que les différents statuts de ces caisses.
+
+13
+
+OPERATION DE CAISSE
+Cet onglet permet l'attribution des
+caisses aux différents guichetiers .
+Egalement, sous cet onglet l'état des
+différentes caisses (ouvert ou fermé
+ou en attente de validation) est
+visible
+C'est une étape nécéssaire pour
+l'ouverture d'une caisse.
+
+HISTORIQUE
+Ici, vous avez tous les états
+des caisses des guichetiers
+ainsi
+que
+tous
+les
+mouvements effectués au
+travers de ces caisses
+
+14
+
+PARAMETRE
+Cet onglet donne toutes les informations sur
+le compte du caissier principal
+
+DECONNEXION
+Ce bouton permet à l’utilisateur de fermer
+sa session et de protéger les données de
+son espace sur la plateforme Hopefund
+Digital Banking
+
+15
+
+OPERATION D'OUVERTURE DE CAISSE
+
+01
+
+Aller dans l'onglet " OPERATION DE CAISSE "
+
+02
+
+Cliquer sur " RECHARGER UNE CAISSE "
+
+03
+
+Remplir les différents champs puis Cliquer sur " RECHARGER UNE CAISSE
+"
+
+16
+
+L'espace du guichetier se présente sous trois (03)
+formes du statut de la caisse :
+OUVERTURE - OPERATION APRES OUVERTURE FERMETURE
+
+DEFINITION :
+A l'ouverture : Des fonds sont affectés au
+guichetier afin qu'il démarre la journée.
+
+Le Compte
+
+GUICHETIER
+
+A l'opération après ouverture : C'est l'ensemble
+des transactions (retraits - versements - opérations
+spéciales...) éffectué par le guichetier durant sa
+journée.
+A la fermeture : C'est l'ensemble des opérations
+précédent la ferméture la fermeture de la caisse.
+
+17
+
+A
+L'OUVERTURE
+
+FONCTIONNALITES
+Cette espace donne une vue large sur le tableau de
+bord.
+Le guichetier n'est pas encore opérationnel.
+Il est en attente de l'affectation d'une caisse par le
+caissier principal.
+Son espace se modifie et comprend :
+· Tableau de bord
+· Rapport de clôture
+· Historique
+· Paramètres
+· Se déconnecter
+
+18
+
+L'OUVERTURE
+
+1 - Brouillard des caisses
+Il donne la possibilité au caissier de valider l'affectation du montant en
+renseignant la somme physique à sa disposition lui donnant la
+possibilité ainsi d'ouvrir la caisse
+
+2 - Rapport de clôture
+Cette partie présente l'état et toutes les informations de la caisse lors
+de la dernière fermeture.
+
+19
+
+L'OUVERTURE
+
+3 - Historique
+Cette espace donne toutes les informations sur les versements et les
+retraits avant la dernière fermeture de la caisse.
+Versements
+
+Retraits
+
+20
+
+L'OUVERTURE
+
+Paramètres
+Cet onglet donne toutes les informations sur le compte de l’utilisateur avec la
+possibilité de faire des ajustements.
+
+Déconnexion
+Ce bouton permet à l’utilisateur de fermer sa
+session et de protéger les données de son espace
+sur la plateforme Hopefund Digital Banking
+
+21
+
+OPERATION
+APRES
+OUVERTURE
+
+FONCTIONNALITES
+Cette espace donne une vue large sur le tableau
+de bord.
+Le guichetier est alors opérationnel. Il peut
+effectuer ses prestations en toute sécurité.
+Son espace se modifie et comprend :
+· Tableau de bord
+· Transactions
+· Consulter un compte
+· Fermeture de caisse
+· Rapport de clôture
+· Historique
+· Paramètres
+· Se déconnecter
+
+22
+
+Tableau de bord
+Il offre un résumé de toutes les tâches du guichetier retransmis ensuite dans un graphique et le nom du caissier
+connecté ainsi que l’heure de connexion.
+
+01
+
+Information Transaction
+
+Il donne les informations sur les
+transactions telles que :
+Le solde en cours - Le solde à l’ouverture Les versements - Les retraits
+
+02
+
+Graphique
+Il nous donne la visibilité sur l’ensemble des
+opérations effectuées dans un graphique
+
+23
+
+Tableau de bord
+03
+
+·Liste des récentes transactions
+
+Il donne les informations sur les transactions récentes...
+
+24
+
+Transactions
+Ce menu donne la possibilité au
+guichétier d’effectuer les transactions
+et de recharger les comptes.
+
+Versement
+
+Il est nécessaire d'avoir le numéro de
+compte du receveur ainsi que certaines
+informations sur le deposant.
+
+Retrait
+Ce menu donne toutes les
+informations sur tous les rétraits
+récents ainsi que la possibilité de voir
+le reçu de la transaction.
+
+25
+
+Comment éffectuer un versement ?
+01
+
+Sélectionner transactions puis cliquer sur versements
+
+02
+
+Cliquer sur faire un versement
+
+03
+
+Cliquer sur commencer maintenant
+
+04
+
+Entrer le numero de compte du client puis cliquer sur commencer
+
+05
+
+Remplir les différents champs puis cliquer sur valider
+
+26
+
+Comment éffectuer un retrait ?
+01
+
+Sélectionner transactions puis cliquer sur retrait
+
+02
+
+Cliquer sur faire un retrait
+
+03
+
+Entrer le numero de compte du client puis cliquer sur commencer
+
+04
+
+Remplir les différents champs puis cliquer sur valider
+
+27
+
+Opération spéciale
+Ce menu renferme deux (02) onglets dont le relevé bancaire et la demande de chèquiers.
+
+Relevé bancaire
+
+Cet onglet sert à faire une demande du
+rélévé bancaire.
+Le relevé de compte est un document qui
+permet de connaître toutes les opérations
+enregistrées sur votre compte bancaire et
+le solde du compte, pour une période
+donnée.
+Commande de chèquiers
+
+Le guichetier doit remplir le brouillard
+de caisse afin de procéder à la
+ferméture.
+
+28
+
+Effectuer une demande de rélévé bancaire ?
+01
+
+Sélectionner opération spéciale puis cliquer sur rélévé bancaire
+
+02
+
+Cliquer sur commencer maintenant
+
+03
+
+Entrer le numero de compte du client puis cliquer sur commencer
+
+04
+
+Sélectionner les périodes de début et de fin puis cliquer sur rechercher
+
+05
+
+Une fois retrouvé, puis cliquer sur Imprimer
+
+29
+
+Effectuer une commande de chéquiers ?
+01
+
+Sélectionner opération spéciale puis cliquer sur commande de chéquiers
+
+02
+
+Cliquer sur Faire une commande de chéquiers
+
+03
+
+Cliquer sur commencer maintenant
+
+04
+
+Entrer le numero de compte du client puis cliquer sur commencer
+
+05
+
+CRemplir les champs puis cliquer sur valider
+
+30
+
+Consulter un
+compte
+Ce menu permet de rechercher un
+compte et d'afficher les détails le
+concernant.
+Il existe 03 manières d'y accéder :
+Le numéro du compte - L'E-mail - Le
+numéro de téléphone.
+
+Fermeture de
+caisse
+Il s'agit de notifier le nombre de
+monnaies et de billets présents dans
+la caisse pour une bonne traçabilité
+avant de fermer la caisse.
+
+31
+
+Comment fermer une caisse?
+01
+
+Sélectionner ferméture de caisse
+
+02
+
+Remplir le brouillard de caisse puis cliquer sur fermer la caisse
+
+32
+
+Rapport de
+clôture
+
+Historique
+
+Ce menu donne toutes les informations actualisées des caisses en
+instance de ferméture.
+
+Ce menu donne la visibilité sur toutes les transactions de versement et
+de retrait avec la possibilité d'imprimer la page.
+
+33
+
+Paramètre
+Cet onglet donne toutes les informations sur le compte
+de l’utilisateur avec la possibilité de faire des ajustements.
+
+Déconnexion
+Ce bouton permet à l’utilisateur de fermer sa session et
+de protéger les données de son espace sur la
+plateforme Hopefund Digital Banking
+
+34
+
+LA
+FERMETURE
+
+FONCTIONNALITES
+Cette espace donne une vue large sur le tableau de
+bord.
+La caisse n'est plus opérationnelle mais e guichetier peut
+toutefois voir les rapport de clôture et l'historique des
+caisses
+Il est en attente de l'affectation d'une caisse par le .
+Son espace se modifie et comprend :
+· Tableau de bord
+· Rapport de clôture
+· Historique
+· Paramètres
+· Se déconnecter
+
+35
+
+LA FERMETURE
+
+1 - Tableau de bord
+Il se présente vide. Il est en attente de l'attribution d'une somme par le
+caissier principal
+
+2 - Rapport de clôture
+Cette partie présente l'état et toutes les informations de la caisse lors
+de la dernière fermeture.
+
+36
+
+LA FERMETURE
+
+3 - Historique
+Cette espace donne toutes les informations sur les versements et les
+retraits avant la dernière fermeture de la caisse.
+Versements
+
+Retraits
+
+37
+
+LA FERMETURE
+
+Paramètres
+Cet onglet donne toutes les informations sur le compte de l’utilisateur avec la
+possibilité de faire des ajustements.
+
+Déconnexion
+Ce bouton permet à l’utilisateur de fermer sa
+session et de protéger les données de son espace
+sur la plateforme Hopefund Digital Banking
+
+38
+
+MON COMPTE
+
+CHEF DE SERVICE
+CREDIT
+
+39
+
+01
+
+Tableau de bord
+
+02
+
+Voir les demandes
+
+03
+
+Consulter un compte
+
+04
+
+Paramètres
+
+05
+
+Se déconnecter
+
+Fonctionnalité
+CHEF DE SERVICE
+CREDIT
+40
+
+Tableau de bord
+Il offre une large visibilité sur toutes les opérations d'octroi ou de demande de crédits.
+Cette option comprend 3 parties : le profil de la personne connectée, les informations importantes
+reparties dans un graphique.
+
+41
+
+Voir les demandes
+Ce menu donne la possibilité au
+chef du service crédit d'avoir
+tous les détails sur toutes les
+demandes de crédits avec la
+possibilité de la faire suivre à un
+Analyste.
+
+Consulter un compte
+Ce menu permet de rechercher un
+compte et d'afficher les détails le
+concernant.
+Il existe 03 manières d'y accéder :
+Le numéro du compte - L'E-mail - Le
+numéro de téléphone.
+
+42
+
+Paramètres
+Cette option donne une large
+visibilité sur le compte du chef du
+service crédit ainsi que la possibilité
+de faire des réglages.
+
+Se déconnecter
+Ce bouton permet à l’utilisateur de
+fermer sa session et de protéger les
+données de son espace sur la
+plateforme Hopefund Digital Banking
+
+43
+
+01
+
+Tableau de bord
+
+02
+
+Demande de prêt
+
+03
+
+Vérifier les prêts
+
+04
+
+Paramètres
+
+05
+
+Se déconnecter
+
+Le compte
+ANALYSTE
+
+44
+
+Il offre une large visibilité sur toutes les opérations de demande
+de crédit.
+Cette option comprend 3 parties : le profil de la personne
+connectée, les différents prêt disponibles et statuts des
+demande de prêt, le tout reparti dans un graphique
+
+Tableau de
+bord
+
+45
+
+Il offre la possibilité à l'analyste de consulter toutes les informations
+sur les demande de prêts avec l'option de completer les informations
+du réquerant.
+
+Vérifier les
+demandes de
+prêts
+
+Completer la demande
+Une fois cliqué dessus, C'est l'option qui
+donne la possibilité à l'analyste de
+renseigner
+l'identification
+des
+réquerants pour compléter les
+différents dossiers.
+
+46
+
+Paramètres
+Cette option donne une large visibilité sur le compte de
+l'analyste ainsi que la possibilité de faire des réglages.
+
+Se déconnecter
+Ce bouton permet à l’utilisateur de fermer sa session et de
+protéger les données de son espace sur la plateforme
+Hopefund Digital Banking
+
+47
+
+FONCTIONNALITES
+Cette espace donne une vue large sur le tableau de
+bord. Il comprend les options :
+
+Le Compte
+
+RECEPTIONNISTE
+
+· Tableau de bord
+· clients
+· Demande de crédit
+· Correspondances
+· Demande de chèquiers
+· Paramètres
+· Se déconnecter
+
+48
+
+TABLEAU DE
+BORD
+Le tableau de bord permet au
+réceptionniste de voir les tâches
+qui lui sont attribuées.
+Il s'etend sur quatres (04) parties :
+• Le présentation de
+l'utilisateur
+• Le récapitulatif des informations importantes
+• L'affichage graphique
+• La liste des demandes avec la possibilité de les modifier ou de les annuler
+
+49
+
+CLIENTS
+L'option client donne la possibilité de créer des comptes pour les
+nouveaux clients (Ouverture) et de voir les informations sur les
+comptes de clients existants (Liste des clients).
+
+Ouverture
+
+50
+
+LISTE DES DEMANDES DE CREDITS
+Cette option donne la possibilité de voir toutes les informations sur les demandes de prêts,
+de les modifier ou les annuler et de faire des demandes de crédits pour le compte d'un client
+
+CORRESPONDANCE
+"Cet onglet permet de consigner dans le registre toutes les correspondances réçues.
+
+51
+
+PARAMETRE
+Cette option donne une large visibilité sur le compte du
+receptionniste ainsi que la possibilité de faire des réglages.
+
+SE DECONNECTER
+Ce bouton permet à l’utilisateur de fermer sa session et de
+protéger les données de son espace sur la plateforme
+Hopefund Digital Banking
+
+52
+
+Mon compte
+
+SERVICE DES
+OPERATIONS
+53
+
+TABLEAU DE BORD
+
+Il offre un résumé de toutes les transactions en attente et validées. Ensuite dans un
+graphique et le nom du caissier connecté.
+
+Il offre également tous les détails des transactions éffectuées ainsi que le poussibilité
+d'imprimer les réçus
+
+54
+
+CREER UNE CAISSE
+C’est dans cet onglet qu’on a les
+informations de toutes les caisses
+affiliés au caissier principal ainsi
+que la possibilité d’en ajouter, de
+modifier ou de supprimer les
+caisses ajoutés.
+
+CONSULTER UN COMPTE
+Ce menu permet de rechercher un
+compte et d'afficher les détails le
+concernant.
+Il existe 03 manières d'y accéder :
+Le numéro du compte - L'E-mail - Le
+numéro de téléphone.
+
+55
+
+VALIDER UNE TRANSACTION
+Ce menu a pour fonction de garantir l'exactitude des demandes en offrant la possibilité d'ajuster
+la taille des transactions selon les besoins, que ce soit pour les augmenter ou les diminuer
+leurs limites.
+
+CONSULTER UN COMPTE
+Ce menu donne toutes les informations sur les écarts des caisses lors de leurs fermetures et
+les possibilités d'apporter des réajustements.
+
+56
+
+REMBOURSER UN PRÊT
+Cette option permet de suivre les modalités de remboursement des prêts en plus des intérêts
+
+IMPRIMER UN RELEVE
+Cette onglet permet de générer l'impression de relevés de transactions pour une période
+définie.
+
+57
+
+PARAMETRE
+Cette option donne une large visibilité sur le compte du
+receptionniste ainsi que la possibilité de faire des réglages.
+
+SE DECONNECTER
+Ce bouton permet à l’utilisateur de fermer sa session et de
+protéger les données de son espace sur la plateforme
+Hopefund Digital Banking
+
+58
+
+FONCTIONNALITES
+Cette espace donne une vue large sur le tableau de
+bord. Il comprend les options :
+· Tableau de bord
+· Virements
+· Historiques virements
+· Paramètres
+· Se déconnecter
+
+Mon compte
+
+COMPTABILITE
+
+01
+
+Tableau de bord
+Il offre un résumé des informations importantes de la comptabilité, retransmis ensuite dans un graphique ainsi que
+la liste des recentes transactions.
+
+01
+
+Information & graphique
+
+Il donne les informations sur les
+informations importantes telles que :
+Le compte principal - Régularisation soldes client - clients transcrit dans un
+graphique
+
+02
+
+LIste des recentes transactions
+
+02
+
+VIREMENTS
+Ce menu donne toutes les informations sur tous les virements récents ainsi que la possibilité d'imprimer le
+reçu de la transaction.
+
+HISTORIQUE DE VIREMENTS
+Ce menu donne toutes les informations sur tous les virements effectués ainsi que la possibilité d'imprimer
+le reçu de la transaction.
+
+03
+
+Comment éffectuer virement ?
+01
+
+Sélectionner virement
+
+02
+
+Cliquer sur faire un virement
+
+03
+
+Cliquer sur commencer maintenant
+
+04
+
+Entrer le numero de compte du client puis cliquer sur commencer
+
+05
+
+Remplir les différents champs puis cliquer sur valider
+
+06
+
+Cliquer sur confirmer et valider
+
+04
+
+PARAMETRE
+Cette option donne une large visibilité sur le compte de la
+comptabilité ainsi que la possibilité de faire des
+ajustements.
+
+SE DECONNECTER
+Ce bouton permet à l’utilisateur de fermer sa session et de
+protéger les données de son espace sur la plateforme
+Hopefund Digital Banking
+
+05
+
+
