@@ -144,8 +144,8 @@ router.get('/caisse', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER'), as
     // 1. Sessions avec utilisateur et agence valides
     const sessionsInvalides = await prisma.$queryRaw<any[]>`
       SELECT COUNT(*)::int as count
-      FROM "CaisseSession" s
-      LEFT JOIN "User" u ON s.user_id = u.id
+      FROM app_caisse_sessions s
+      LEFT JOIN app_users u ON s.user_id = u.id
       LEFT JOIN ad_agc a ON s.id_ag = a.id_ag
       WHERE u.id IS NULL OR a.id_ag IS NULL
     `;
@@ -161,7 +161,7 @@ router.get('/caisse', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER'), as
     // 2. États de session valides
     const etatsInvalides = await prisma.$queryRaw<any[]>`
       SELECT COUNT(*)::int as count
-      FROM "CaisseSession"
+      FROM app_caisse_sessions
       WHERE etat NOT IN (1, 2, 3)
     `;
 
@@ -182,7 +182,7 @@ router.get('/caisse', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER'), as
         total_sorties::numeric,
         montant_fermeture::numeric,
         ecart::numeric
-      FROM "CaisseSession"
+      FROM app_caisse_sessions
       WHERE etat IN (2, 3) AND montant_fermeture IS NOT NULL
     `;
 
@@ -220,7 +220,7 @@ router.get('/caisse', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER'), as
     // 4. Doublons de sessions ouvertes
     const doublons = await prisma.$queryRaw<any[]>`
       SELECT user_id, id_ag, date_session, COUNT(*)::int as nb_sessions
-      FROM "CaisseSession"
+      FROM app_caisse_sessions
       WHERE etat = 1
       GROUP BY user_id, id_ag, date_session
       HAVING COUNT(*) > 1
@@ -238,7 +238,7 @@ router.get('/caisse', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER'), as
     // 5. Mouvements validés sans valideur
     const mouvementsSansValideur = await prisma.$queryRaw<any[]>`
       SELECT COUNT(*)::int as count
-      FROM "CaisseMouvement"
+      FROM app_caisse_mouvements
       WHERE etat IN (2, 3) AND valide_par IS NULL
     `;
 
@@ -257,7 +257,7 @@ router.get('/caisse', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER'), as
         SUM(CASE WHEN etat = 1 THEN 1 ELSE 0 END)::int as sessions_ouvertes,
         SUM(CASE WHEN etat = 2 THEN 1 ELSE 0 END)::int as sessions_fermees,
         SUM(CASE WHEN etat = 3 THEN 1 ELSE 0 END)::int as sessions_validees
-      FROM "CaisseSession"
+      FROM app_caisse_sessions
     `;
 
     const statsMouvements = await prisma.$queryRaw<any[]>`
@@ -266,7 +266,7 @@ router.get('/caisse', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER'), as
         SUM(CASE WHEN etat = 1 THEN 1 ELSE 0 END)::int as en_attente,
         SUM(CASE WHEN etat = 2 THEN 1 ELSE 0 END)::int as valides,
         SUM(CASE WHEN etat = 3 THEN 1 ELSE 0 END)::int as rejetes
-      FROM "CaisseMouvement"
+      FROM app_caisse_mouvements
     `;
 
     const nbSuccess = results.filter(r => r.status === 'success').length;
@@ -343,8 +343,8 @@ router.get('/utilisateurs', authorize('SUPER_ADMIN', 'DIRECTOR'), async (req, re
     const usersSansAgence = await prisma.user.count({
       where: {
         role: { in: rolesAvecAgence },
-        isActive: true,
-        agenceId: null,
+        is_active: true,
+        id_ag: null,
       },
     });
 
@@ -360,7 +360,7 @@ router.get('/utilisateurs', authorize('SUPER_ADMIN', 'DIRECTOR'), async (req, re
     const superAdmins = await prisma.user.count({
       where: {
         role: 'SUPER_ADMIN',
-        isActive: true,
+        is_active: true,
       },
     });
 
@@ -377,15 +377,15 @@ router.get('/utilisateurs', authorize('SUPER_ADMIN', 'DIRECTOR'), async (req, re
       SELECT
         role,
         COUNT(*)::int as total,
-        SUM(CASE WHEN "isActive" = true THEN 1 ELSE 0 END)::int as actifs
-      FROM "User"
+        SUM(CASE WHEN "is_active" = true THEN 1 ELSE 0 END)::int as actifs
+      FROM app_users
       GROUP BY role
       ORDER BY total DESC
     `;
 
     // Statistiques
     const totalUsers = await prisma.user.count();
-    const activeUsers = await prisma.user.count({ where: { isActive: true } });
+    const activeUsers = await prisma.user.count({ where: { is_active: true } });
 
     const nbSuccess = results.filter(r => r.status === 'success').length;
     const nbErrors = results.filter(r => r.status === 'error').length;
@@ -429,15 +429,15 @@ router.get('/all', authorize('SUPER_ADMIN', 'DIRECTOR'), async (req, res, next) 
     // Caisse
     const sessionsOk = await prisma.$queryRaw<any[]>`
       SELECT COUNT(*)::int as count
-      FROM "CaisseSession" s
-      LEFT JOIN "User" u ON s.user_id = u.id
+      FROM app_caisse_sessions s
+      LEFT JOIN app_users u ON s.user_id = u.id
       WHERE u.id IS NULL
     `;
     const caisseOk = parseInt(sessionsOk[0]?.count || '0') === 0;
 
     // Utilisateurs
     const superAdmins = await prisma.user.count({
-      where: { role: 'SUPER_ADMIN', isActive: true },
+      where: { role: 'SUPER_ADMIN', is_active: true },
     });
     const utilisateursOk = superAdmins >= 1;
 

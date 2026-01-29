@@ -39,7 +39,7 @@ describe('Utilisateurs - Cohérence des données', () => {
     it('devrait avoir des emails uniques', async () => {
       const doublons = await prisma.$queryRaw<any[]>`
         SELECT email, COUNT(*)::int as count
-        FROM "User"
+        FROM app_users
         GROUP BY email
         HAVING COUNT(*) > 1
       `;
@@ -57,8 +57,8 @@ describe('Utilisateurs - Cohérence des données', () => {
     it('devrait avoir des utilisateurs actifs avec mot de passe', async () => {
       const usersSansMdp = await prisma.user.count({
         where: {
-          isActive: true,
-          password: { equals: '' },
+          is_active: true,
+          password_hash: { equals: '' },
         },
       });
 
@@ -74,8 +74,8 @@ describe('Utilisateurs - Cohérence des données', () => {
       const usersSansAgence = await prisma.user.findMany({
         where: {
           role: { in: rolesAvecAgence },
-          isActive: true,
-          agenceId: null,
+          is_active: true,
+          id_ag: null,
         },
         select: { id: true, email: true, nom: true, prenom: true, role: true },
       });
@@ -92,16 +92,16 @@ describe('Utilisateurs - Cohérence des données', () => {
 
     it('devrait avoir des agences valides pour les utilisateurs assignés', async () => {
       const usersAgenceInvalide = await prisma.$queryRaw<any[]>`
-        SELECT u.id, u.email, u.nom, u.prenom, u."agenceId"
-        FROM "User" u
-        LEFT JOIN ad_agc a ON u."agenceId" = a.id_ag
-        WHERE u."agenceId" IS NOT NULL AND a.id_ag IS NULL
+        SELECT u.id, u.email, u.nom, u.prenom, u.id_ag
+        FROM app_users u
+        LEFT JOIN ad_agc a ON u.id_ag = a.id_ag
+        WHERE u.id_ag IS NOT NULL AND a.id_ag IS NULL
       `;
 
       if (usersAgenceInvalide.length > 0) {
         console.log('Utilisateurs avec agence invalide:');
         usersAgenceInvalide.forEach(u => {
-          console.log(`  - ${u.prenom} ${u.nom}: Agence ${u.agenceId} (inexistante)`);
+          console.log(`  - ${u.prenom} ${u.nom}: Agence ${u.id_ag} (inexistante)`);
         });
       }
 
@@ -115,9 +115,9 @@ describe('Utilisateurs - Cohérence des données', () => {
         SELECT
           role,
           COUNT(*)::int as total,
-          SUM(CASE WHEN "isActive" = true THEN 1 ELSE 0 END)::int as actifs,
-          SUM(CASE WHEN "agenceId" IS NOT NULL THEN 1 ELSE 0 END)::int as avec_agence
-        FROM "User"
+          SUM(CASE WHEN is_active = true THEN 1 ELSE 0 END)::int as actifs,
+          SUM(CASE WHEN id_ag IS NOT NULL THEN 1 ELSE 0 END)::int as avec_agence
+        FROM app_users
         GROUP BY role
         ORDER BY total DESC
       `;
@@ -138,7 +138,7 @@ describe('Utilisateurs - Cohérence des données', () => {
       const superAdmins = await prisma.user.count({
         where: {
           role: 'SUPER_ADMIN',
-          isActive: true,
+          is_active: true,
         },
       });
 
@@ -155,7 +155,7 @@ describe('Utilisateurs - Cohérence des données', () => {
           COUNT(u.id)::int as nb_utilisateurs,
           STRING_AGG(DISTINCT u.role, ', ') as roles
         FROM ad_agc a
-        LEFT JOIN "User" u ON a.id_ag = u."agenceId" AND u."isActive" = true
+        LEFT JOIN app_users u ON a.id_ag = u.id_ag AND u.is_active = true
         WHERE a.etat_ag = 1
         GROUP BY a.id_ag, a.libel_ag
         ORDER BY a.id_ag
@@ -178,10 +178,10 @@ describe('Utilisateurs - Cohérence des données', () => {
         FROM ad_agc a
         WHERE a.etat_ag = 1
         AND NOT EXISTS (
-          SELECT 1 FROM "User" u
-          WHERE u."agenceId" = a.id_ag
+          SELECT 1 FROM app_users u
+          WHERE u.id_ag = a.id_ag
           AND u.role = 'TELLER'
-          AND u."isActive" = true
+          AND u.is_active = true
         )
       `;
 
@@ -202,8 +202,8 @@ describe('Utilisateurs - Activités de caisse', () => {
   it('devrait vérifier que les sessions de caisse appartiennent aux guichetiers', async () => {
     const sessionsNonGuichetier = await prisma.$queryRaw<any[]>`
       SELECT s.id, s.user_id, u.email, u.role
-      FROM "CaisseSession" s
-      JOIN "User" u ON s.user_id = u.id
+      FROM app_caisse_sessions s
+      JOIN app_users u ON s.user_id = u.id
       WHERE u.role NOT IN ('TELLER', 'BRANCH_MANAGER', 'SUPER_ADMIN', 'DIRECTOR')
       LIMIT 10
     `;
@@ -221,8 +221,8 @@ describe('Utilisateurs - Activités de caisse', () => {
   it('devrait vérifier que les validations sont faites par des superviseurs', async () => {
     const validationsNonSuperviseur = await prisma.$queryRaw<any[]>`
       SELECT m.id, m.valide_par, u.email, u.role
-      FROM "CaisseMouvement" m
-      JOIN "User" u ON m.valide_par = u.id
+      FROM app_caisse_mouvements m
+      JOIN app_users u ON m.valide_par = u.id
       WHERE u.role NOT IN ('BRANCH_MANAGER', 'SUPER_ADMIN', 'DIRECTOR')
       AND m.valide_par IS NOT NULL
       LIMIT 10
@@ -241,8 +241,8 @@ describe('Utilisateurs - Activités de caisse', () => {
   it('devrait vérifier que les utilisateurs ne valident pas leurs propres mouvements', async () => {
     const autoValidations = await prisma.$queryRaw<any[]>`
       SELECT m.id, m.demande_par, m.valide_par, u.email
-      FROM "CaisseMouvement" m
-      JOIN "User" u ON m.demande_par = u.id
+      FROM app_caisse_mouvements m
+      JOIN app_users u ON m.demande_par = u.id
       WHERE m.demande_par = m.valide_par
       LIMIT 10
     `;
@@ -285,8 +285,8 @@ describe('Utilisateurs - Activités comptables', () => {
 describe('Utilisateurs - Statistiques globales', () => {
   it('devrait afficher un résumé complet des utilisateurs', async () => {
     const totalUsers = await prisma.user.count();
-    const activeUsers = await prisma.user.count({ where: { isActive: true } });
-    const usersAvecAgence = await prisma.user.count({ where: { agenceId: { not: null } } });
+    const activeUsers = await prisma.user.count({ where: { is_active: true } });
+    const usersAvecAgence = await prisma.user.count({ where: { id_ag: { not: null } } });
 
     console.log('\n=== RÉSUMÉ UTILISATEURS ===');
     console.log(`Total utilisateurs: ${totalUsers}`);

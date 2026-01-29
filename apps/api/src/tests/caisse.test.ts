@@ -11,8 +11,8 @@ describe('Caisse - Cohérence des sessions', () => {
     it('devrait avoir des sessions avec utilisateur et agence valides', async () => {
       const sessionsInvalides = await prisma.$queryRaw<any[]>`
         SELECT s.id, s.user_id, s.id_ag, s.date_session
-        FROM "CaisseSession" s
-        LEFT JOIN "User" u ON s.user_id = u.id
+        FROM app_caisse_sessions s
+        LEFT JOIN app_users u ON s.user_id = u.id
         LEFT JOIN ad_agc a ON s.id_ag = a.id_ag
         WHERE u.id IS NULL OR a.id_ag IS NULL
         LIMIT 10
@@ -31,7 +31,7 @@ describe('Caisse - Cohérence des sessions', () => {
     it('devrait avoir un seul état valide par session (1=ouverte, 2=fermée, 3=validée)', async () => {
       const etatsInvalides = await prisma.$queryRaw<any[]>`
         SELECT id, etat
-        FROM "CaisseSession"
+        FROM app_caisse_sessions
         WHERE etat NOT IN (1, 2, 3)
         LIMIT 10
       `;
@@ -77,7 +77,7 @@ describe('Caisse - Cohérence des sessions', () => {
     it('devrait avoir une seule session ouverte par utilisateur par jour', async () => {
       const doublons = await prisma.$queryRaw<any[]>`
         SELECT user_id, id_ag, date_session, COUNT(*)::int as nb_sessions
-        FROM "CaisseSession"
+        FROM app_caisse_sessions
         WHERE etat = 1
         GROUP BY user_id, id_ag, date_session
         HAVING COUNT(*) > 1
@@ -98,8 +98,8 @@ describe('Caisse - Cohérence des sessions', () => {
     it('devrait avoir des mouvements liés à des sessions valides', async () => {
       const mouvementsOrphelins = await prisma.$queryRaw<any[]>`
         SELECT m.id, m.session_id, m.type_mouvement, m.montant::numeric
-        FROM "CaisseMouvement" m
-        LEFT JOIN "CaisseSession" s ON m.session_id = s.id
+        FROM app_caisse_mouvements m
+        LEFT JOIN app_caisse_sessions s ON m.session_id = s.id
         WHERE s.id IS NULL AND m.session_id != 0
         LIMIT 10
       `;
@@ -110,7 +110,7 @@ describe('Caisse - Cohérence des sessions', () => {
     it('devrait avoir des types de mouvement valides (1=approvisionnement, 2=reversement)', async () => {
       const typesInvalides = await prisma.$queryRaw<any[]>`
         SELECT id, type_mouvement
-        FROM "CaisseMouvement"
+        FROM app_caisse_mouvements
         WHERE type_mouvement NOT IN (1, 2)
         LIMIT 10
       `;
@@ -121,7 +121,7 @@ describe('Caisse - Cohérence des sessions', () => {
     it('devrait avoir des états de mouvement valides (1=en attente, 2=validé, 3=rejeté)', async () => {
       const etatsInvalides = await prisma.$queryRaw<any[]>`
         SELECT id, etat
-        FROM "CaisseMouvement"
+        FROM app_caisse_mouvements
         WHERE etat NOT IN (1, 2, 3)
         LIMIT 10
       `;
@@ -132,7 +132,7 @@ describe('Caisse - Cohérence des sessions', () => {
     it('devrait avoir des montants positifs', async () => {
       const montantsNegatifs = await prisma.$queryRaw<any[]>`
         SELECT id, montant::numeric
-        FROM "CaisseMouvement"
+        FROM app_caisse_mouvements
         WHERE montant <= 0
         LIMIT 10
       `;
@@ -143,7 +143,7 @@ describe('Caisse - Cohérence des sessions', () => {
     it('devrait avoir un valideur pour les mouvements validés/rejetés', async () => {
       const mouvementsSansValideur = await prisma.$queryRaw<any[]>`
         SELECT id, etat, valide_par
-        FROM "CaisseMouvement"
+        FROM app_caisse_mouvements
         WHERE etat IN (2, 3) AND valide_par IS NULL
         LIMIT 10
       `;
@@ -163,8 +163,8 @@ describe('Caisse - Cohérence des sessions', () => {
     it('devrait avoir des décomptes liés à des sessions valides', async () => {
       const decomptesOrphelins = await prisma.$queryRaw<any[]>`
         SELECT d.id, d.session_id, d.type_decompte
-        FROM "CaisseDecompte" d
-        LEFT JOIN "CaisseSession" s ON d.session_id = s.id
+        FROM app_caisse_decomptes d
+        LEFT JOIN app_caisse_sessions s ON d.session_id = s.id
         WHERE s.id IS NULL
         LIMIT 10
       `;
@@ -180,15 +180,14 @@ describe('Caisse - Cohérence des sessions', () => {
       let incoherences = 0;
       decomptes.forEach(d => {
         // Calculer le total à partir des coupures BIF
-        const billets = (d.billets_10000 || 0) * 10000 +
+        const billets = (d.billets_20000 || 0) * 20000 +
+          (d.billets_10000 || 0) * 10000 +
           (d.billets_5000 || 0) * 5000 +
-          (d.billets_2000 || 0) * 2000 +
           (d.billets_1000 || 0) * 1000 +
           (d.billets_500 || 0) * 500 +
           (d.billets_200 || 0) * 200 +
           (d.billets_100 || 0) * 100 +
-          (d.billets_50 || 0) * 50 +
-          (d.billets_20000 || 0) * 20000;
+          (d.billets_50 || 0) * 50;
 
         const pieces = (d.pieces_50 || 0) * 50 +
           (d.pieces_25 || 0) * 25 +
@@ -272,7 +271,7 @@ describe('Caisse - Statistiques', () => {
         SUM(montant_ouverture)::numeric as total_ouvertures,
         SUM(total_entrees)::numeric as total_entrees,
         SUM(total_sorties)::numeric as total_sorties
-      FROM "CaisseSession"
+      FROM app_caisse_sessions
     `;
 
     const mouvStats = await prisma.$queryRaw<any[]>`
@@ -283,7 +282,7 @@ describe('Caisse - Statistiques', () => {
         SUM(CASE WHEN etat = 3 THEN 1 ELSE 0 END)::int as rejetes,
         SUM(CASE WHEN type_mouvement = 1 THEN montant ELSE 0 END)::numeric as total_approvisionnements,
         SUM(CASE WHEN type_mouvement = 2 THEN montant ELSE 0 END)::numeric as total_reversements
-      FROM "CaisseMouvement"
+      FROM app_caisse_mouvements
     `;
 
     console.log('\n=== STATISTIQUES CAISSE ===');
