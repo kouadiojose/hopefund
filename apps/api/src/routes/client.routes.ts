@@ -141,6 +141,64 @@ const toNumber = (val: Decimal | null | undefined): number => {
   return parseFloat(val.toString());
 };
 
+// Helper: Generate theoretical payment schedule
+function generatePaymentSchedule(
+  montant: number,
+  tauxAnnuel: number,
+  dureeMois: number,
+  dateDebut: Date
+): Array<{ num_ech: number; date_ech: Date; mnt_capital: number; mnt_int: number }> {
+  if (montant <= 0 || dureeMois <= 0) return [];
+  const tauxMensuel = tauxAnnuel / 100 / 12;
+  const capitalParEcheance = montant / dureeMois;
+  let soldeRestant = montant;
+  const echeances = [];
+  for (let i = 1; i <= dureeMois; i++) {
+    const interets = soldeRestant * tauxMensuel;
+    const capital = capitalParEcheance;
+    soldeRestant -= capital;
+    const dateEch = new Date(dateDebut);
+    dateEch.setMonth(dateEch.getMonth() + i);
+    echeances.push({ num_ech: i, date_ech: dateEch, mnt_capital: Math.round(capital), mnt_int: Math.round(interets) });
+  }
+  return echeances;
+}
+
+// Helper: Analyze loan status (overdue calculation)
+function analyzeLoanStatus(
+  montantOctroye: number,
+  dureeMois: number,
+  tauxInteret: number,
+  dateDeblocage: Date | null,
+  paiements: Array<{ mnt_remb_cap: number; mnt_remb_int: number }>
+): { isOverdue: boolean; daysOverdue: number; overdueCapital: number; overdueInterest: number; overdueTotal: number } {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (!dateDeblocage || montantOctroye <= 0 || dureeMois <= 0) {
+    return { isOverdue: false, daysOverdue: 0, overdueCapital: 0, overdueInterest: 0, overdueTotal: 0 };
+  }
+  const schedule = generatePaymentSchedule(montantOctroye, tauxInteret, dureeMois, dateDeblocage);
+  const paidCapital = paiements.reduce((s, p) => s + Number(p.mnt_remb_cap || 0), 0);
+  const paidInterest = paiements.reduce((s, p) => s + Number(p.mnt_remb_int || 0), 0);
+  const pastDueSchedule = schedule.filter(e => e.date_ech <= today);
+  const expectedCapital = pastDueSchedule.reduce((s, e) => s + e.mnt_capital, 0);
+  const expectedInterest = pastDueSchedule.reduce((s, e) => s + e.mnt_int, 0);
+  const overdueCapital = Math.max(0, expectedCapital - paidCapital);
+  const overdueInterest = Math.max(0, expectedInterest - paidInterest);
+  const overdueTotal = overdueCapital + overdueInterest;
+  let daysOverdue = 0;
+  if (overdueTotal > 0 && pastDueSchedule.length > 0) {
+    let unpaidCapitalRemaining = overdueCapital;
+    for (const ech of pastDueSchedule) {
+      if (unpaidCapitalRemaining > 0) {
+        daysOverdue = Math.floor((today.getTime() - ech.date_ech.getTime()) / (1000 * 60 * 60 * 24));
+        unpaidCapitalRemaining -= ech.mnt_capital;
+      }
+    }
+  }
+  return { isOverdue: overdueTotal > 0, daysOverdue, overdueCapital, overdueInterest, overdueTotal };
+}
+
 // Helper: Get credit status label
 const getCreditStatusLabel = (etat: number | null): string => {
   const statuses: Record<number, string> = {
@@ -589,33 +647,70 @@ router.get('/:id', async (req, res, next) => {
     const soldeDisponible = totalSolde - totalBloques;
 
     const creditsEnCours = creditsWithDetails.filter((d: any) => [5, 6, 8].includes(d.cre_etat || 0));
-    const totalCapitalRestant = creditsEnCours.reduce((sum: number, d: any) => {
-      const echeancesNonPayees = (d.echeances || []).filter((e: any) => e.etat !== 2);
-      return sum + echeancesNonPayees.reduce((s: number, e: any) => s + toNumber(e.solde_capital), 0);
-    }, 0);
 
-    // Échéances en retard
+    // Analyze each credit for overdue status using theoretical schedule
     const today = new Date();
-    const echeancesEnRetard = creditsWithDetails.flatMap((d: any) =>
-      (d.echeances || []).filter((e: any) =>
-        e.etat !== 2 && e.date_ech && new Date(e.date_ech) < today
-      )
-    );
-    const montantEnRetard = echeancesEnRetard.reduce((sum: number, e: any) =>
-      sum + toNumber(e.solde_capital) + toNumber(e.solde_int), 0
+    let totalMontantEnRetard = 0;
+    let totalEcheancesEnRetard = 0;
+    let totalCapitalRestant = 0;
+
+    const creditsAnalyzed = await Promise.all(
+      creditsWithDetails.map(async (dossier: any) => {
+        const montantOctroye = toNumber(dossier.cre_mnt_octr);
+        const dureeMois = Number(dossier.duree_mois || 12);
+        const tauxInteret = Number(dossier.tx_interet_lcr || 0);
+        const dateDeblocage = dossier.cre_date_debloc ? new Date(dossier.cre_date_debloc) : null;
+
+        // Get actual payments
+        const paiementsFormats = (dossier.paiements || []).map((p: any) => ({
+          mnt_remb_cap: toNumber(p.mnt_remb_cap),
+          mnt_remb_int: toNumber(p.mnt_remb_int),
+        }));
+
+        const analysis = analyzeLoanStatus(montantOctroye, dureeMois, tauxInteret, dateDeblocage, paiementsFormats);
+
+        // Calculate remaining capital
+        const paidCapital = paiementsFormats.reduce((s: number, p: any) => s + p.mnt_remb_cap, 0);
+        const capitalRestant = Math.max(0, montantOctroye - paidCapital);
+
+        if ([5, 6, 8].includes(dossier.cre_etat || 0)) {
+          totalCapitalRestant += capitalRestant;
+          if (analysis.isOverdue) {
+            totalMontantEnRetard += analysis.overdueTotal;
+            totalEcheancesEnRetard++;
+          }
+        }
+
+        return {
+          ...dossier,
+          _analysis: analysis,
+          _capitalRestant: capitalRestant,
+        };
+      })
     );
 
-    // Prochaines échéances
-    const prochainesEcheances = creditsWithDetails.flatMap((d: any) =>
-      (d.echeances || [])
-        .filter((e: any) => e.etat !== 2 && e.date_ech && new Date(e.date_ech) >= today)
-        .map((e: any) => ({
-          ...e,
-          id_doss: d.id_doss,
-          montant_total: toNumber(e.mnt_capital) + toNumber(e.mnt_int),
-        }))
-    ).sort((a: any, b: any) => new Date(a.date_ech!).getTime() - new Date(b.date_ech!).getTime())
-    .slice(0, 5);
+    // Prochaines échéances (calculées à partir de l'échéancier théorique)
+    const prochainesEcheances: any[] = [];
+    for (const credit of creditsEnCours) {
+      const dateDeblocage = credit.cre_date_debloc ? new Date(credit.cre_date_debloc) : null;
+      if (!dateDeblocage) continue;
+
+      const montant = toNumber(credit.cre_mnt_octr);
+      const duree = Number(credit.duree_mois || 12);
+      const taux = Number(credit.tx_interet_lcr || 0);
+      const schedule = generatePaymentSchedule(montant, taux, duree, dateDeblocage);
+
+      const futureEcheances = schedule.filter(e => e.date_ech > today);
+      if (futureEcheances.length > 0) {
+        prochainesEcheances.push({
+          id_doss: credit.id_doss,
+          num_ech: futureEcheances[0].num_ech,
+          date_ech: futureEcheances[0].date_ech,
+          montant_total: futureEcheances[0].mnt_capital + futureEcheances[0].mnt_int,
+        });
+      }
+    }
+    prochainesEcheances.sort((a, b) => new Date(a.date_ech).getTime() - new Date(b.date_ech).getTime());
 
     res.json({
       // Informations personnelles
@@ -669,9 +764,9 @@ router.get('/:id', async (req, res, next) => {
         comptes_actifs: comptesWithMovements.filter((c: any) => c.etat_cpte === 1).length,
         nombre_credits: creditsWithDetails.length,
         credits_en_cours: creditsEnCours.length,
-        capital_restant: totalCapitalRestant,
-        montant_en_retard: montantEnRetard,
-        echeances_en_retard: echeancesEnRetard.length,
+        capital_restant: Math.round(totalCapitalRestant),
+        montant_en_retard: Math.round(totalMontantEnRetard),
+        echeances_en_retard: totalEcheancesEnRetard,
       },
 
       // Comptes avec dernières transactions
@@ -698,19 +793,18 @@ router.get('/:id', async (req, res, next) => {
       })),
 
       // Crédits avec échéancier
-      credits: creditsWithDetails.map((d: any) => {
-        const echeancesNonPayees = (d.echeances || []).filter((e: any) => e.etat !== 2);
-        const capitalRestant = echeancesNonPayees.reduce((s: number, e: any) => s + toNumber(e.solde_capital), 0);
-        const interetsRestants = echeancesNonPayees.reduce((s: number, e: any) => s + toNumber(e.solde_int), 0);
-        const echeancesEnRetardCredit = (d.echeances || []).filter((e: any) =>
-          e.etat !== 2 && e.date_ech && new Date(e.date_ech) < today
-        );
+      credits: creditsAnalyzed.map((d: any) => {
+        const analysis = d._analysis;
+        const capitalRestant = d._capitalRestant;
+        const montantOctroye = toNumber(d.cre_mnt_octr);
+        const paidCapital = (d.paiements || []).reduce((s: number, p: any) => s + toNumber(p.mnt_remb_cap), 0);
+        const paidInterest = (d.paiements || []).reduce((s: number, p: any) => s + toNumber(p.mnt_remb_int), 0);
 
         return {
           id_doss: d.id_doss,
           date_demande: d.date_dem,
           montant_demande: toNumber(d.mnt_dem),
-          montant_octroye: toNumber(d.cre_mnt_octr),
+          montant_octroye: montantOctroye,
           date_approbation: d.cre_date_approb,
           date_deblocage: d.cre_date_debloc,
           duree_mois: d.duree_mois,
@@ -726,16 +820,15 @@ router.get('/:id', async (req, res, next) => {
           commission: toNumber(d.mnt_commission),
           assurance: toNumber(d.mnt_assurance),
 
-          // État actuel
-          capital_restant: capitalRestant,
-          interets_restants: interetsRestants,
-          total_restant: capitalRestant + interetsRestants,
-          echeances_payees: (d.echeances || []).filter((e: any) => e.etat === 2).length,
-          echeances_restantes: echeancesNonPayees.length,
-          echeances_en_retard: echeancesEnRetardCredit.length,
-          montant_en_retard: echeancesEnRetardCredit.reduce((s: number, e: any) =>
-            s + toNumber(e.solde_capital) + toNumber(e.solde_int), 0
-          ),
+          // État actuel (calculé depuis les paiements réels et l'échéancier théorique)
+          capital_restant: Math.round(capitalRestant),
+          interets_restants: 0, // À calculer si nécessaire
+          total_restant: Math.round(capitalRestant),
+          echeances_payees: (d.paiements || []).filter((p: any) => p.annul_remb !== 1).length,
+          echeances_restantes: Math.max(0, Number(d.duree_mois || 12) - (d.paiements || []).filter((p: any) => p.annul_remb !== 1).length),
+          echeances_en_retard: analysis.isOverdue ? 1 : 0,
+          montant_en_retard: Math.round(analysis.overdueTotal),
+          jours_retard: analysis.daysOverdue,
 
           // Garanties
           garanties: (d.garanties || []).map((g: any) => ({
@@ -778,8 +871,8 @@ router.get('/:id', async (req, res, next) => {
         };
       }),
 
-      // Prochaines échéances à payer
-      prochaines_echeances: prochainesEcheances,
+      // Prochaines échéances à payer (max 5)
+      prochaines_echeances: prochainesEcheances.slice(0, 5),
     });
   } catch (error) {
     next(error);
