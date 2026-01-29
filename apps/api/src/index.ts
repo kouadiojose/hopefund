@@ -18,6 +18,7 @@ import permissionsRoutes from './routes/permissions.routes';
 import auditRoutes from './routes/audit.routes';
 import caisseRoutes from './routes/caisse.routes';
 import comptabiliteRoutes from './routes/comptabilite.routes';
+import validationRoutes from './routes/validation.routes';
 import debugTablesRoutes from './routes/debug-tables';
 
 const app = express();
@@ -67,6 +68,7 @@ app.use('/permissions', permissionsRoutes);
 app.use('/audit', auditRoutes);
 app.use('/caisse', caisseRoutes);
 app.use('/comptabilite', comptabiliteRoutes);
+app.use('/validation', validationRoutes);
 app.use('/debug-db', debugTablesRoutes);
 
 // Routes with /api prefix (direct access)
@@ -81,6 +83,7 @@ app.use('/api/permissions', permissionsRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api/caisse', caisseRoutes);
 app.use('/api/comptabilite', comptabiliteRoutes);
+app.use('/api/validation', validationRoutes);
 app.use('/api/debug-db', debugTablesRoutes);
 
 // Error handling

@@ -31,6 +31,7 @@ import {
   TrendingDown,
   FileSpreadsheet,
   History,
+  CheckCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth';
@@ -60,6 +61,7 @@ const adminNavigation = [
   { name: 'Rôles & Permissions', href: '/admin/roles', icon: Lock },
   { name: 'Journal d\'audit', href: '/admin/audit', icon: Activity },
   { name: 'Gestion données', href: '/admin/data', icon: Database },
+  { name: 'Validation données', href: '/admin/validation', icon: CheckCircle },
 ];
 
 const comptabiliteNavigation: NavItem[] = [
