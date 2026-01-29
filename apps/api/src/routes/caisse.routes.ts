@@ -21,20 +21,20 @@ router.use(authenticate);
 
 // Valeurs des billets BIF (Franc Burundais)
 const BILLETS_BIF = {
+  billets_20000: 20000,
   billets_10000: 10000,
   billets_5000: 5000,
-  billets_2000: 2000,
   billets_1000: 1000,
   billets_500: 500,
+  billets_200: 200,
   billets_100: 100,
   billets_50: 50,
-  billets_20: 20,
-  billets_10: 10,
 };
 
 // Valeurs des pièces BIF
 const PIECES_BIF = {
   pieces_50: 50,
+  pieces_25: 25,
   pieces_10: 10,
   pieces_5: 5,
   pieces_1: 1,
@@ -108,18 +108,18 @@ function calculerTotalDecompte(decompte: any): { totalBillets: number; totalPiec
 // Schéma de validation pour le décompte
 const decompteSchema = z.object({
   devise: z.string().default('BIF'),
-  // Billets BIF (Franc Burundais)
+  // Billets BIF (Franc Burundais) - correspond au schema Prisma
+  billets_20000: z.number().int().min(0).default(0),
   billets_10000: z.number().int().min(0).default(0),
   billets_5000: z.number().int().min(0).default(0),
-  billets_2000: z.number().int().min(0).default(0),
   billets_1000: z.number().int().min(0).default(0),
   billets_500: z.number().int().min(0).default(0),
+  billets_200: z.number().int().min(0).default(0),
   billets_100: z.number().int().min(0).default(0),
   billets_50: z.number().int().min(0).default(0),
-  billets_20: z.number().int().min(0).default(0),
-  billets_10: z.number().int().min(0).default(0),
-  // Pièces BIF
+  // Pièces BIF - correspond au schema Prisma
   pieces_50: z.number().int().min(0).default(0),
+  pieces_25: z.number().int().min(0).default(0),
   pieces_10: z.number().int().min(0).default(0),
   pieces_5: z.number().int().min(0).default(0),
   pieces_1: z.number().int().min(0).default(0),
