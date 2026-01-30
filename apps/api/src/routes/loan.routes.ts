@@ -307,108 +307,130 @@ router.get('/portfolio/stats', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANA
   }
 });
 
-// GET /api/loans/delinquent - Prêts en retard de paiement (basé sur échéancier)
+// GET /api/loans/delinquent - Prêts en retard de paiement (calcul hybride: échéancier ou théorique)
 router.get('/delinquent', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_OFFICER'), async (req, res, next) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
     const minDaysOverdue = parseInt(req.query.daysOverdue as string) || 0;
 
-    // Récupérer directement les échéances en retard avec les infos client/crédit
-    const overdueSchedules = await prisma.$queryRaw`
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // 1. Récupérer tous les crédits actifs avec date de déblocage
+    const activeLoans = await prisma.$queryRaw`
       SELECT
-        e.id_ech,
-        e.id_doss,
-        e.date_ech,
-        e.mnt_capital,
-        e.mnt_int,
-        e.solde_capital,
-        e.solde_int,
-        EXTRACT(DAY FROM (CURRENT_DATE - e.date_ech)) as jours_retard,
-        d.id_client,
-        d.cre_mnt_octr,
-        d.cre_date_debloc,
-        d.duree_mois,
-        d.tx_interet_lcr,
-        c.pp_nom,
-        c.pp_prenom,
-        c.pm_raison_sociale,
-        c.statut_juridique,
-        c.num_port,
-        c.email
-      FROM ad_sre e
-      JOIN ad_dcr d ON e.id_doss = d.id_doss AND e.id_ag = d.id_ag
+        d.id_doss, d.id_ag, d.id_client, d.cre_mnt_octr, d.cre_date_debloc,
+        d.duree_mois, d.tx_interet_lcr, d.cre_etat,
+        c.pp_nom, c.pp_prenom, c.pm_raison_sociale, c.statut_juridique,
+        c.num_port, c.email
+      FROM ad_dcr d
       JOIN ad_cli c ON d.id_client = c.id_client AND d.id_ag = c.id_ag
-      WHERE e.date_ech < CURRENT_DATE
-        AND (e.etat IS NULL OR e.etat != 2)
-        AND (e.solde_capital > 0 OR e.solde_int > 0)
-        AND d.cre_etat IN (5, 8)
-        AND EXTRACT(DAY FROM (CURRENT_DATE - e.date_ech)) >= ${minDaysOverdue}
-      ORDER BY (CURRENT_DATE - e.date_ech) DESC
+      WHERE d.cre_etat IN (5, 8)
+        AND d.cre_mnt_octr > 0
+        AND d.cre_date_debloc IS NOT NULL
     ` as any[];
 
-    // Grouper par dossier pour avoir les stats globales
-    const loanStats = new Map<number, any>();
+    const overdueLoans: any[] = [];
     const clientsEnRetard = new Set<number>();
     let totalOverdueAmount = 0;
     let totalOverdueSchedules = 0;
 
-    for (const ech of overdueSchedules) {
-      const montantDu = Number(ech.solde_capital || 0) + Number(ech.solde_int || 0);
-      const joursRetard = Number(ech.jours_retard || 0);
-      totalOverdueAmount += montantDu;
-      totalOverdueSchedules++;
-      clientsEnRetard.add(ech.id_client);
+    for (const loan of activeLoans) {
+      const montantOctroye = Number(loan.cre_mnt_octr || 0);
+      const dureeMois = Number(loan.duree_mois || 12);
+      const tauxInteret = Number(loan.tx_interet_lcr || 0);
+      const dateDeblocage = loan.cre_date_debloc ? new Date(loan.cre_date_debloc) : null;
 
-      if (!loanStats.has(ech.id_doss)) {
-        loanStats.set(ech.id_doss, {
-          id_doss: ech.id_doss,
-          id_client: ech.id_client,
-          montant_octroye: Number(ech.cre_mnt_octr || 0),
-          date_deblocage: ech.cre_date_debloc,
-          duree_mois: ech.duree_mois,
-          taux_interet: ech.tx_interet_lcr,
-          jours_retard: joursRetard,
-          capital_impaye: 0,
-          interet_impaye: 0,
-          montant_du: 0,
-          nb_echeances_retard: 0,
-          client: {
-            id_client: ech.id_client,
-            nom: ech.statut_juridique === 1
-              ? `${ech.pp_prenom || ''} ${ech.pp_nom || ''}`.trim()
-              : ech.pm_raison_sociale,
-            telephone: ech.num_port,
-            email: ech.email,
-          },
-          niveau_risque: 'faible',
-        });
+      if (!dateDeblocage || montantOctroye <= 0) continue;
+
+      // 2. Vérifier si le crédit a des échéances dans ad_sre
+      const echeances = await prisma.$queryRawUnsafe(`
+        SELECT id_ech, date_ech, mnt_capital, mnt_int, solde_capital, solde_int, etat, mnt_paye
+        FROM ad_sre
+        WHERE id_doss = $1 AND id_ag = $2
+        ORDER BY date_ech ASC
+      `, loan.id_doss, loan.id_ag) as any[];
+
+      let overdueCapital = 0;
+      let overdueInterest = 0;
+      let daysOverdue = 0;
+      let nbEcheancesRetard = 0;
+
+      if (echeances.length > 0) {
+        // 3a. Utiliser les échéances existantes
+        for (const ech of echeances) {
+          const dateEch = new Date(ech.date_ech);
+          const soldeCapital = Number(ech.solde_capital || 0);
+          const soldeInt = Number(ech.solde_int || 0);
+          const etat = ech.etat;
+
+          // Échéance passée, non payée (etat != 2) et avec solde restant
+          if (dateEch < today && etat !== 2 && (soldeCapital > 0 || soldeInt > 0)) {
+            overdueCapital += soldeCapital;
+            overdueInterest += soldeInt;
+            nbEcheancesRetard++;
+            const joursRetardEch = Math.floor((today.getTime() - dateEch.getTime()) / (1000 * 60 * 60 * 24));
+            daysOverdue = Math.max(daysOverdue, joursRetardEch);
+          }
+        }
+      } else {
+        // 3b. Calculer théoriquement basé sur les paramètres du crédit
+        const theoreticalSchedule = generatePaymentSchedule(montantOctroye, tauxInteret, dureeMois, dateDeblocage);
+
+        // Calculer ce qui aurait dû être payé jusqu'à aujourd'hui
+        for (const ech of theoreticalSchedule) {
+          if (ech.date_ech <= today) {
+            // Échéance passée - on considère qu'elle n'a pas été payée (pas d'échéances = pas de paiements)
+            overdueCapital += ech.mnt_capital;
+            overdueInterest += ech.mnt_int;
+            nbEcheancesRetard++;
+            const joursRetardEch = Math.floor((today.getTime() - ech.date_ech.getTime()) / (1000 * 60 * 60 * 24));
+            daysOverdue = Math.max(daysOverdue, joursRetardEch);
+          }
+        }
       }
 
-      const stat = loanStats.get(ech.id_doss);
-      stat.capital_impaye += Number(ech.solde_capital || 0);
-      stat.interet_impaye += Number(ech.solde_int || 0);
-      stat.montant_du += montantDu;
-      stat.nb_echeances_retard++;
-      stat.jours_retard = Math.max(stat.jours_retard, joursRetard);
+      const overdueTotal = overdueCapital + overdueInterest;
 
-      // Update risk level
-      stat.niveau_risque = stat.jours_retard > 90 ? 'critique' :
-                          stat.jours_retard > 60 ? 'eleve' :
-                          stat.jours_retard > 30 ? 'moyen' : 'faible';
+      // 4. Filtrer par jours de retard minimum
+      if (overdueTotal > 0 && daysOverdue >= minDaysOverdue) {
+        overdueLoans.push({
+          id_doss: loan.id_doss,
+          id_client: loan.id_client,
+          montant_octroye: montantOctroye,
+          date_deblocage: dateDeblocage,
+          duree_mois: dureeMois,
+          taux_interet: tauxInteret,
+          jours_retard: daysOverdue,
+          capital_impaye: Math.round(overdueCapital),
+          interet_impaye: Math.round(overdueInterest),
+          montant_du: Math.round(overdueTotal),
+          nb_echeances_retard: nbEcheancesRetard,
+          has_echeances: echeances.length > 0,
+          client: {
+            id_client: loan.id_client,
+            nom: loan.statut_juridique === 1
+              ? `${loan.pp_prenom || ''} ${loan.pp_nom || ''}`.trim()
+              : loan.pm_raison_sociale,
+            telephone: loan.num_port,
+            email: loan.email,
+          },
+          niveau_risque: daysOverdue > 90 ? 'critique' :
+                        daysOverdue > 60 ? 'eleve' :
+                        daysOverdue > 30 ? 'moyen' : 'faible',
+        });
+
+        totalOverdueAmount += overdueTotal;
+        totalOverdueSchedules += nbEcheancesRetard;
+        clientsEnRetard.add(loan.id_client);
+      }
     }
 
-    // Convertir en array et trier
-    const overdueLoans = Array.from(loanStats.values())
-      .map(loan => ({
-        ...loan,
-        capital_impaye: Math.round(loan.capital_impaye),
-        interet_impaye: Math.round(loan.interet_impaye),
-        montant_du: Math.round(loan.montant_du),
-      }))
-      .sort((a, b) => b.jours_retard - a.jours_retard);
+    // Trier par jours de retard (le plus élevé en premier)
+    overdueLoans.sort((a, b) => b.jours_retard - a.jours_retard);
 
-    // Paginate
+    // Paginer
     const total = overdueLoans.length;
     const startIdx = (page - 1) * limit;
     const paginatedLoans = overdueLoans.slice(startIdx, startIdx + limit);
@@ -499,97 +521,153 @@ router.get('/schedule/upcoming', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MA
   }
 });
 
-// GET /api/loans/clients/delinquent - Clients avec des retards de paiement (groupés)
+// GET /api/loans/clients/delinquent - Clients avec des retards de paiement (calcul hybride)
 router.get('/clients/delinquent', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_OFFICER'), async (req, res, next) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
 
-    // Clients avec échéances en retard, groupés
-    const delinquentClients = await prisma.$queryRaw`
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // 1. Récupérer tous les crédits actifs avec leurs clients
+    const activeLoans = await prisma.$queryRaw`
       SELECT
-        c.id_client,
-        c.pp_nom,
-        c.pp_prenom,
-        c.pm_raison_sociale,
-        c.statut_juridique,
-        c.num_port,
-        c.email,
-        c.adresse,
-        COUNT(DISTINCT d.id_doss) as nb_prets,
-        COUNT(e.id_ech) as nb_echeances_retard,
-        MAX(EXTRACT(DAY FROM (CURRENT_DATE - e.date_ech))) as max_jours_retard,
-        COALESCE(SUM(e.solde_capital + e.solde_int), 0) as montant_total_retard,
-        MIN(e.date_ech) as premiere_echeance_retard
-      FROM ad_cli c
-      JOIN ad_dcr d ON c.id_client = d.id_client AND c.id_ag = d.id_ag
-      JOIN ad_sre e ON d.id_doss = e.id_doss AND d.id_ag = e.id_ag
-      WHERE e.date_ech < CURRENT_DATE
-        AND (e.etat IS NULL OR e.etat != 2)
-        AND (e.solde_capital > 0 OR e.solde_int > 0)
-        AND d.cre_etat IN (5, 8)
-      GROUP BY c.id_client, c.pp_nom, c.pp_prenom, c.pm_raison_sociale,
-               c.statut_juridique, c.num_port, c.email, c.adresse
-      ORDER BY montant_total_retard DESC
-      LIMIT ${limit} OFFSET ${(page - 1) * limit}
+        d.id_doss, d.id_ag, d.id_client, d.cre_mnt_octr, d.cre_date_debloc,
+        d.duree_mois, d.tx_interet_lcr,
+        c.pp_nom, c.pp_prenom, c.pm_raison_sociale, c.statut_juridique,
+        c.num_port, c.email, c.adresse
+      FROM ad_dcr d
+      JOIN ad_cli c ON d.id_client = c.id_client AND d.id_ag = c.id_ag
+      WHERE d.cre_etat IN (5, 8)
+        AND d.cre_mnt_octr > 0
+        AND d.cre_date_debloc IS NOT NULL
     ` as any[];
 
-    // Compter le total de clients délinquants
-    const countResult = await prisma.$queryRaw`
-      SELECT COUNT(DISTINCT c.id_client) as total
-      FROM ad_cli c
-      JOIN ad_dcr d ON c.id_client = d.id_client AND c.id_ag = d.id_ag
-      JOIN ad_sre e ON d.id_doss = e.id_doss AND d.id_ag = e.id_ag
-      WHERE e.date_ech < CURRENT_DATE
-        AND (e.etat IS NULL OR e.etat != 2)
-        AND (e.solde_capital > 0 OR e.solde_int > 0)
-        AND d.cre_etat IN (5, 8)
-    ` as any[];
+    // Map pour agréger par client
+    const clientStats = new Map<number, any>();
+    let totalOverdueAmount = 0;
+    let totalOverdueLoans = 0;
+    let totalOverdueSchedules = 0;
 
-    const total = Number(countResult[0]?.total || 0);
+    for (const loan of activeLoans) {
+      const montantOctroye = Number(loan.cre_mnt_octr || 0);
+      const dureeMois = Number(loan.duree_mois || 12);
+      const tauxInteret = Number(loan.tx_interet_lcr || 0);
+      const dateDeblocage = loan.cre_date_debloc ? new Date(loan.cre_date_debloc) : null;
 
-    // Get aggregate stats for all delinquent clients
-    const statsResult = await prisma.$queryRaw`
-      SELECT
-        COUNT(DISTINCT c.id_client) as nb_clients_retard,
-        COUNT(DISTINCT d.id_doss) as nb_prets_retard,
-        COUNT(e.id_ech) as nb_echeances_retard,
-        COALESCE(SUM(e.solde_capital + e.solde_int), 0) as montant_total_retard
-      FROM ad_cli c
-      JOIN ad_dcr d ON c.id_client = d.id_client AND c.id_ag = d.id_ag
-      JOIN ad_sre e ON d.id_doss = e.id_doss AND d.id_ag = e.id_ag
-      WHERE e.date_ech < CURRENT_DATE
-        AND (e.etat IS NULL OR e.etat != 2)
-        AND (e.solde_capital > 0 OR e.solde_int > 0)
-        AND d.cre_etat IN (5, 8)
-    ` as any[];
+      if (!dateDeblocage || montantOctroye <= 0) continue;
 
-    const formattedResults = delinquentClients.map((c: any) => ({
-      id_client: c.id_client,
-      nom: c.statut_juridique === 1
-        ? `${c.pp_prenom || ''} ${c.pp_nom || ''}`.trim()
-        : c.pm_raison_sociale,
-      telephone: c.num_port,
-      email: c.email,
-      adresse: c.adresse,
-      nb_prets: Number(c.nb_prets || 0),
-      nb_echeances_retard: Number(c.nb_echeances_retard || 0),
-      max_jours_retard: Number(c.max_jours_retard || 0),
-      montant_total_retard: Number(c.montant_total_retard || 0),
-      premiere_echeance_retard: c.premiere_echeance_retard,
-      // Classification du risque
-      niveau_risque: Number(c.max_jours_retard || 0) > 90 ? 'critique' :
-                     Number(c.max_jours_retard || 0) > 60 ? 'eleve' :
-                     Number(c.max_jours_retard || 0) > 30 ? 'moyen' : 'faible',
-    }));
+      // 2. Vérifier si le crédit a des échéances dans ad_sre
+      const echeances = await prisma.$queryRawUnsafe(`
+        SELECT id_ech, date_ech, mnt_capital, mnt_int, solde_capital, solde_int, etat
+        FROM ad_sre
+        WHERE id_doss = $1 AND id_ag = $2
+        ORDER BY date_ech ASC
+      `, loan.id_doss, loan.id_ag) as any[];
+
+      let loanOverdueCapital = 0;
+      let loanOverdueInterest = 0;
+      let loanDaysOverdue = 0;
+      let loanNbEcheancesRetard = 0;
+      let premiereEcheanceRetard: Date | null = null;
+
+      if (echeances.length > 0) {
+        // 3a. Utiliser les échéances existantes
+        for (const ech of echeances) {
+          const dateEch = new Date(ech.date_ech);
+          const soldeCapital = Number(ech.solde_capital || 0);
+          const soldeInt = Number(ech.solde_int || 0);
+          const etat = ech.etat;
+
+          if (dateEch < today && etat !== 2 && (soldeCapital > 0 || soldeInt > 0)) {
+            loanOverdueCapital += soldeCapital;
+            loanOverdueInterest += soldeInt;
+            loanNbEcheancesRetard++;
+            const joursRetardEch = Math.floor((today.getTime() - dateEch.getTime()) / (1000 * 60 * 60 * 24));
+            loanDaysOverdue = Math.max(loanDaysOverdue, joursRetardEch);
+            if (!premiereEcheanceRetard || dateEch < premiereEcheanceRetard) {
+              premiereEcheanceRetard = dateEch;
+            }
+          }
+        }
+      } else {
+        // 3b. Calculer théoriquement
+        const theoreticalSchedule = generatePaymentSchedule(montantOctroye, tauxInteret, dureeMois, dateDeblocage);
+
+        for (const ech of theoreticalSchedule) {
+          if (ech.date_ech <= today) {
+            loanOverdueCapital += ech.mnt_capital;
+            loanOverdueInterest += ech.mnt_int;
+            loanNbEcheancesRetard++;
+            const joursRetardEch = Math.floor((today.getTime() - ech.date_ech.getTime()) / (1000 * 60 * 60 * 24));
+            loanDaysOverdue = Math.max(loanDaysOverdue, joursRetardEch);
+            if (!premiereEcheanceRetard || ech.date_ech < premiereEcheanceRetard) {
+              premiereEcheanceRetard = ech.date_ech;
+            }
+          }
+        }
+      }
+
+      const loanOverdueTotal = loanOverdueCapital + loanOverdueInterest;
+
+      // 4. Agréger par client si en retard
+      if (loanOverdueTotal > 0) {
+        totalOverdueAmount += loanOverdueTotal;
+        totalOverdueLoans++;
+        totalOverdueSchedules += loanNbEcheancesRetard;
+
+        if (!clientStats.has(loan.id_client)) {
+          clientStats.set(loan.id_client, {
+            id_client: loan.id_client,
+            nom: loan.statut_juridique === 1
+              ? `${loan.pp_prenom || ''} ${loan.pp_nom || ''}`.trim()
+              : loan.pm_raison_sociale,
+            telephone: loan.num_port,
+            email: loan.email,
+            adresse: loan.adresse,
+            nb_prets: 0,
+            nb_echeances_retard: 0,
+            max_jours_retard: 0,
+            montant_total_retard: 0,
+            premiere_echeance_retard: null,
+          });
+        }
+
+        const stat = clientStats.get(loan.id_client);
+        stat.nb_prets++;
+        stat.nb_echeances_retard += loanNbEcheancesRetard;
+        stat.max_jours_retard = Math.max(stat.max_jours_retard, loanDaysOverdue);
+        stat.montant_total_retard += loanOverdueTotal;
+        if (!stat.premiere_echeance_retard || (premiereEcheanceRetard && premiereEcheanceRetard < stat.premiere_echeance_retard)) {
+          stat.premiere_echeance_retard = premiereEcheanceRetard;
+        }
+      }
+    }
+
+    // Convertir en array et ajouter niveau de risque
+    const delinquentClients = Array.from(clientStats.values())
+      .map(c => ({
+        ...c,
+        montant_total_retard: Math.round(c.montant_total_retard),
+        niveau_risque: c.max_jours_retard > 90 ? 'critique' :
+                      c.max_jours_retard > 60 ? 'eleve' :
+                      c.max_jours_retard > 30 ? 'moyen' : 'faible',
+      }))
+      .sort((a, b) => b.montant_total_retard - a.montant_total_retard);
+
+    // Paginer
+    const total = delinquentClients.length;
+    const startIdx = (page - 1) * limit;
+    const paginatedClients = delinquentClients.slice(startIdx, startIdx + limit);
 
     res.json({
-      data: formattedResults,
+      data: paginatedClients,
       stats: {
-        nb_prets_retard: Number(statsResult[0]?.nb_prets_retard || 0),
-        nb_clients_retard: Number(statsResult[0]?.nb_clients_retard || 0),
-        montant_total_retard: Number(statsResult[0]?.montant_total_retard || 0),
-        nb_echeances_retard: Number(statsResult[0]?.nb_echeances_retard || 0),
+        nb_prets_retard: totalOverdueLoans,
+        nb_clients_retard: total,
+        montant_total_retard: Math.round(totalOverdueAmount),
+        nb_echeances_retard: totalOverdueSchedules,
       },
       pagination: {
         page,
