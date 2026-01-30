@@ -26,18 +26,16 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/components/ui/tabs';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils';
 import { comptabiliteApi } from '@/lib/api';
 
-interface DepenseRevenu {
+interface DepenseRevenuItem {
   id: number;
-  date: string;
-  reference: string;
   libelle: string;
   categorie: string;
   montant: number;
+  nb_operations: number;
   type: 'depense' | 'revenu';
-  statut: 'valide' | 'en_attente';
 }
 
 const categoriesDepenses = [
@@ -76,26 +74,22 @@ export default function DepensesRevenusPage() {
     }),
   });
 
-  const depenses: DepenseRevenu[] = (depensesRevenusData?.depenses || []).map((d: any, index: number) => ({
+  const depenses = (depensesRevenusData?.depenses || []).map((d: any, index: number) => ({
     id: index + 1,
-    date: new Date().toISOString().split('T')[0],
-    reference: `DEP-${String(index + 1).padStart(3, '0')}`,
     libelle: d.libelle,
     categorie: d.compte,
     montant: d.montant,
+    nb_operations: d.nb_operations || 0,
     type: 'depense' as const,
-    statut: 'valide' as const,
   }));
 
-  const revenus: DepenseRevenu[] = (depensesRevenusData?.revenus || []).map((r: any, index: number) => ({
+  const revenus = (depensesRevenusData?.revenus || []).map((r: any, index: number) => ({
     id: index + 1,
-    date: new Date().toISOString().split('T')[0],
-    reference: `REV-${String(index + 1).padStart(3, '0')}`,
     libelle: r.libelle,
     categorie: r.compte,
     montant: r.montant,
+    nb_operations: r.nb_operations || 0,
     type: 'revenu' as const,
-    statut: 'valide' as const,
   }));
 
   const totalDepenses = depensesRevenusData?.totalDepenses || 0;
@@ -242,27 +236,25 @@ export default function DepensesRevenusPage() {
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Date</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Référence</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Compte</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Libellé</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Catégorie</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500">Montant</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Nb Opérations</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500">Montant Total</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Statut</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {filteredDepenses.map((depense) => (
                     <tr key={depense.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm">{formatDate(depense.date)}</td>
-                      <td className="px-4 py-3 text-sm font-mono">{depense.reference}</td>
+                      <td className="px-4 py-3 text-sm font-mono">{depense.categorie}</td>
                       <td className="px-4 py-3 text-sm">{depense.libelle}</td>
-                      <td className="px-4 py-3 text-sm">{depense.categorie}</td>
+                      <td className="px-4 py-3 text-sm text-center">{depense.nb_operations || '-'}</td>
                       <td className="px-4 py-3 text-sm text-right font-medium text-red-600">
                         {formatCurrency(depense.montant)}
                       </td>
                       <td className="px-4 py-3">
-                        <Badge className={depense.statut === 'valide' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
-                          {depense.statut === 'valide' ? 'Validé' : 'En attente'}
+                        <Badge className="bg-green-100 text-green-800">
+                          Validé
                         </Badge>
                       </td>
                     </tr>
@@ -270,7 +262,7 @@ export default function DepensesRevenusPage() {
                 </tbody>
                 <tfoot className="bg-gray-100">
                   <tr>
-                    <td colSpan={4} className="px-4 py-3 text-sm font-bold">TOTAL DÉPENSES</td>
+                    <td colSpan={3} className="px-4 py-3 text-sm font-bold">TOTAL DÉPENSES</td>
                     <td className="px-4 py-3 text-sm text-right font-bold text-red-600">
                       {formatCurrency(filteredDepenses.reduce((sum, d) => sum + d.montant, 0))}
                     </td>
@@ -288,27 +280,25 @@ export default function DepensesRevenusPage() {
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Date</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Référence</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Compte</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Libellé</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Catégorie</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500">Montant</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Nb Opérations</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500">Montant Total</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Statut</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {filteredRevenus.map((revenu) => (
                     <tr key={revenu.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm">{formatDate(revenu.date)}</td>
-                      <td className="px-4 py-3 text-sm font-mono">{revenu.reference}</td>
+                      <td className="px-4 py-3 text-sm font-mono">{revenu.categorie}</td>
                       <td className="px-4 py-3 text-sm">{revenu.libelle}</td>
-                      <td className="px-4 py-3 text-sm">{revenu.categorie}</td>
+                      <td className="px-4 py-3 text-sm text-center">{revenu.nb_operations || '-'}</td>
                       <td className="px-4 py-3 text-sm text-right font-medium text-green-600">
                         {formatCurrency(revenu.montant)}
                       </td>
                       <td className="px-4 py-3">
-                        <Badge className={revenu.statut === 'valide' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
-                          {revenu.statut === 'valide' ? 'Validé' : 'En attente'}
+                        <Badge className="bg-green-100 text-green-800">
+                          Validé
                         </Badge>
                       </td>
                     </tr>
@@ -316,7 +306,7 @@ export default function DepensesRevenusPage() {
                 </tbody>
                 <tfoot className="bg-gray-100">
                   <tr>
-                    <td colSpan={4} className="px-4 py-3 text-sm font-bold">TOTAL REVENUS</td>
+                    <td colSpan={3} className="px-4 py-3 text-sm font-bold">TOTAL REVENUS</td>
                     <td className="px-4 py-3 text-sm text-right font-bold text-green-600">
                       {formatCurrency(filteredRevenus.reduce((sum, r) => sum + r.montant, 0))}
                     </td>
