@@ -307,87 +307,106 @@ router.get('/portfolio/stats', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANA
   }
 });
 
-// GET /api/loans/delinquent - Prêts en retard de paiement (calcul basé sur échéancier théorique)
+// GET /api/loans/delinquent - Prêts en retard de paiement (basé sur échéancier)
 router.get('/delinquent', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_OFFICER'), async (req, res, next) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
     const minDaysOverdue = parseInt(req.query.daysOverdue as string) || 0;
 
-    // Get all active loans with client info
-    const activeLoans = await prisma.$queryRaw`
+    // Récupérer directement les échéances en retard avec les infos client/crédit
+    const overdueSchedules = await prisma.$queryRaw`
       SELECT
-        d.id_doss, d.id_ag, d.id_client, d.cre_mnt_octr, d.cre_date_debloc,
-        d.duree_mois, d.tx_interet_lcr, d.cre_etat,
-        c.pp_nom, c.pp_prenom, c.pm_raison_sociale, c.statut_juridique,
-        c.num_port, c.email
-      FROM ad_dcr d
+        e.id_ech,
+        e.id_doss,
+        e.date_ech,
+        e.mnt_capital,
+        e.mnt_int,
+        e.solde_capital,
+        e.solde_int,
+        EXTRACT(DAY FROM (CURRENT_DATE - e.date_ech)) as jours_retard,
+        d.id_client,
+        d.cre_mnt_octr,
+        d.cre_date_debloc,
+        d.duree_mois,
+        d.tx_interet_lcr,
+        c.pp_nom,
+        c.pp_prenom,
+        c.pm_raison_sociale,
+        c.statut_juridique,
+        c.num_port,
+        c.email
+      FROM ad_sre e
+      JOIN ad_dcr d ON e.id_doss = d.id_doss AND e.id_ag = d.id_ag
       JOIN ad_cli c ON d.id_client = c.id_client AND d.id_ag = c.id_ag
-      WHERE d.cre_etat IN (5, 8) AND d.cre_mnt_octr > 0 AND d.cre_date_debloc IS NOT NULL
+      WHERE e.date_ech < CURRENT_DATE
+        AND (e.etat IS NULL OR e.etat != 2)
+        AND (e.solde_capital > 0 OR e.solde_int > 0)
+        AND d.cre_etat IN (5, 8)
+        AND EXTRACT(DAY FROM (CURRENT_DATE - e.date_ech)) >= ${minDaysOverdue}
+      ORDER BY (CURRENT_DATE - e.date_ech) DESC
     ` as any[];
 
-    // Analyze each loan and filter overdue ones
-    const overdueLoans: any[] = [];
+    // Grouper par dossier pour avoir les stats globales
+    const loanStats = new Map<number, any>();
+    const clientsEnRetard = new Set<number>();
     let totalOverdueAmount = 0;
     let totalOverdueSchedules = 0;
-    const clientsEnRetard = new Set<number>();
 
-    for (const loan of activeLoans) {
-      // Get payments for this loan
-      const paiements = await prisma.$queryRawUnsafe(`
-        SELECT date_remb, mnt_remb_cap, mnt_remb_int
-        FROM ad_sre
-        WHERE id_doss = $1 AND id_ag = $2 AND annul_remb IS DISTINCT FROM 1
-      `, loan.id_doss, loan.id_ag) as any[];
+    for (const ech of overdueSchedules) {
+      const montantDu = Number(ech.solde_capital || 0) + Number(ech.solde_int || 0);
+      const joursRetard = Number(ech.jours_retard || 0);
+      totalOverdueAmount += montantDu;
+      totalOverdueSchedules++;
+      clientsEnRetard.add(ech.id_client);
 
-      const analysis = analyzeLoanStatus(
-        Number(loan.cre_mnt_octr || 0),
-        Number(loan.duree_mois || 12),
-        Number(loan.tx_interet_lcr || 0),
-        loan.cre_date_debloc ? new Date(loan.cre_date_debloc) : null,
-        paiements
-      );
-
-      if (analysis.isOverdue && analysis.overdueTotal > 0 && analysis.daysOverdue >= minDaysOverdue) {
-        // Calculer le nombre d'échéances impayées (écheances attendues moins paiements effectués)
-        const echeancesImpayees = Math.max(0, analysis.expectedPayments - analysis.actualPayments);
-
-        overdueLoans.push({
-          id_doss: loan.id_doss,
-          id_client: loan.id_client,
-          montant_octroye: Number(loan.cre_mnt_octr || 0),
-          date_deblocage: loan.cre_date_debloc,
-          duree_mois: loan.duree_mois,
-          taux_interet: loan.tx_interet_lcr,
-          jours_retard: analysis.daysOverdue,
-          capital_impaye: Math.round(analysis.overdueCapital),
-          interet_impaye: Math.round(analysis.overdueInterest),
-          montant_du: Math.round(analysis.overdueTotal),
-          echeances_attendues: analysis.expectedPayments,
-          paiements_effectues: analysis.actualPayments,
-          nb_echeances_retard: echeancesImpayees,
-          prochaine_echeance: analysis.nextDueDate,
-          montant_prochaine: Math.round(analysis.nextDueAmount),
+      if (!loanStats.has(ech.id_doss)) {
+        loanStats.set(ech.id_doss, {
+          id_doss: ech.id_doss,
+          id_client: ech.id_client,
+          montant_octroye: Number(ech.cre_mnt_octr || 0),
+          date_deblocage: ech.cre_date_debloc,
+          duree_mois: ech.duree_mois,
+          taux_interet: ech.tx_interet_lcr,
+          jours_retard: joursRetard,
+          capital_impaye: 0,
+          interet_impaye: 0,
+          montant_du: 0,
+          nb_echeances_retard: 0,
           client: {
-            id_client: loan.id_client,
-            nom: loan.statut_juridique === 1
-              ? `${loan.pp_prenom || ''} ${loan.pp_nom || ''}`.trim()
-              : loan.pm_raison_sociale,
-            telephone: loan.num_port,
-            email: loan.email,
+            id_client: ech.id_client,
+            nom: ech.statut_juridique === 1
+              ? `${ech.pp_prenom || ''} ${ech.pp_nom || ''}`.trim()
+              : ech.pm_raison_sociale,
+            telephone: ech.num_port,
+            email: ech.email,
           },
-          niveau_risque: analysis.daysOverdue > 90 ? 'critique' :
-                         analysis.daysOverdue > 60 ? 'eleve' :
-                         analysis.daysOverdue > 30 ? 'moyen' : 'faible',
+          niveau_risque: 'faible',
         });
-        totalOverdueAmount += analysis.overdueTotal;
-        totalOverdueSchedules += echeancesImpayees;
-        clientsEnRetard.add(loan.id_client);
       }
+
+      const stat = loanStats.get(ech.id_doss);
+      stat.capital_impaye += Number(ech.solde_capital || 0);
+      stat.interet_impaye += Number(ech.solde_int || 0);
+      stat.montant_du += montantDu;
+      stat.nb_echeances_retard++;
+      stat.jours_retard = Math.max(stat.jours_retard, joursRetard);
+
+      // Update risk level
+      stat.niveau_risque = stat.jours_retard > 90 ? 'critique' :
+                          stat.jours_retard > 60 ? 'eleve' :
+                          stat.jours_retard > 30 ? 'moyen' : 'faible';
     }
 
-    // Sort by days overdue (highest first)
-    overdueLoans.sort((a, b) => b.jours_retard - a.jours_retard);
+    // Convertir en array et trier
+    const overdueLoans = Array.from(loanStats.values())
+      .map(loan => ({
+        ...loan,
+        capital_impaye: Math.round(loan.capital_impaye),
+        interet_impaye: Math.round(loan.interet_impaye),
+        montant_du: Math.round(loan.montant_du),
+      }))
+      .sort((a, b) => b.jours_retard - a.jours_retard);
 
     // Paginate
     const total = overdueLoans.length;
