@@ -106,7 +106,9 @@ export default function DelinquentClientsPage() {
 
   const clients: DelinquentClient[] = clientsData?.data || [];
   const schedules: DelinquentSchedule[] = schedulesData?.data || [];
-  const stats = schedulesData?.stats || {
+
+  // Use stats from whichever endpoint is active (both now return stats)
+  const stats = (viewMode === 'clients' ? clientsData?.stats : schedulesData?.stats) || {
     nb_prets_retard: 0,
     nb_clients_retard: 0,
     montant_total_retard: 0,

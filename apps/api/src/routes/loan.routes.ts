@@ -329,6 +329,7 @@ router.get('/delinquent', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER',
     // Analyze each loan and filter overdue ones
     const overdueLoans: any[] = [];
     let totalOverdueAmount = 0;
+    let totalOverdueSchedules = 0;
     const clientsEnRetard = new Set<number>();
 
     for (const loan of activeLoans) {
@@ -348,6 +349,9 @@ router.get('/delinquent', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER',
       );
 
       if (analysis.isOverdue && analysis.overdueTotal > 0 && analysis.daysOverdue >= minDaysOverdue) {
+        // Calculer le nombre d'échéances impayées (écheances attendues moins paiements effectués)
+        const echeancesImpayees = Math.max(0, analysis.expectedPayments - analysis.actualPayments);
+
         overdueLoans.push({
           id_doss: loan.id_doss,
           id_client: loan.id_client,
@@ -361,6 +365,7 @@ router.get('/delinquent', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER',
           montant_du: Math.round(analysis.overdueTotal),
           echeances_attendues: analysis.expectedPayments,
           paiements_effectues: analysis.actualPayments,
+          nb_echeances_retard: echeancesImpayees,
           prochaine_echeance: analysis.nextDueDate,
           montant_prochaine: Math.round(analysis.nextDueAmount),
           client: {
@@ -376,6 +381,7 @@ router.get('/delinquent', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER',
                          analysis.daysOverdue > 30 ? 'moyen' : 'faible',
         });
         totalOverdueAmount += analysis.overdueTotal;
+        totalOverdueSchedules += echeancesImpayees;
         clientsEnRetard.add(loan.id_client);
       }
     }
@@ -394,6 +400,7 @@ router.get('/delinquent', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER',
         nb_prets_retard: total,
         nb_clients_retard: clientsEnRetard.size,
         montant_total_retard: Math.round(totalOverdueAmount),
+        nb_echeances_retard: totalOverdueSchedules,
       },
       pagination: {
         page,
@@ -522,6 +529,22 @@ router.get('/clients/delinquent', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_M
 
     const total = Number(countResult[0]?.total || 0);
 
+    // Get aggregate stats for all delinquent clients
+    const statsResult = await prisma.$queryRaw`
+      SELECT
+        COUNT(DISTINCT c.id_client) as nb_clients_retard,
+        COUNT(DISTINCT d.id_doss) as nb_prets_retard,
+        COUNT(e.id_ech) as nb_echeances_retard,
+        COALESCE(SUM(e.solde_capital + e.solde_int), 0) as montant_total_retard
+      FROM ad_cli c
+      JOIN ad_dcr d ON c.id_client = d.id_client AND c.id_ag = d.id_ag
+      JOIN ad_sre e ON d.id_doss = e.id_doss AND d.id_ag = e.id_ag
+      WHERE e.date_ech < CURRENT_DATE
+        AND (e.etat IS NULL OR e.etat != 2)
+        AND (e.solde_capital > 0 OR e.solde_int > 0)
+        AND d.cre_etat IN (5, 8)
+    ` as any[];
+
     const formattedResults = delinquentClients.map((c: any) => ({
       id_client: c.id_client,
       nom: c.statut_juridique === 1
@@ -543,6 +566,12 @@ router.get('/clients/delinquent', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_M
 
     res.json({
       data: formattedResults,
+      stats: {
+        nb_prets_retard: Number(statsResult[0]?.nb_prets_retard || 0),
+        nb_clients_retard: Number(statsResult[0]?.nb_clients_retard || 0),
+        montant_total_retard: Number(statsResult[0]?.montant_total_retard || 0),
+        nb_echeances_retard: Number(statsResult[0]?.nb_echeances_retard || 0),
+      },
       pagination: {
         page,
         limit,
