@@ -307,6 +307,95 @@ router.get('/portfolio/stats', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANA
   }
 });
 
+// GET /api/loans/delinquent/diagnostic - Diagnostic des données pour les retards
+router.get('/delinquent/diagnostic', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER'), async (req, res, next) => {
+  try {
+    // Compter tous les crédits par état
+    const creditsByState = await prisma.$queryRaw`
+      SELECT cre_etat, etat, COUNT(*) as count
+      FROM ad_dcr
+      GROUP BY cre_etat, etat
+      ORDER BY cre_etat, etat
+    ` as any[];
+
+    // Crédits actifs (cre_etat 5 ou 8)
+    const activeLoansCount = await prisma.$queryRaw`
+      SELECT COUNT(*) as total
+      FROM ad_dcr
+      WHERE cre_etat IN (5, 8)
+    ` as any[];
+
+    // Crédits avec date de déblocage
+    const loansWithDisbursement = await prisma.$queryRaw`
+      SELECT COUNT(*) as total
+      FROM ad_dcr
+      WHERE cre_etat IN (5, 8) AND cre_date_debloc IS NOT NULL
+    ` as any[];
+
+    // Crédits avec montant octroyé > 0
+    const loansWithAmount = await prisma.$queryRaw`
+      SELECT COUNT(*) as total
+      FROM ad_dcr
+      WHERE cre_etat IN (5, 8) AND cre_mnt_octr > 0
+    ` as any[];
+
+    // Crédits qui remplissent toutes les conditions
+    const eligibleLoans = await prisma.$queryRaw`
+      SELECT COUNT(*) as total
+      FROM ad_dcr
+      WHERE cre_etat IN (5, 8) AND cre_mnt_octr > 0 AND cre_date_debloc IS NOT NULL
+    ` as any[];
+
+    // Échéances dans ad_sre
+    const echeancesCount = await prisma.$queryRaw`
+      SELECT COUNT(*) as total FROM ad_sre
+    ` as any[];
+
+    // Échéances en retard (selon ancienne logique)
+    const overdueEcheances = await prisma.$queryRaw`
+      SELECT COUNT(*) as total
+      FROM ad_sre e
+      JOIN ad_dcr d ON e.id_doss = d.id_doss AND e.id_ag = d.id_ag
+      WHERE e.date_ech < CURRENT_DATE
+        AND (e.etat IS NULL OR e.etat != 2)
+        AND (e.solde_capital > 0 OR e.solde_int > 0)
+        AND d.cre_etat IN (5, 8)
+    ` as any[];
+
+    // Exemple de 5 crédits actifs
+    const sampleLoans = await prisma.$queryRaw`
+      SELECT id_doss, id_client, cre_etat, etat, cre_mnt_octr, cre_date_debloc, duree_mois, tx_interet_lcr
+      FROM ad_dcr
+      WHERE cre_etat IN (5, 8) OR etat IN (5, 8)
+      LIMIT 5
+    ` as any[];
+
+    // Vérifier aussi les crédits avec etat (pas cre_etat)
+    const loansWithEtat = await prisma.$queryRaw`
+      SELECT COUNT(*) as total
+      FROM ad_dcr
+      WHERE etat IN (5, 8)
+    ` as any[];
+
+    res.json({
+      diagnostic: {
+        credits_by_state: creditsByState,
+        active_loans_cre_etat_5_8: Number(activeLoansCount[0]?.total || 0),
+        active_loans_etat_5_8: Number(loansWithEtat[0]?.total || 0),
+        loans_with_disbursement_date: Number(loansWithDisbursement[0]?.total || 0),
+        loans_with_amount: Number(loansWithAmount[0]?.total || 0),
+        eligible_loans: Number(eligibleLoans[0]?.total || 0),
+        total_echeances: Number(echeancesCount[0]?.total || 0),
+        overdue_echeances: Number(overdueEcheances[0]?.total || 0),
+        sample_loans: sampleLoans,
+      },
+    });
+  } catch (error) {
+    console.error('Diagnostic error:', error);
+    next(error);
+  }
+});
+
 // GET /api/loans/delinquent - Prêts en retard de paiement (calcul hybride: échéancier ou théorique)
 router.get('/delinquent', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER', 'CREDIT_OFFICER'), async (req, res, next) => {
   try {
@@ -318,17 +407,18 @@ router.get('/delinquent', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER',
     today.setHours(0, 0, 0, 0);
 
     // 1. Récupérer tous les crédits actifs avec date de déblocage
+    // Note: certains crédits utilisent cre_etat, d'autres utilisent etat
     const activeLoans = await prisma.$queryRaw`
       SELECT
         d.id_doss, d.id_ag, d.id_client, d.cre_mnt_octr, d.cre_date_debloc,
-        d.duree_mois, d.tx_interet_lcr, d.cre_etat,
+        d.duree_mois, d.tx_interet_lcr, d.cre_etat, d.etat,
+        d.mnt_dem, d.date_dem, d.cre_date_approb,
         c.pp_nom, c.pp_prenom, c.pm_raison_sociale, c.statut_juridique,
         c.num_port, c.email
       FROM ad_dcr d
       JOIN ad_cli c ON d.id_client = c.id_client AND d.id_ag = c.id_ag
-      WHERE d.cre_etat IN (5, 8)
-        AND d.cre_mnt_octr > 0
-        AND d.cre_date_debloc IS NOT NULL
+      WHERE (d.cre_etat IN (5, 8) OR d.etat IN (5, 8))
+        AND (d.cre_mnt_octr > 0 OR d.mnt_dem > 0)
     ` as any[];
 
     const overdueLoans: any[] = [];
@@ -337,10 +427,14 @@ router.get('/delinquent', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_MANAGER',
     let totalOverdueSchedules = 0;
 
     for (const loan of activeLoans) {
-      const montantOctroye = Number(loan.cre_mnt_octr || 0);
+      // Utiliser cre_mnt_octr en priorité, sinon mnt_dem
+      const montantOctroye = Number(loan.cre_mnt_octr || loan.mnt_dem || 0);
       const dureeMois = Number(loan.duree_mois || 12);
       const tauxInteret = Number(loan.tx_interet_lcr || 0);
-      const dateDeblocage = loan.cre_date_debloc ? new Date(loan.cre_date_debloc) : null;
+      // Utiliser cre_date_debloc en priorité, sinon cre_date_approb, sinon date_dem
+      const dateDeblocage = loan.cre_date_debloc ? new Date(loan.cre_date_debloc)
+        : loan.cre_date_approb ? new Date(loan.cre_date_approb)
+        : loan.date_dem ? new Date(loan.date_dem) : null;
 
       if (!dateDeblocage || montantOctroye <= 0) continue;
 
@@ -531,17 +625,17 @@ router.get('/clients/delinquent', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_M
     today.setHours(0, 0, 0, 0);
 
     // 1. Récupérer tous les crédits actifs avec leurs clients
+    // Note: certains crédits utilisent cre_etat, d'autres utilisent etat
     const activeLoans = await prisma.$queryRaw`
       SELECT
         d.id_doss, d.id_ag, d.id_client, d.cre_mnt_octr, d.cre_date_debloc,
-        d.duree_mois, d.tx_interet_lcr,
+        d.duree_mois, d.tx_interet_lcr, d.mnt_dem, d.date_dem, d.cre_date_approb,
         c.pp_nom, c.pp_prenom, c.pm_raison_sociale, c.statut_juridique,
         c.num_port, c.email, c.adresse
       FROM ad_dcr d
       JOIN ad_cli c ON d.id_client = c.id_client AND d.id_ag = c.id_ag
-      WHERE d.cre_etat IN (5, 8)
-        AND d.cre_mnt_octr > 0
-        AND d.cre_date_debloc IS NOT NULL
+      WHERE (d.cre_etat IN (5, 8) OR d.etat IN (5, 8))
+        AND (d.cre_mnt_octr > 0 OR d.mnt_dem > 0)
     ` as any[];
 
     // Map pour agréger par client
@@ -551,10 +645,14 @@ router.get('/clients/delinquent', authorize('SUPER_ADMIN', 'DIRECTOR', 'BRANCH_M
     let totalOverdueSchedules = 0;
 
     for (const loan of activeLoans) {
-      const montantOctroye = Number(loan.cre_mnt_octr || 0);
+      // Utiliser cre_mnt_octr en priorité, sinon mnt_dem
+      const montantOctroye = Number(loan.cre_mnt_octr || loan.mnt_dem || 0);
       const dureeMois = Number(loan.duree_mois || 12);
       const tauxInteret = Number(loan.tx_interet_lcr || 0);
-      const dateDeblocage = loan.cre_date_debloc ? new Date(loan.cre_date_debloc) : null;
+      // Utiliser cre_date_debloc en priorité, sinon cre_date_approb, sinon date_dem
+      const dateDeblocage = loan.cre_date_debloc ? new Date(loan.cre_date_debloc)
+        : loan.cre_date_approb ? new Date(loan.cre_date_approb)
+        : loan.date_dem ? new Date(loan.date_dem) : null;
 
       if (!dateDeblocage || montantOctroye <= 0) continue;
 
